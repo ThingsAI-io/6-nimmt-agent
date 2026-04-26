@@ -3,7 +3,8 @@
 > **Milestone:** Engine and simulation CLI working end-to-end  
 > **Approach:** Fully agent-driven — no human writes or reviews code  
 > **Execution:** Tasks dispatched via `/fleet` to parallel agent groups  
-> **Spec commit:** `77d4c58` (branch: `draft`)
+> **Spec commit:** `f2fb510` (branch: `draft`)  
+> **Total tasks:** 26
 
 ---
 
@@ -20,6 +21,8 @@ T0 (scaffold)
 ├──► T1G (reference model)            ─┘        │
 ├──► T1H (anti-cheat lint rules)  ──────────────┤
 │                                               │
+│                                          T1-CI (early CI skeleton + harness freeze)
+│                                               │
 │    ┌──────────────────────────────────────────┘
 │    ▼
 │   T2A (types + card + PRNG) ──► T2B (row) ──► T2C (board)
@@ -30,9 +33,10 @@ T0 (scaffold)
 │                                                    │
 │                                               T2-GATE (engine fixture tests)
 │                                                    │
-│                                               T2-REVIEW (adversarial review)
-│                                                    │
 │                              ┌─────────────────────┘
+│                              │
+│                              │   T2-REVIEW (adversarial review, non-blocking)
+│                              │
 │                              ▼
 │                         T3A (strategy interface + random + registry)
 │                              │
@@ -71,14 +75,15 @@ T0 (scaffold)
 |---------|-------|-------------|------|
 | **Fleet 1** | T0 | 1 agent | Must pass `npm install && npx tsc --noEmit` |
 | **Fleet 2** | T1A, T1B, T1C, T1D, T1E, T1F, T1G, T1H | 8 parallel | — |
-| **Fleet 3** | T1-VERIFY | 1 agent | All fixtures pass reference model; lint rules pass |
+| **Fleet 3** | T1-VERIFY → T1-CI | 2 sequential | All fixtures pass reference model; lint rules pass; CI skeleton green |
 | **Fleet 4** | T2A, T2B, T2C | 3 sequential* | `npx tsc --noEmit` after each |
 | **Fleet 5** | T2D, T2E | 2 sequential* | `npx tsc --noEmit` after each |
-| **Fleet 6** | T2-GATE, T2-REVIEW | 1+1 sequential | All fixture tests pass, review produces 0 regressions |
+| **Fleet 6** | T2-GATE | 1 agent | All fixture tests pass |
+| **Fleet 6bg** | T2-REVIEW | 1 agent (background) | Non-blocking; findings filed as issues |
 | **Fleet 7** | T3A, T3-TEST | 2 sequential | Strategy tests pass |
-| **Fleet 8** | T4A, T4B, T4-TEST | 3 sequential | Sim tests + 10K-game smoke pass |
+| **Fleet 8** | T4A, T4B, T4-TEST | 3 sequential | Sim tests + parameterized smoke (2/5/10 players) pass |
 | **Fleet 9** | T5A, T5B, T5C, T5-TEST | 4 sequential | CLI tests pass |
-| **Fleet 10** | T6-E2E, T6-CI, T6-REVIEW | 3 sequential | Full CI green, adversarial review produces 0 regressions |
+| **Fleet 10** | T6-E2E, T6-CI, T6-REVIEW | 3 sequential | Full CI green; E2E runs at 2/5/10 players; adversarial review produces 0 regressions |
 
 *Sequential within the fleet because of type dependencies, but dispatched as one fleet.
 
@@ -96,16 +101,19 @@ T0 (scaffold)
   - `.eslintrc.cjs` — base config (anti-cheat rules added in T1H)
   - Directory structure: `src/engine/`, `src/engine/strategies/`, `src/sim/`, `src/cli/`, `test/unit/`, `test/fixtures/`, `test/reference/`, `test/smoke/`, `test/invariant/`
   - Stub `src/engine/index.ts` (empty barrel) so TypeScript compiles
+  - Stub `src/cli/index.ts` with shebang (`#!/usr/bin/env node`) so CLI entrypoint exists
 - **Acceptance:**
   - `npm install` succeeds
   - `npx tsc --noEmit` succeeds
+  - `npm run build` succeeds and produces `dist/cli/index.js`
+  - `node dist/cli/index.js --help` runs without error (CLI entrypoint is executable via built output)
   - `npx vitest run` succeeds (0 tests, 0 failures)
   - `npx eslint .` succeeds
 - **Notes:**
   - Use `vitest` (not jest) — faster, native ESM, TypeScript-first
   - Use `commander` for CLI argument parsing
   - Pin dependency versions in package.json
-  - Add `bin` field pointing to `src/cli/index.ts` for `6nimmt` command
+  - Add `bin` field pointing to `dist/cli/index.js` (the built artifact, not raw TypeScript)
 
 ---
 
@@ -150,25 +158,33 @@ T0 (scaffold)
 - **Agent type:** `general-purpose`
 - **Inputs:** `spec/rules/6-nimmt.md` (placement rules 1–4), `spec/engine.md` §3.3 (placement logic)
 - **Creates:** `spec/fixtures/placement-scenarios.json`
-- **Requirements (≥20 scenarios):**
-  - **Basic placement (rule 1+2):** Card goes to row with closest lower tail
+- **Requirements (≥25 scenarios):**
+  - **Single-card placement (rule 1+2):** Card goes to row with closest lower tail
     - All 4 rows eligible — card goes to closest tail
     - Only 1 row eligible — card goes there
     - 2 rows eligible with different gaps
     - Card = tail + 1 (minimum gap)
     - Card much larger than all tails
-  - **Overflow (rule 3):** Row already has 5 cards
+  - **Single-card overflow (rule 3):** Row already has 5 cards
     - Single overflow in a turn
-    - Multiple overflows in the same turn (different players)
-    - Overflow changes board, affecting later placements in same turn
-  - **Must-pick-row (rule 4):** Card lower than all tails
+  - **Single-card must-pick-row (rule 4):** Card lower than all tails
     - Card lower than all 4 tails
-    - After row pick, subsequent card placements use modified board
+  - **Multi-play turn resolution (2 simultaneous plays):**
+    - Two cards placed, no interaction between them
+    - Two cards targeting the same row, lower card placed first
+    - One card overflows, second card's target row changes as a result
+  - **Multi-play turn resolution (5 simultaneous plays):**
+    - Five cards with mixed rule triggers (placement, overflow, must-pick-row)
+    - Five cards all targeting the same row (cascading overflows)
+  - **Multi-play turn resolution (10 simultaneous plays):**
+    - Full 10-player turn with complex interactions
+    - 10 cards where early placements affect later placement targets
+    - 10 cards including at least one overflow and one must-pick-row
   - **Edge cases:**
     - Board with rows of varying lengths (1, 2, 3, 4, 5 cards)
     - Card 1 (always triggers rule 4 unless it's a tail)
     - Card 104 (always has an eligible row)
-- **Schema per scenario:**
+- **Schema — single-card variant:**
   ```json
   {
     "id": "placement-basic-closest-tail",
@@ -178,18 +194,43 @@ T0 (scaffold)
     "expected": { "kind": "place", "rowIndex": 1, "causesOverflow": false }
   }
   ```
-- **Acceptance:** Each scenario hand-verified against rules. Include at least 3 from each category above.
+- **Schema — multi-play variant:**
+  ```json
+  {
+    "id": "turn-resolution-2-players-no-interaction",
+    "description": "Two cards placed on different rows, no interaction",
+    "board": { "rows": [[10], [20], [30], [40]] },
+    "plays": [
+      { "playerId": "p0", "card": 15 },
+      { "playerId": "p1", "card": 35 }
+    ],
+    "expected": {
+      "resolution": [
+        { "card": 15, "playerId": "p0", "placement": { "kind": "place", "rowIndex": 0, "causesOverflow": false } },
+        { "card": 35, "playerId": "p1", "placement": { "kind": "place", "rowIndex": 2, "causesOverflow": false } }
+      ],
+      "collected": {},
+      "boardAfter": { "rows": [[10, 15], [20], [30, 35], [40]] }
+    }
+  }
+  ```
+- **Acceptance:**
+  - Each scenario hand-verified against rules
+  - Include at least 3 single-card scenarios from each placement category
+  - Include at least 2 multi-play scenarios for each of the 2-, 5-, and 10-player counts
+  - Multi-play scenarios include `plays` array (sorted ascending by card for resolution), expected per-card placements, and `boardAfter`
 
 ### T1C — Golden Fixture: `overflow-scenarios.json`
 - **Agent type:** `general-purpose`
 - **Inputs:** `spec/rules/6-nimmt.md` (rule 3), `spec/engine.md` §3.3
 - **Creates:** `spec/fixtures/overflow-scenarios.json`
-- **Requirements (≥5 scenarios):**
+- **Requirements (≥7 scenarios):**
   - Row with exactly 5 cards, 6th card triggers collection
   - Multiple overflows in one turn
   - Overflow after a rule-4 row pick in same turn
   - Overflow that changes which row a subsequent card goes to
   - Verify collected cards = the 5 existing cards (not the triggering card)
+  - **10-player overflow cascade:** A turn with 10 simultaneous plays where multiple overflows occur in sequence, and later placements depend on board state modified by earlier overflows (e.g., overflow clears row A, a subsequent card that would have gone to row B now goes to row A instead)
 - **Schema per scenario:**
   ```json
   {
@@ -203,7 +244,9 @@ T0 (scaffold)
     }
   }
   ```
-- **Acceptance:** Each scenario's expected output is hand-derived from rules.
+- **Acceptance:**
+  - Each scenario's expected output is hand-derived from rules
+  - The 10-player cascade scenario must show at least 2 overflows where the second overflow's target row was changed by the first overflow
 
 ### T1D — Golden Fixture: `must-pick-row-scenarios.json`
 - **Agent type:** `general-purpose`
@@ -253,13 +296,16 @@ T0 (scaffold)
       { "id": "p1", "score": 20, "collected": [1, 2] }
     ],
     "expected": {
-      "scoresAfter": [{ "id": "p0", "score": 68 }, { "id": "p1", "score": 22 }],
+      "scoresAfter": [{ "id": "p0", "score": 66 }, { "id": "p1", "score": 22 }],
       "gameOver": true,
       "winners": ["p1"]
     }
   }
   ```
-- **Acceptance:** All cattle-heads sums manually verified. Game-over logic matches rules.
+  > **Arithmetic check:** cattleHeads(5)=2, cattleHeads(10)=3, cattleHeads(15)=1 → penalty=6 → 60+6=**66** (exact threshold).
+- **Acceptance:**
+  - All cattle-heads sums manually verified. Game-over logic matches rules.
+  - Every sample scenario must include hand-checked cattle-head arithmetic; score examples may not rely on card-number sums.
 
 ### T1F — Golden Fixture: `full-game-traces.json`
 - **Agent type:** `general-purpose`
@@ -267,7 +313,7 @@ T0 (scaffold)
 - **Creates:** `spec/fixtures/full-game-traces.json`
 - **Requirements (≥2 complete games):**
   - **Game 1:** 2 players, short game (few rounds) — minimum complexity, full trace
-  - **Game 2:** 4–5 players, multi-round game — exercises more interactions
+  - **Game 2:** **10 players**, multi-round game — exercises maximum player-count interactions, cascading overflows, and simultaneous must-pick-row events
   - Each game trace includes:
     - Seed used
     - Initial deck order (from seed)
@@ -306,8 +352,12 @@ T0 (scaffold)
     "winners": ["p1"]
   }
   ```
-- **Critical constraint:** The agent must play out each game step-by-step following the rules exactly. Every intermediate board state must be consistent with the previous state + the card placed. The trace must be a valid game under the rules — no shortcuts.
-- **Acceptance:** A separate verification pass (in T1-VERIFY) replays the trace against the reference model.
+- **Critical constraints:**
+  - The agent must play out each game step-by-step following the rules exactly. Every intermediate board state must be consistent with the previous state + the card placed. The trace must be a valid game under the rules — no shortcuts.
+  - **No rule violations in sample traces.** Every card placement must be legal: a placed card's value must be strictly greater than the tail of the row it targets (rule 1). E.g., card 12 cannot be placed after row tail 17 — that violates rule 1 (12 < 17). Sample schemas are illustrative; agents must produce correct values.
+- **Acceptance:**
+  - A separate verification pass (in T1-VERIFY) replays the trace against the reference model.
+  - Both sample traces must replay cleanly against the reference model — every intermediate state matches.
 
 ### T1G — Reference Model
 - **Agent type:** `general-purpose`
@@ -315,6 +365,7 @@ T0 (scaffold)
 - **Creates:**
   - `test/reference/reference-model.ts` — ~200 lines, deliberately naive implementation
   - `test/reference/index.ts` — barrel export
+  - `test/reference/prng-vectors.test.ts` — canonical PRNG known-answer tests
 - **Requirements:**
   - Hardcoded lookup table for `cattleHeads()` — all 104 values, no computation
   - `determinePlacement()` — iterate all 4 rows, find eligible ones (tail < card), pick closest
@@ -324,6 +375,15 @@ T0 (scaffold)
   - `isGameOver()` — any player score ≥ 66
   - `getWinners()` — player(s) with lowest total score
   - `dealRound()` — recollect all cards, shuffle with seed, deal 10/player + 4 to board
+- **Canonical PRNG known-answer test vectors:**
+  - **SHA-256 seed derivation:** For named seeds (e.g., `"test-seed-001"`, `"trace-seed-001"`), lock the derived 256-bit state bytes as hex literals
+  - **xoshiro256\*\* output sequence:** For each locked seed state, lock the first 20 output values as decimal literals
+  - **Fisher–Yates shuffled deck:** For each named seed, lock the full 104-card shuffled deck order
+  - These vectors are committed as assertions in `test/reference/prng-vectors.test.ts` — any PRNG implementation must reproduce them exactly
+- **Player-count verification:**
+  - Reference model must be verified at **2, 5, and 10 players**
+  - `dealRound()` verified: correct hand sizes (10 cards each), correct board (4 cards), correct deck remainder (104 − 10×N − 4 cards)
+  - `resolveTurn()` verified: correct simultaneous resolution for 2, 5, and 10 plays
 - **Style constraints:**
   - Flat imperative code, no abstractions, no classes
   - No imports from `src/` (completely independent)
@@ -333,6 +393,8 @@ T0 (scaffold)
 - **Acceptance:**
   - Compiles with `npx tsc --noEmit`
   - Self-test: reference model can play a complete game to termination
+  - PRNG known-answer test vectors pass (determinism is insufficient — must match locked oracle values)
+  - Player-count tests pass for 2, 5, and 10 players
 
 ### T1H — Anti-Cheat ESLint Rules
 - **Agent type:** `general-purpose`
@@ -340,14 +402,21 @@ T0 (scaffold)
 - **Creates:**
   - `.eslintrc.cjs` update (or `eslint.config.js` if using flat config)
   - Custom ESLint rule or config restricting `src/engine/**`:
-    - No imports of `fs`, `path`, `child_process`, `process.env`, `http`, `https`, `net`
+    - **Comprehensive I/O ban:** No imports of `fs`, `path`, `child_process`, `http`, `https`, `net`, `dgram`, `dns`, `tls`, `cluster`, `worker_threads`, `os`, or any other I/O, networking, subprocess, or environment-probing module
+    - **`node:` prefix coverage:** Ban both bare (`fs`) and prefixed (`node:fs`) import forms for all banned modules
+    - **`process.env` ban:** No direct `process.env` access (including `process.env.NODE_ENV`, `process.env.TEST`, etc.)
     - No string literals matching fixture file names (`cattle-heads`, `placement-scenarios`, etc.)
     - No references to test framework APIs (`describe`, `it`, `test`, `expect`, `jest`, `vitest`)
-    - No `NODE_ENV` or `process.env.TEST` conditionals
+  - **Dependency-boundary rules** (non-blocking improvement):
+    - `src/engine/**` cannot import from `src/sim/**` or `src/cli/**`
+    - Enforced via `no-restricted-imports` or equivalent pattern-based rule
 - **Acceptance:**
   - `npx eslint src/engine/` passes on clean engine stubs
   - Creating a test file in `src/engine/` that imports `fs` fails lint
+  - Creating a file that imports `node:fs` in `src/engine/` fails lint
   - Creating a file referencing `describe` in `src/engine/` fails lint
+  - Creating a file with `process.env.FOO` in `src/engine/` fails lint
+  - Creating a file in `src/engine/` that imports from `src/sim/` or `src/cli/` fails lint
 
 ### T1-VERIFY — Harness Verification Gate
 - **Agent type:** `general-purpose`
@@ -359,12 +428,36 @@ T0 (scaffold)
   3. Create `test/fixtures/trace-replay.test.ts` — replays full-game-traces.json against reference model, asserts every intermediate state matches
   4. Run all fixture tests: `npx vitest run test/fixtures/`
   5. Run lint: `npx eslint .`
+- **Player-count coverage assertions:**
+  - Placement fixtures include 2-, 5-, and 10-simultaneous-play scenarios
+  - Overflow fixtures include a 10-player cascading-overflow scenario
+  - Full game traces include a 2-player game and a 10-player game
+- **Runtime-sandbox verification:**
+  - Fixture and trace tests must run with filesystem and network access blocked (Layer 6 sandbox)
+  - Verify that test execution cannot read arbitrary files or make network requests
 - **Acceptance:**
   - All fixture tests pass against the reference model
   - Full game traces replay correctly (every intermediate state matches)
   - Lint passes
   - No circular dependencies between test/ and src/
+  - Player-count coverage: all required scenario counts verified present
+  - Runtime sandbox: fixture tests confirmed isolated from filesystem and network
+- **Freeze rule:** After T1-VERIFY passes, later tasks may **NOT** modify `spec/fixtures/**`, `test/reference/**`, or anti-cheat ESLint config except via an explicit harness-plan amendment. This protects the trust boundary established by this gate.
 - **This is the critical trust gate.** If fixtures and reference model disagree, the harness is broken. Fix before proceeding.
+
+### T1-CI — Early CI Skeleton + Harness Freeze
+- **Agent type:** `general-purpose`
+- **Depends on:** T1-VERIFY
+- **Creates:** `.github/workflows/ci.yml` (skeleton CI pipeline)
+- **Requirements:**
+  - Initial CI pipeline stages: `npm ci` → `npx tsc --noEmit` → `npx eslint .` → `npx vitest run test/fixtures/` → `npx vitest run test/reference/`
+  - **Path protection:** CI fails if `spec/fixtures/**`, `test/reference/**`, or `.eslintrc*` / `eslint.config.*` are modified by non-harness tasks. Implemented via a CI step that checks changed files against a protected-paths list and fails the job if protected files are touched without an explicit `harness-amendment` label or commit trailer.
+  - **Runtime sandbox:** Fixture tests run with filesystem and network access blocked (e.g., `--no-file-system-access` flag, Node.js policy file, or equivalent isolation mechanism)
+  - Pipeline runs on push to `main` and on all pull requests
+- **Acceptance:**
+  - CI runs green on current branch
+  - Modifying a fixture file in a PR triggers CI failure (path protection works)
+  - Fixture tests cannot access filesystem or network (sandbox enforced)
 
 ---
 
@@ -379,13 +472,14 @@ T0 (scaffold)
 - **Inputs:** `spec/engine.md` §1.1, §1.4–1.7, §2.2
 - **Creates:**
   - `src/engine/types.ts` — `CardNumber`, `Row`, `Board`, `PlayerState`, `GameState`, `GamePhase`, `PendingTurnResolution`, `CardChoiceState`, `RowChoiceState`, `PlayCardMove`, `PickRowMove`, `Move`, `TurnResolutionResult`, `PlacementResult`
-  - `src/engine/card.ts` — `cattleHeads()`, `createFullDeck()`, `isValidCardNumber()`
+  - `src/engine/card.ts` — `cattleHeads()`, `createDeck(seed)`, `isValidCardNumber()`
   - `src/engine/prng.ts` — xoshiro256** implementation, SHA-256 seed derivation, Fisher-Yates shuffle
 - **Acceptance:**
   - `npx tsc --noEmit` passes
   - `cattleHeads()` fixture test passes (test/fixtures/cattle-heads.test.ts)
   - PRNG is deterministic: same seed → same output sequence
-  - Deck generation: `createFullDeck()` returns shuffled 104 cards, all unique
+  - Deck generation: `createDeck(seed)` returns shuffled 104 cards, all unique
+  - `createDeck(seed)` and `prng.ts` pass the canonical SHA-256, xoshiro256**, and Fisher–Yates known-answer vectors from T1G
 
 ### T2B — Row Module
 - **Agent type:** `general-purpose`
@@ -405,9 +499,10 @@ T0 (scaffold)
   - `src/engine/board.ts` — `determinePlacement()`, `placeCard()`, `collectRow()`
 - **Acceptance:**
   - `npx tsc --noEmit` passes
-  - Placement fixture tests pass (test/fixtures/placement-scenarios)
+  - Single-card placement fixture tests pass (test/fixtures/placement-scenarios)
   - Overflow fixture tests pass (test/fixtures/overflow-scenarios)
   - Must-pick-row fixture tests pass (test/fixtures/must-pick-row-scenarios)
+  - Scope limited to single-card board logic only; simultaneous-play / player-count placement behavior is validated in T2D and T2-GATE
 
 ### T2D — Game Lifecycle
 - **Agent type:** `general-purpose`
@@ -417,6 +512,22 @@ T0 (scaffold)
   - `src/engine/game.ts` — `createGame()`, `dealRound()`, `resolveTurn()`, `applyRowPick()`, `scoreRound()`, `isGameOver()`
 - **Acceptance:**
   - `npx tsc --noEmit` passes
+  - **Initial contract:** `createGame()` returns `round=1`, `turn=0`, `phase="round-over"`, full 104-card deck, empty board, empty hands, empty collected piles, all scores 0
+  - **Precondition tests:**
+    - `createGame()` rejects player counts outside 2–10
+    - `createGame()` rejects duplicate player IDs
+    - `createGame()` rejects empty seed
+    - `resolveTurn()` requires exactly one card per player
+    - Each played card must be in that player's hand
+    - `scoreRound()` throws unless `turn === 10`
+    - Wrong-phase calls throw for `dealRound()`, `resolveTurn()`, `applyRowPick()`, `scoreRound()`
+  - **Round-boundary tests:** `dealRound()` reclaims board + hands + collected → full 104-card deck before shuffle/deal
+  - **Player-count deck-size assertions:** 2 players = 80 remaining, 10 players = 0 remaining, formula `100 - 10 × playerCount`
+  - **`dealRound()` post-conditions:** resets collected, sets `turn=1`, phase → `"awaiting-cards"`
+  - **Turn-10 post-condition:** after turn 10 resolution, phase → `"round-over"`
+  - **`scoreRound()` semantics:** does NOT clear `collected`; `isGameOver()` checked only after scoring; `applyRowPick()` always returns `{ kind: "completed" }`
+  - **Simultaneous-play resolution:** acceptance tests for 2, 5, and 10 simultaneous plays in `resolveTurn()`
+  - **Stress scenario:** 10-player cascade/overflow-heavy turn acceptance
   - Round-scoring fixture tests pass
   - Full game trace fixture tests pass (the critical test — replays entire games)
   - All phase transition preconditions validated (throws on wrong phase)
@@ -432,26 +543,42 @@ T0 (scaffold)
   - `npx tsc --noEmit` passes
   - Visible state projections contain only public information (no hands of other players, no deck)
   - `toRowChoiceState()` includes `triggeringCard`, `revealedThisTurn`, `resolutionIndex`
+  - **Negative tests:** `toCardChoiceState()` throws for non-existent `playerId`; `toRowChoiceState()` throws unless phase is `"awaiting-row-pick"` AND `playerId` matches pending row-pick player
+  - *(Non-blocking)* Assert every required `CardChoiceState` and `RowChoiceState` field explicitly
+  - *(Non-blocking)* Resolve barrel/export sequencing — either move `strategy.ts` into Phase 2 or defer barrel update to Phase 3
 
 ### T2-GATE — Engine Verification Gate
 - **Agent type:** `task`
 - **Depends on:** T2E
 - **Actions:**
   1. `npx vitest run test/fixtures/` — all fixture tests pass
-  2. Create and run `test/invariant/invariants.test.ts` — run 100 random games, check all invariants after every state transition (total cards = 104, unique cards, row lengths 1–5, strictly increasing row values, etc.)
-  3. Create and run `test/invariant/metamorphic.test.ts` — player rename, input order independence, seed determinism, serialisation round-trip
-  4. Create and run `test/invariant/differential.test.ts` — generate 1000 random game states, run both reference model and engine, assert identical outputs
-  5. `npx eslint src/engine/` — anti-cheat lint passes
+  2. Create and run `test/invariant/invariants.test.ts` — run 100 random games at **2, 3, 5, 7, and 10** players, check the following invariants after every state transition:
+     - total cards = 104
+     - all cards unique (no duplicates across deck + board + hands + collected)
+     - exactly 4 rows on the board
+     - each row length 1–5
+     - rows strictly increasing by tail card value
+     - player count 2–10
+     - hand-size formula correct (`10 - (turn - 1)` during play)
+     - deck-size formula correct (`100 - 10 × playerCount` after deal, minus cards played)
+     - non-negative and monotonically non-decreasing scores
+     - unique player IDs
+     - rule-4 (must-pick-row) triggers at most once per turn and only for the lowest card
+     - same-seed replay is byte-identical
+  3. Create and run `test/invariant/metamorphic.test.ts` — player rename, input order independence, seed determinism, serialisation round-trip; additionally: different seed ⇒ different game
+  4. Create and run `test/invariant/immutability.test.ts` — engine operations return new state without mutating inputs
+  5. Create and run `test/invariant/differential.test.ts` — generate 1000 random game states, run both reference model and engine, assert identical outputs
+  6. `npx eslint src/engine/` — anti-cheat lint passes
 - **Acceptance:** All tests pass. Zero fixture failures. Zero invariant violations. Zero differential mismatches.
 
-### T2-REVIEW — Adversarial Engine Review
-- **Agent type:** `code-review` (followed by `rubber-duck`)
+### T2-REVIEW — Adversarial Engine Review *(optional checkpoint)*
+- **Agent type:** `code-review`
 - **Depends on:** T2-GATE
+- **Does NOT block T3A** — T2-GATE feeds directly into T3A.
 - **Actions:**
-  1. Code review agent reads spec + implementation (not tests), produces concrete failing test cases for any discrepancy
-  2. Rubber-duck agent reviews the test cases for correctness
-  3. Any valid failing tests → implementation must be fixed before proceeding
-- **Acceptance:** All adversarial test cases either pass or are proven incorrect.
+  1. Code review agent reads spec + implementation (not tests), flags potential discrepancies
+  2. Any issues found are logged for later resolution; this is NOT the formal adversarial harness review
+- **Note:** The authoritative adversarial review is T6-REVIEW, which runs after CI is green and must only emit failing tests. T2-REVIEW is a lightweight sanity check and may be skipped without blocking progress.
 
 ---
 
@@ -468,12 +595,18 @@ T0 (scaffold)
 - **Requirements:**
   - `RandomStrategy.chooseCard()` uses seeded `rng` from `onGameStart()`, not `Math.random()`
   - `RandomStrategy.chooseRow()` picks row with fewest cattle heads (deterministic tiebreak: lowest row index)
-  - Registry is a `ReadonlyMap<string, () => Strategy>` for factory pattern
+  - Registry is a `ReadonlyMap<string, (params?: Record<string, unknown>) => Strategy>` for parameterized factory pattern; `SimConfig.players[].params` is passed through unchanged to the factory function
+  - Each strategy instance receives an **independent PRNG stream** derived from `gameSeed + playerId` via `onGameStart()`
   - Illegal strategy output handling per spec: forfeit to lowest card / fewest-heads row
 - **Acceptance:**
   - `npx tsc --noEmit` passes
   - Random strategy produces valid moves for any legal game state (fuzz with 1000 random states)
   - Same seed → same strategy decisions
+  - `Strategy` interface shape is exactly:
+    - `onGameStart({ playerId, playerCount, rng })`
+    - `onTurnResolved(resolution)`
+    - `onRoundEnd(scores)`
+  - `TurnResolution` shape contains at least: `turn`, `plays`, `rowPickups`, `boardAfter`
 
 ### T3-TEST — Strategy Validation
 - **Agent type:** `task`
@@ -484,7 +617,10 @@ T0 (scaffold)
   3. Test: chooseRow always returns 0–3
   4. Test: deterministic with same seed
   5. Test: illegal output handling (mock strategy that returns invalid cards)
-  6. Run: `npx vitest run test/unit/strategies/`
+  6. Test: invalid row fallback — mock strategy returning out-of-range row index falls back to fewest-heads row
+  7. Test: thrown `chooseCard()` — strategy that throws is forfeited to lowest card
+  8. Test: thrown `chooseRow()` — strategy that throws is forfeited to fewest-heads row
+  9. Run: `npx vitest run test/unit/strategies/`
 - **Acceptance:** All tests pass.
 
 ---
@@ -500,13 +636,19 @@ T0 (scaffold)
   - `src/sim/runner.ts` — `GameRunner.runGame(config: SimConfig): GameResult`
 - **Requirements:**
   - Follows the loop in simulator spec §4 exactly
-  - Calls strategy lifecycle hooks (`onGameStart`, `onTurnResolved`, `onRoundEnd`) at correct times
-  - Handles strategy errors gracefully (forfeit, not crash)
+  - Instantiates strategies through the **parameterized registry**: passes each player's `SimConfig.players[].params` into the factory function
+  - Calls `onGameStart({ playerId, playerCount, rng })` with a **per-player derived RNG** (from `gameSeed + playerId`) once per game (not once per round)
+  - Calls `onTurnResolved(resolution)` and `onRoundEnd(scores)` at correct times
+  - Strategy errors (thrown or illegal output) are **logged** and result in forfeit, not crash
   - Returns complete `GameResult` with seed, rounds count, player results with rankings
 - **Acceptance:**
   - A seeded game produces identical `GameResult` on repeated runs
   - Game terminates (no infinite loops)
   - Rankings are correct (lowest score = rank 1)
+  - Player-count acceptance: validated at **2, 5, and 10** players
+    - 2-player: game terminates within a reasonable number of rounds
+    - 10-player: deck remainder = 0 cards dealt per round start (104 − 10 × 10 hand − 4 rows = 0)
+  - `onGameStart()` fires exactly once per game, not once per round
 
 ### T4B — BatchRunner + Statistics
 - **Agent type:** `general-purpose`
@@ -525,6 +667,8 @@ T0 (scaffold)
   - Batch of 100 games completes without error
   - Same batch seed → identical `BatchResult`
   - Statistics are mathematically correct (spot-check a few games manually)
+  - Batch execution and aggregation spot-checked across **2, 5, and 10** player configs
+  - `BatchResult` and `StrategyStats` fields verified field-by-field: `wins`, `losses`, `avgScore`, `medianScore`, `minScore`, `maxScore`, `stddevScore`, `winRate`
 
 ### T4-TEST — Simulator Integration + Statistical Smoke Tests
 - **Agent type:** `task`
@@ -532,13 +676,20 @@ T0 (scaffold)
 - **Actions:**
   1. Create `test/unit/sim/runner.test.ts` — seeded replay test, lifecycle hook invocation order
   2. Create `test/unit/sim/batch.test.ts` — batch determinism, aggregation correctness
-  3. Create `test/smoke/statistical.test.ts` — 10,000 games with 5 random players:
+  3. Create `test/smoke/statistical.test.ts` — parameterized across **2, 5, and 10** players (10,000 games each):
      - All games terminate
      - Average game length 1–10 rounds
      - No negative scores
      - Winner exists in every game
      - Win rate per seat roughly equal (χ² test, p > 0.01)
-  4. Run: `npx vitest run test/unit/sim/ test/smoke/`
+     - Deck remainder after deal = `104 − 10 × playerCount − 4` cards:
+       - 2-player: remainder = 80
+       - 5-player: remainder = 50
+       - 10-player: remainder = 0 (heavy overflow / row-pick behavior expected)
+     - Mean score per round per player within outlier bounds (e.g., between 1 and 15 cattle heads)
+  4. Create `test/unit/sim/information-hiding.test.ts`:
+     - `chooseCard()` runs before card reveal; strategy never sees same-turn opponent card choices
+  5. Run: `npx vitest run test/unit/sim/ test/smoke/`
 - **Acceptance:** All tests pass. Statistical smoke tests within bounds.
 
 ---
@@ -554,13 +705,21 @@ T0 (scaffold)
   - Shebang line for `npx 6nimmt` execution
 - **Requirements:**
   - Three subcommands: `simulate`, `strategies`, `play`
-  - Global `--format` option (table/json/csv, default: table)
+  - Global `--format` / `-f` option (table/json/csv, default: table)
+  - Short aliases for all flags: `-s` (strategies), `-n` (games), `-S` (seed), `-f` (format), `-v` (verbose)
   - Exit codes per spec: 0 success, 1 invalid args, 2 runtime error
-  - Structured JSON errors when `--format json`
+  - Structured-error contract when `--format json` — every CLI error is a JSON object with a `code` field. Defined error codes:
+    - `INVALID_STRATEGY` — unknown strategy name (include `validValues` + "did you mean?" suggestion)
+    - `INVALID_PLAYER_COUNT` — not in 2–10 range (include `validValues`)
+    - `INVALID_SEED` — seed string fails validation
+    - `INVALID_FORMAT` — format not in table/json/csv (include `validValues`)
+    - `ENGINE_ERROR` — unexpected engine/runtime failure (include original error message)
+  - Each structured error includes `validValues` where applicable and enough context for AI-assisted self-correction
+  - Commander wiring must be explicit: each subcommand registered via `.command()`, help text verified in acceptance
 - **Acceptance:**
-  - `npx 6nimmt --help` shows all commands
-  - `npx 6nimmt simulate --help` shows all options
-  - Invalid arguments produce correct exit code and error message
+  - `npx 6nimmt --help` shows all commands and short aliases
+  - `npx 6nimmt simulate --help` shows all options with short aliases (`-s`, `-n`, `-S`, `-f`, `-v`)
+  - Invalid arguments produce correct exit code, structured JSON error (when `--format json`), and human-readable message (otherwise)
 
 ### T5B — Output Formatters
 - **Agent type:** `general-purpose`
@@ -580,32 +739,41 @@ T0 (scaffold)
 - **Depends on:** T5A, T5B
 - **Inputs:** `spec/cli.md` §2
 - **Creates:**
-  - `src/cli/commands/simulate.ts` — `--strategies`, `--games`, `--seed`, `--format`, `--verbose`, `--dry-run`
+  - `src/cli/commands/simulate.ts` — `--strategies` / `-s`, `--games` / `-n`, `--seed` / `-S`, `--format` / `-f`, `--verbose` / `-v`, `--dry-run`
   - `src/cli/commands/strategies.ts` — list registered strategies
   - `src/cli/commands/play.ts` — single game with turn-by-turn output
 - **Requirements:**
   - `--strategies` accepts both comma-separated and JSON array format
+  - `simulate --games` defaults to **100** when omitted
   - `--dry-run` validates args and outputs resolved config without running
   - Strategy name validation with "did you mean?" suggestions
   - Player count validation (2–10)
   - `play` command outputs complete game log per spec JSON schema
+  - All five structured error codes (`INVALID_STRATEGY`, `INVALID_PLAYER_COUNT`, `INVALID_SEED`, `INVALID_FORMAT`, `ENGINE_ERROR`) are validated and serialized through the formatter pipeline
+  - Each error includes `validValues` where applicable and AI-self-correction context
 - **Acceptance:**
   - `npx 6nimmt simulate --strategies random,random,random,random --games 10 --seed test --format json` produces valid output
-  - `npx 6nimmt strategies --format json` lists all strategies
+  - `npx 6nimmt strategies --format json` lists all strategies with a `usage` block containing:
+    - `simulateExample` — a runnable command string
+    - `playerCountRange: { min: 2, max: 10 }`
+    - `strategyNamesCaseSensitive: true`
   - `npx 6nimmt play --strategies random,random --seed test --format json` outputs full game trace
-  - `npx 6nimmt simulate --strategies nonexistent` produces `INVALID_STRATEGY` error with suggestions
+  - `npx 6nimmt simulate --strategies nonexistent` produces `INVALID_STRATEGY` error with suggestions and `validValues`
 
 ### T5-TEST — CLI Tests
 - **Agent type:** `task`
 - **Depends on:** T5C
 - **Actions:**
   1. Create `test/unit/cli/simulate.test.ts` — argument parsing, dry-run, output format
-  2. Create `test/unit/cli/strategies.test.ts` — list output
+  2. Create `test/unit/cli/strategies.test.ts` — list output, full JSON schema including `usage.*`
   3. Create `test/unit/cli/play.test.ts` — full game output schema validation
-  4. Create `test/unit/cli/errors.test.ts` — error codes, structured errors, "did you mean?"
-  5. Snapshot tests for table/json/csv output formats
-  6. Run: `npx vitest run test/unit/cli/`
-- **Acceptance:** All tests pass. Output schemas match spec.
+  4. Create `test/unit/cli/errors.test.ts` — all five structured error codes (`INVALID_STRATEGY`, `INVALID_PLAYER_COUNT`, `INVALID_SEED`, `INVALID_FORMAT`, `ENGINE_ERROR`), "did you mean?" suggestions, `validValues` presence
+  5. Create `test/unit/cli/aliases.test.ts` — short aliases (`-s`, `-n`, `-S`, `-f`, `-v`) produce identical results to long flags
+  6. Create `test/unit/cli/defaults.test.ts` — omitted `--games` defaults to 100
+  7. Create `test/unit/cli/output-routing.test.ts` — JSON errors route to stdout when `--format json`, human-readable errors route to stderr otherwise
+  8. Snapshot tests for table/json/csv output formats
+  9. Run: `npx vitest run test/unit/cli/`
+- **Acceptance:** All tests pass. Output schemas match spec. All five error codes covered. Short aliases verified.
 
 ---
 
@@ -615,21 +783,23 @@ T0 (scaffold)
 - **Agent type:** `general-purpose`
 - **Depends on:** T5-TEST
 - **Creates:**
-  - `test/e2e/cli-e2e.test.ts` — run actual CLI commands as subprocesses, validate output
+  - `test/e2e/cli-e2e.test.ts` — run actual CLI commands against the **built executable artifact** (`dist/cli/index.js` or `npx 6nimmt`), not `src/cli/index.ts`
 - **Tests:**
   - Full simulate pipeline: CLI → BatchRunner → GameRunner → Engine → output
   - Seeded replay: run same command twice, assert identical output
   - All format variations (json, table, csv)
   - Error scenarios (invalid strategies, bad player count)
+  - Explicit player-count variations: **2 players**, **5 players**, and **10 players**
   - Performance: 1000 games completes within 30 seconds
-- **Acceptance:** All E2E tests pass.
+- **Acceptance:** All E2E tests pass against the built artifact.
 
-### T6-CI — CI Pipeline
+### T6-CI — CI Expansion
 - **Agent type:** `general-purpose`
 - **Depends on:** T6-E2E
-- **Creates:**
-  - `.github/workflows/ci.yml` — GitHub Actions workflow
-- **CI steps (in order):**
+- **Note:** This task **extends** the CI skeleton created by T1-CI in Phase 1 — it does not create `.github/workflows/ci.yml` from scratch.
+- **Modifies:**
+  - `.github/workflows/ci.yml` — expand existing workflow with full pipeline steps
+- **CI steps (in order, additive to T1-CI skeleton):**
   1. Install dependencies
   2. TypeScript compilation (`npx tsc --noEmit`)
   3. ESLint (including anti-cheat rules)
@@ -640,17 +810,26 @@ T0 (scaffold)
   8. Run holdout fixture tests
   9. Statistical smoke tests (`npx vitest run test/smoke/`)
   10. E2E tests (`npx vitest run test/e2e/`)
-- **Acceptance:** CI runs green on current branch.
+- **CI enforcement:**
+  - Fixture and holdout tests run in a **runtime sandbox** (no filesystem or network access beyond test inputs)
+  - Frozen harness artifacts — `spec/fixtures/**`, `test/reference/**`, `.eslintrc*` are treated as immutable; CI fails if these are modified after Phase 1
+  - Parameterized suites execute at **2/3/5/7/10** player counts (unit/invariant) and **2/5/10** player counts (E2E)
+- **Acceptance:** CI runs green on current branch. Sandbox enforcement verified. Player-count matrix passes.
 
 ### T6-REVIEW — Final Adversarial Review
 - **Agent type:** `code-review`
 - **Depends on:** T6-CI
+- **Constraints (harness-compliant review):**
+  - Review agent uses a **different prompt/model** than the implementation agents
+  - Review agent reads **spec + implementation** but **NOT existing tests**
+  - Review agent **cannot modify existing code** — it may only emit **new test files**
+  - Review agent does **NOT fix code** — it only produces concrete failing test cases
 - **Actions:**
-  1. Full code review of `src/` against `spec/`
-  2. Produce concrete failing test cases for any discrepancy
-  3. Run the new test cases
-  4. Fix any failures found
-- **Acceptance:** All adversarial test cases pass. CI remains green.
+  1. Read `spec/` and `src/` (excluding `test/`)
+  2. Produce new test files exposing any spec-vs-implementation discrepancies
+  3. Run the new test files against the unchanged implementation
+  4. Report pass/fail results — failures indicate implementation bugs to be fixed in a separate task
+- **Acceptance:** All emitted adversarial test cases are valid (they compile and run). Any failures are logged as issues for follow-up, not fixed in-place. CI remains green on existing tests.
 
 ---
 
@@ -658,16 +837,18 @@ T0 (scaffold)
 
 | Metric | Count |
 |--------|-------|
-| Total tasks | 25 |
+| Total tasks | 26 |
 | Fleet dispatches | 10 |
 | Max parallelism (Fleet 2) | 8 agents |
-| Verification gates | 4 (T1-VERIFY, T2-GATE, T4-TEST, T6-CI) |
+| Verification gates | 5 (T1-CI, T1-VERIFY, T2-GATE, T4-TEST, T6-CI) |
 | Review checkpoints | 2 (T2-REVIEW, T6-REVIEW) |
 
 ### Milestone Definition: ✅ Engine + Simulation CLI E2E
 
 The milestone is achieved when:
-- `npx 6nimmt simulate --strategies random,random,random,random,random --games 1000 --seed benchmark --format json` produces correct, deterministic output
+- `npx 6nimmt simulate --strategies random,random --games 100 --seed bench2 --format json` produces correct, deterministic output (2 players)
+- `npx 6nimmt simulate --strategies random,random,random,random,random --games 1000 --seed benchmark --format json` produces correct, deterministic output (5 players)
+- `npx 6nimmt simulate --strategies random,random,random,random,random,random,random,random,random,random --games 100 --seed bench10 --format json` produces correct, deterministic output (10 players)
 - `npx 6nimmt play --strategies random,random --seed demo --format json` outputs a complete, rule-correct game trace
 - `npx 6nimmt strategies` lists available strategies
 - All 7 verification layers pass in CI
