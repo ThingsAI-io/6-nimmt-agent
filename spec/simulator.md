@@ -122,3 +122,15 @@ When multiple players share a strategy name, their results are pooled:
 - `avgScore`, `medianScore`, `minScore`, `maxScore`, and `scoreStdDev` are computed over all player-game final scores for that strategy.
 
 **Example:** with `--strategies bayesian,random,random,random,random` and 1000 games, the `random` strategy has 4000 player-game data points.
+
+---
+
+## 8. Player Count Considerations
+
+The simulator must work correctly for **all valid player counts (2–10)**. Key differences across the range:
+
+- **2 players:** Long games (few penalties per round), low overflow frequency, large deck remainder (80 cards unused per round). Tests must verify the game still terminates in reasonable time.
+- **10 players:** Short games (many penalties per round), frequent overflow cascades, zero deck remainder. Tests must verify `dealRound()` handles the fully-exhausted deck correctly.
+- **Mid-range (3–9):** Varying dynamics; no special handling needed, but should be covered by parameterized testing.
+
+Integration and smoke tests should run at minimum **2, 5, and 10** player configurations to cover the extremes and a midpoint. See [Harness](harness.md) Layer 5 for statistical checks per player count.
