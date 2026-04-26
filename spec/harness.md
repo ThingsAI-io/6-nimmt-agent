@@ -27,9 +27,9 @@ This document specifies a multi-layered verification harness designed to make it
 | Fixture | Content |
 |---------|---------|
 | `cattle-heads.json` | All 104 cards with their correct cattle head values |
-| `placement-scenarios.json` | ~20 board states + card → expected placement result. Must include: closest-tail selection, all 4 rows eligible, only 1 row eligible |
-| `overflow-scenarios.json` | Scenarios where the 6th card triggers row collection. Must include: multiple overflows in one turn, overflow after a rule-4 row pick in same turn |
-| `must-pick-row-scenarios.json` | Scenarios where a card is lower than all row tails. Must include: choosing 1-card row, choosing 5-card row, board state changes affecting later placements in same turn |
+| `placement-scenarios.json` | ~20 board states + card → expected placement result. Must include: closest-tail selection, all 4 rows eligible, only 1 row eligible. Must cover turn resolutions with **2, 5, and 10 simultaneous card plays** to exercise different interaction densities. |
+| `overflow-scenarios.json` | Scenarios where the 6th card triggers row collection. Must include: multiple overflows in one turn, overflow after a rule-4 row pick in same turn. Must include a **10-player turn** where many overflows cascade. |
+| `must-pick-row-scenarios.json` | Scenarios where a card is lower than all row tails. Must include: choosing 1-card row, choosing 5-card row, board state changes affecting later placements in same turn. |
 | `round-scoring-scenarios.json` | End-of-round scoring, game-over threshold (exact 66, all players ≥66, ties) |
 | `full-game-traces.json` | 2–3 complete games played out move-by-move with every intermediate state |
 
@@ -79,7 +79,7 @@ This document specifies a multi-layered verification harness designed to make it
 
 **What:** Tests that verify structural properties and behavioural symmetries, not specific outputs.
 
-**Invariant tests** (must hold after every engine operation):
+**Invariant tests** (must hold after every engine operation, tested at **all valid player counts 2–10**):
 - Total cards across all locations (board + hands + collected + deck) = 104
 - All card numbers are unique across all locations (no duplicates)
 - Board has **exactly 4 rows**
@@ -91,6 +91,8 @@ This document specifies a multi-layered verification harness designed to make it
 - Sum of cattleHeads for all 104 cards = 171
 - A seeded game produces byte-identical results on replay
 - Rule 4 (must-pick-row) triggers at most **once per turn**, and only for the lowest card
+
+Invariant tests must be parameterized and run for at minimum: **2, 3, 5, 7, 10** players.
 
 **Metamorphic tests** (relational properties):
 - **Player rename:** Renaming all player IDs should produce structurally identical game traces (only IDs change).
@@ -104,13 +106,25 @@ This document specifies a multi-layered verification harness designed to make it
 
 **What:** Run large batches of games and verify aggregate properties.
 
-**Checks (10,000 games, 5 random players, various seeds):**
+**Checks (10,000 games per configuration, various seeds):**
+
+Player-count configurations to test (minimum):
+- **2 players** — minimum, 80-card deck remainder, fewest interactions per turn
+- **5 players** — mid-range, 50-card deck remainder
+- **10 players** — maximum, deck fully exhausted (0 remainder), maximum interactions per turn
+
+All checks must pass for **every** player-count configuration:
 - All games terminate (no infinite loops; hard timeout at 1000 rounds)
-- Average game length is 1–10 rounds (sanity bounds)
+- Average game length is within reasonable bounds per player count (more players → shorter games due to more penalties per round)
 - No player finishes with a negative score
 - Every game has exactly one or more winners (the player(s) with the lowest total score). Note: it is valid for ALL players to have ≥66; the winner is still the one with the fewest cattle heads.
 - Win rate per seat index is roughly equal (χ² test, p > 0.01 — no seat bias with random strategy)
 - Mean score per round per player falls within reasonable bounds (no games with zero penalties or extreme outliers)
+
+**Player-count-specific checks:**
+- 10 players: deck has exactly 0 cards after deal (10×10 + 4 = 104)
+- 2 players: deck has exactly 80 cards after deal (2×10 + 4 = 24)
+- All player counts: deck size after deal = 100 − 10 × playerCount
 
 **Why it works:** These catch crashes, infinite loops, and gross logical errors. They are **not** evidence of rule correctness — treat them as robustness checks only.
 

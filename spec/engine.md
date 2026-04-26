@@ -238,6 +238,16 @@ The following must hold at all times:
 - All `PlayerState.id` values must be unique within a game.
 - **Rule 4 (must-pick-row) can trigger at most once per turn**, and only for the lowest-valued card in that turn. Once that card becomes a row tail, all subsequent cards (which have higher values) will always find at least one eligible row.
 
+**Player count affects game dynamics significantly.** All engine functions must work correctly across the full 2–10 range. Key differences:
+
+| Players | Cards dealt | Deck remainder | Cards resolved per turn | Overflow likelihood |
+|---------|------------|----------------|------------------------|---------------------|
+| 2       | 24         | 80             | 2                      | Low — rows fill slowly |
+| 5       | 54         | 50             | 5                      | Moderate |
+| 10      | 104        | 0              | 10                     | High — rows fill quickly, cascading overflows likely |
+
+All testing must cover at minimum **2, 5, and 10** player configurations.
+
 ### 2.4 Tie-Breaking
 
 If multiple players share the lowest score at game end, they all win (shared victory). The [CLI](cli.md) reports all winners.
