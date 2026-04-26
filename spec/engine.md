@@ -193,7 +193,7 @@ type Move = PlayCardMove | PickRowMove;
 1. `dealRound()` first returns all cards (board, hands, collected) to the deck to form the full 104-card deck, then shuffles using the seed-derived PRNG, deals 10 cards per player, and places 4 cards on the board. Resets `collected` to empty for all players. Resets `turn` to 1, `phase` to `"awaiting-cards"`. Note: with 10 players, the deck is fully exhausted after dealing (10×10 + 4 = 104).
 2. Turns 1–10 proceed (card selection → resolution).
 3. After turn 10, `phase` becomes `"round-over"`.
-4. `scoreRound()` adds each player's `sum(cattleHeads(collected))` to their cumulative `score`, then clears `collected`.
+4. `scoreRound()` adds each player's `sum(cattleHeads(collected))` to their cumulative `score`. **Does not clear `collected`** — cards remain in the collected pile until `dealRound()` reclaims them. This preserves the "total cards = 104" invariant between rounds.
 5. `isGameOver()` is checked **only after scoring a round** — never mid-round. If any player's `score ≥ 66`, phase becomes `"game-over"`.
 6. If not game-over, increment `round` and go to step 1.
 
@@ -229,11 +229,14 @@ The following must hold at all times:
 
 - All cards across board rows, player hands, player collected piles, and undealt deck are **unique** (no duplicates).
 - The total cards across all locations equals 104.
-- Each row contains **1–5 cards**, and cards within a row are in **strictly increasing** order of placement time (not necessarily value — but tails are always the most recently placed).
+- The board has **exactly 4 rows**.
+- Each row contains **1–5 cards**, and cards within a row are in **strictly increasing order of value** (because each placed card must exceed the current tail per rule 1).
 - Player count is **2–10**.
 - Hands start at 10 cards and decrease by exactly 1 per turn.
+- At round start (after `dealRound()`), the undealt deck contains exactly `100 − 10 × playerCount` cards.
 - Scores are **non-negative** and **monotonically increasing** across rounds.
 - All `PlayerState.id` values must be unique within a game.
+- **Rule 4 (must-pick-row) can trigger at most once per turn**, and only for the lowest-valued card in that turn. Once that card becomes a row tail, all subsequent cards (which have higher values) will always find at least one eligible row.
 
 ### 2.4 Tie-Breaking
 
@@ -287,12 +290,14 @@ type TurnResolutionResult =
   | { kind: "completed"; state: GameState }
   | { kind: "needs-row-pick"; playerId: string; card: CardNumber; state: GameState };
 
-/** Apply a row-pick decision and continue resolution. */
+/** Apply a row-pick decision and continue resolution.
+ *  Note: rule 4 can only trigger once per turn (for the lowest card),
+ *  so the returned result will always be { kind: "completed" }. */
 function applyRowPick(
   state: GameState,
   playerId: string,
   rowIndex: 0 | 1 | 2 | 3
-): TurnResolutionResult; // may need another row-pick from a different player
+): TurnResolutionResult;
 
 /** Score the round: sum collected penalties into cumulative scores. */
 function scoreRound(state: GameState): GameState;

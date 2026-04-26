@@ -10,6 +10,7 @@
 | [Strategies](strategies.md) | Strategy interface, random baseline, registration |
 | [Simulator](simulator.md) | GameRunner, BatchRunner, statistics |
 | [CLI](cli.md) | Commands, arguments, output formats |
+| [Harness](harness.md) | Agent-driven dev process, verification layers, trust architecture |
 
 ---
 
