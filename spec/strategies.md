@@ -17,13 +17,43 @@ interface Strategy {
   chooseCard(state: CardChoiceState): CardNumber;
 
   /** Choose which row to pick up. Called only when the played card is
-   *  lower than all row tails. Receives the triggering card and all
-   *  revealed cards this turn for informed decision-making. */
+   *  lower than all row tails. */
   chooseRow(state: RowChoiceState): 0 | 1 | 2 | 3;
+
+  // --- Lifecycle hooks (optional) ---
+
+  /** Called once when a game begins. Use to initialise internal state.
+   *  @param rng — a seeded PRNG for deterministic randomness. */
+  onGameStart?(config: {
+    playerId: string;
+    playerCount: number;
+    rng: () => number;
+  }): void;
+
+  /** Called after each turn resolves with full public resolution details.
+   *  Use to update opponent models, card tracking, etc. */
+  onTurnResolved?(resolution: TurnResolution): void;
+
+  /** Called after each round is scored. */
+  onRoundEnd?(scores: readonly { id: string; score: number }[]): void;
+}
+
+/** Public information about a resolved turn. */
+interface TurnResolution {
+  readonly turn: number;
+  readonly plays: readonly { playerId: string; card: CardNumber }[];
+  readonly rowPickups: readonly {
+    playerId: string;
+    rowIndex: number;
+    collectedCards: readonly CardNumber[];
+  }[];
+  readonly boardAfter: Board;
 }
 ```
 
-Input types (`CardChoiceState`, `RowChoiceState`) are defined in the [Engine spec §1.6](engine.md#16-visible-state-strategy-input).
+Input types (`CardChoiceState`, `RowChoiceState`) are defined in the [Engine spec §1.6](engine.md#16-visible-state-strategy-input). `TurnResolution` is defined here.
+
+**Information hiding invariant:** `chooseCard()` is called *before* card reveal — a strategy never sees other players' card choices for the current turn. Simultaneity is enforced architecturally by the `CardChoiceState` projection, not by convention.
 
 ---
 
@@ -41,7 +71,7 @@ The engine validates every strategy response:
 
 The simplest possible strategy. Provides a performance floor for benchmarking.
 
-- `chooseCard`: picks uniformly at random from hand.
+- `chooseCard`: picks uniformly at random from hand, using the `rng` function provided via `onGameStart()` (not `Math.random()`), ensuring deterministic reproducibility.
 - `chooseRow`: picks the row with the fewest total cattle heads (deterministic tiebreak by lowest row index).
 
 **Rationale for chooseRow:** Even for "random", picking a random row to take would be pathologically bad and not useful as a baseline. The row-pick is a damage-mitigation decision with an obvious greedy answer; using it makes "random" a fairer baseline.
@@ -72,3 +102,13 @@ src/engine/strategies/
 ```
 
 Future strategies are added here without modifying any existing code.
+
+---
+
+## 6. Strategy Randomness
+
+Strategies requiring randomness (e.g. the random baseline) **must** use the `rng` function provided via `onGameStart()`, not `Math.random()`. This ensures deterministic reproducibility — the same game seed always produces the same game, including strategy decisions.
+
+The `rng()` function returns a float in [0, 1) and advances the PRNG state on each call. Each strategy instance receives its own independent PRNG stream derived from the game seed and player ID.
+
+Strategies that don't implement `onGameStart` (and thus have no `rng`) must be fully deterministic.

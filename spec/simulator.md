@@ -28,10 +28,18 @@ src/sim/
 ```typescript
 interface SimConfig {
   /** Player definitions: strategy name for each seat. 2–10 players. */
-  readonly players: readonly { id: string; strategy: string }[];
+  readonly players: readonly {
+    id: string;
+    strategy: string;
+    params?: Record<string, unknown>;  // strategy-specific configuration
+  }[];
   /** Random seed for reproducibility. Auto-generated if omitted. */
   readonly seed?: string;
 }
+
+// The `params` field is passed to the strategy factory function, enabling
+// parameterised strategies (e.g., risk tolerance for heuristic strategies).
+// Strategies that don't accept parameters ignore this field.
 
 interface GameResult {
   readonly seed: string;
@@ -69,14 +77,19 @@ interface StrategyStats {
 
 Runs a single game to completion:
 
-1. Initialise `GameState` with player definitions and seed.
+1. Initialise `GameState` with player definitions and seed via `createGame()`.
 2. Loop rounds until `isGameOver()`:
-   a. `dealRound()` — shuffle and deal.
-   b. Loop 10 turns:
+   a. `dealRound()` — recollect all cards, shuffle, and deal.
+   b. Call each strategy's `onGameStart()` [lifecycle hook](strategies.md) (first round only) or skip.
+   c. Loop 10 turns:
       - Call each player's strategy `chooseCard()` (via [Strategy interface](strategies.md)).
-      - `resolveTurn()` — place cards lowest-first.
-      - If `needs-row-pick`, call the relevant strategy's `chooseRow()`, then `applyRowPick()`.
-   c. `scoreRound()` — tally penalties.
+      - `result = resolveTurn()` — place cards lowest-first.
+      - While `result.kind === "needs-row-pick"`:
+        - Call the relevant strategy's `chooseRow()` for `result.playerId`.
+        - `result = applyRowPick(...)`.
+      - Notify all strategies via `onTurnResolved()` with the turn's public resolution details.
+   d. `scoreRound()` — tally penalties.
+   e. Notify all strategies via `onRoundEnd()` with updated scores.
 3. Return `GameResult`.
 
 ---
@@ -97,3 +110,15 @@ See [Engine spec §2.2](engine.md#22-seed--prng) for full seed/PRNG specificatio
 
 - Batch base seed → per-game seed: `hash(batchSeed + gameIndex)`
 - Per-game seed → per-round seed: `hash(gameSeed + round)`
+
+---
+
+## 7. Aggregation Semantics
+
+When multiple players share a strategy name, their results are pooled:
+
+- `wins` counts the number of player-games won (a game where 2 players tie for lowest score counts as 2 wins).
+- `winRate = wins / (gamesPlayed × playersWithThisStrategy)`.
+- `avgScore`, `medianScore`, `minScore`, `maxScore`, and `scoreStdDev` are computed over all player-game final scores for that strategy.
+
+**Example:** with `--strategies bayesian,random,random,random,random` and 1000 games, the `random` strategy has 4000 player-game data points.

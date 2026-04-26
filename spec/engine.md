@@ -14,10 +14,17 @@ A card is identified solely by its **number** (1–104). The penalty value (catt
 /** Card number, 1–104 inclusive. */
 type CardNumber = number; // branded in implementation
 
-function cattleHeads(card: CardNumber): number;
-// 55 → 7, multiples of 11 → 5, multiples of 10 → 3,
-// multiples of 5 (not 10, not 55) → 2, everything else → 1
+function cattleHeads(card: CardNumber): number {
+  // Rule priority (highest first):
+  // 1. card === 55          → 7  (1 card)
+  // 2. card % 11 === 0      → 5  (11,22,33,44,66,77,88,99 — 8 cards)
+  // 3. card % 10 === 0      → 3  (10,20,30,40,50,60,70,80,90,100 — 10 cards)
+  // 4. card % 5 === 0       → 2  (5,15,25,35,45,65,75,85,95 — 9 cards)
+  // 5. otherwise            → 1  (76 cards)
+}
 ```
+
+**Invariant:** The sum of `cattleHeads(n)` for n = 1..104 is exactly 171.
 
 **Rationale:** Storing penalty separately would violate DRY — the mapping is deterministic and well-defined.
 
@@ -75,6 +82,8 @@ interface GameState {
   readonly phase: GamePhase;
   /** In-flight turn resolution state. Present only during "resolving" / "awaiting-row-pick". */
   readonly pendingResolution?: PendingTurnResolution;
+  /** Cards played and resolved in previous turns this round, with player attribution. Reset by dealRound(). */
+  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber }[];
   /** Seed for deterministic replay. */
   readonly seed: string;
 }
@@ -109,12 +118,18 @@ Provided when a player must choose which card to play.
 interface CardChoiceState {
   readonly board: Board;
   readonly hand: readonly CardNumber[];
-  readonly playerScores: readonly { id: string; score: number }[];
+  readonly playerScores: readonly {
+    id: string;
+    score: number;             // cumulative across rounds
+    penaltyThisRound: number;  // cattle heads collected this round so far
+  }[];
   readonly playerCount: number;
   readonly round: number;
   readonly turn: number;
-  /** Cards resolved in previous turns this round (all players, public info). Ordered by turn then resolution order. */
-  readonly resolvedCardsThisRound: readonly CardNumber[];
+  /** Cards resolved in previous turns this round (all players, public info). Ordered ascending by card number within each turn. All played cards included regardless of overflow or row picks. */
+  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber }[];
+  /** The 4 cards that started the board rows at the beginning of this round. */
+  readonly initialBoardCards: readonly CardNumber[];
 }
 ```
 
@@ -126,15 +141,24 @@ Provided when a player's card is lower than all row tails and they must pick a r
 interface RowChoiceState {
   readonly board: Board;
   readonly hand: readonly CardNumber[]; // remaining hand (excluding the played card)
-  readonly playerScores: readonly { id: string; score: number }[];
+  readonly playerScores: readonly {
+    id: string;
+    score: number;             // cumulative across rounds
+    penaltyThisRound: number;  // cattle heads collected this round so far
+  }[];
   readonly playerCount: number;
   readonly round: number;
   readonly turn: number;
-  readonly resolvedCardsThisRound: readonly CardNumber[];
+  /** Cards resolved in previous turns this round (all players, public info). Ordered ascending by card number within each turn. All played cards included regardless of overflow or row picks. */
+  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber }[];
+  /** The 4 cards that started the board rows at the beginning of this round. */
+  readonly initialBoardCards: readonly CardNumber[];
   /** The card this player played that triggered the forced row pick. */
   readonly triggeringCard: CardNumber;
   /** All cards revealed this turn (all players). Cards resolved before this one have already been placed. */
   readonly revealedThisTurn: readonly { playerId: string; card: CardNumber }[];
+  /** Number of cards already resolved before this one (0-indexed into sorted plays). */
+  readonly resolutionIndex: number;
 }
 ```
 
@@ -166,12 +190,26 @@ type Move = PlayCardMove | PickRowMove;
 
 ### 2.1 Round Boundary
 
-1. `dealRound()` shuffles the deck (using seed-derived PRNG), deals 10 cards per player, places 4 cards on the board. Resets `collected` to empty for all players. Resets `turn` to 1, `phase` to `"awaiting-cards"`.
+1. `dealRound()` first returns all cards (board, hands, collected) to the deck to form the full 104-card deck, then shuffles using the seed-derived PRNG, deals 10 cards per player, and places 4 cards on the board. Resets `collected` to empty for all players. Resets `turn` to 1, `phase` to `"awaiting-cards"`. Note: with 10 players, the deck is fully exhausted after dealing (10×10 + 4 = 104).
 2. Turns 1–10 proceed (card selection → resolution).
 3. After turn 10, `phase` becomes `"round-over"`.
 4. `scoreRound()` adds each player's `sum(cattleHeads(collected))` to their cumulative `score`, then clears `collected`.
 5. `isGameOver()` is checked **only after scoring a round** — never mid-round. If any player's `score ≥ 66`, phase becomes `"game-over"`.
 6. If not game-over, increment `round` and go to step 1.
+
+### 2.1.1 Phase Transition Table
+
+| From               | To                  | Trigger                                        |
+|--------------------|---------------------|------------------------------------------------|
+| `"round-over"`     | `"awaiting-cards"`  | `dealRound()` called                           |
+| `"awaiting-cards"` | `"resolving"`       | `resolveTurn()` called                         |
+| `"resolving"`      | `"awaiting-row-pick"`| Card < all tails encountered during resolution |
+| `"awaiting-row-pick"`| `"resolving"`     | `applyRowPick()` called, more cards to resolve |
+| `"resolving"`      | `"awaiting-cards"`  | All cards resolved, turn < 10                  |
+| `"resolving"`      | `"round-over"`      | All cards resolved, turn = 10                  |
+| `"round-over"`     | `"game-over"`       | `scoreRound()` finds any score ≥ 66            |
+
+Each function validates that the current phase matches its required precondition and throws on violation.
 
 ### 2.2 Seed / PRNG
 
@@ -183,6 +221,8 @@ The `seed` in `GameState` is a base seed for the entire game. Per-round shuffles
 
 For batch simulation, each game gets a unique seed derived from the batch base seed: `hash(batchSeed + gameIndex)`.
 
+Implementation shall use a seeded xoshiro256** PRNG. Seed derivation uses SHA-256: `perRoundSeed = SHA256(gameSeed + '/' + round)`. Deck shuffling uses the Fisher-Yates algorithm.
+
 ### 2.3 Invariants
 
 The following must hold at all times:
@@ -193,6 +233,7 @@ The following must hold at all times:
 - Player count is **2–10**.
 - Hands start at 10 cards and decrease by exactly 1 per turn.
 - Scores are **non-negative** and **monotonically increasing** across rounds.
+- All `PlayerState.id` values must be unique within a game.
 
 ### 2.4 Tie-Breaking
 
@@ -221,6 +262,11 @@ src/engine/
 ### 3.2 Core Functions
 
 ```typescript
+/** Create the initial game state. Does NOT deal — call dealRound() next.
+ *  Returns: round=1, turn=0, phase="round-over", empty hands/collected/board,
+ *  full 104-card deck, score=0 for all players. */
+function createGame(players: readonly { id: string }[], seed: string): GameState;
+
 /** Create a shuffled 104-card deck from a seed. */
 function createDeck(seed: string): CardNumber[];
 
@@ -229,7 +275,9 @@ function dealRound(state: GameState): GameState;
 
 /** Resolve a set of played cards (one per player) against the board.
  *  Processes cards lowest-first. Returns either a completed state or
- *  a state paused at a row-pick decision. */
+ *  a state paused at a row-pick decision.
+ *  Precondition: each played card must be in the corresponding player's hand.
+ *  This function removes played cards from hands as part of resolution. */
 function resolveTurn(
   state: GameState,
   playedCards: readonly { playerId: string; card: CardNumber }[]
@@ -267,8 +315,28 @@ These are pure functions implementing the rules from the [game rules spec](rules
 /** Given a card and a board, determine where it must go.
  *  Returns the row index, or null if card < all tails (player must choose). */
 function determinePlacement(board: Board, card: CardNumber): PlacementResult;
+```
 
+**Note:** Tie-breaking for closest-tail is unnecessary: since all card values are distinct integers and only rows with `tail < card` are eligible, the differences `card - tail` are guaranteed to be distinct.
+
+```typescript
 type PlacementResult =
   | { kind: "place"; rowIndex: 0 | 1 | 2 | 3; causesOverflow: boolean }
   | { kind: "must-pick-row" };
 ```
+
+**Note:** Overflow collection (rule 3 — 6th card on a row) is automatic and does not involve a `PickRowMove`. The engine collects the 5 cards and starts a new row without player interaction. `PickRowMove` is only produced for rule 4 (card lower than all tails).
+
+### 3.4 Preconditions and Error Handling
+
+Each engine function validates its preconditions and throws on violation (these indicate programmer bugs, not runtime conditions):
+
+| Function | Required Phase | Key Preconditions |
+|----------|---------------|-------------------|
+| `createGame()` | (none) | 2–10 players, unique IDs, non-empty seed |
+| `dealRound()` | `"round-over"` | — |
+| `resolveTurn()` | `"awaiting-cards"` | Exactly one card per player, each card in player's hand |
+| `applyRowPick()` | `"awaiting-row-pick"` | playerId matches pending pick, rowIndex 0–3 |
+| `scoreRound()` | `"round-over"` | Turn = 10 (all turns completed) |
+| `toCardChoiceState()` | `"awaiting-cards"` | playerId exists |
+| `toRowChoiceState()` | `"awaiting-row-pick"` | playerId matches pending pick |
