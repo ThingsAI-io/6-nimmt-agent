@@ -278,11 +278,11 @@ configargparse        # Configuration management
 
 ### 6.3 What We Could Adopt
 
-- **ELO rating system** for strategy comparison (supplement our win-rate/score statistics)
-- **Tournament evolution** concept for strategy selection experiments
-- **PUCT formula** (c_puct × P × √N / (1+n)) as starting point for our MCTS strategy
-- **Priority replay buffer** architecture if we implement learning-based strategies
-- **Baseline comparison protocol** — their "5 agents, 4000 games, clone best" approach is sound
+- **ELO rating system** for strategy comparison — post-MVP, once multiple strategy types exist (Bayesian, MCTS, etc.). Not needed for random-only baseline. Their `multi_elo` multi-player adaptation is a good starting point.
+- **Tournament evolution** concept for strategy selection experiments (post-MVP)
+- **PUCT formula** (c_puct × P × √N / (1+n)) as starting point for our MCTS strategy (post-MVP)
+- **Priority replay buffer** architecture if we implement learning-based strategies (post-MVP)
+- **Baseline comparison protocol** — their "5 agents, 4000 games, clone best" approach is sound (post-MVP)
 
 ### 6.4 What We Should Avoid
 
