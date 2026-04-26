@@ -4,39 +4,49 @@
 
 This repository builds an **AI agent** that plays the card game [6 Nimmt!](spec/rules/6-nimmt.md) online — initially on [Board Game Arena (BGA)](https://boardgamearena.com/gamepanel?game=sechsnimmt) — and a **game engine** that powers its decision-making.
 
-The game's card-placement rules are entirely deterministic; the only decision point each turn is **which card to play** (and, in edge cases, **which row to pick up**). The advisory logic therefore lives in a TypeScript game engine, not in an LLM. The agent's role is minimal: connect to the web implementation, read the game state, call the engine, and execute the recommended move.
+The game's card-placement rules are entirely deterministic; the only decision point each turn is **which card to play** (and, in edge cases, **which row to pick up**). The advisory logic therefore lives in a TypeScript game engine, not in an LLM. The agent is a **GitHub Copilot custom agent** (`.github/agents/`) whose skills provide browser automation and BGA-specific DOM navigation, while the engine handles all game logic.
 
 ## Architecture Overview
 
 ```
-┌──────────────────────────────────────────────┐
-│                   Agent                       │
-│  (headless browser via Puppeteer/Playwright)  │
-│  • Reads game state from BGA DOM              │
-│  • Calls Engine for recommendation            │
-│  • Executes the move on the page              │
-└────────────────┬─────────────────────────────┘
-                 │  GameState → RecommendedMove
-                 ▼
-┌──────────────────────────────────────────────┐
-│              Game Engine (TypeScript)          │
-│  • Models the full game state                 │
-│  • Implements pluggable strategies:           │
-│    – Random (baseline)                        │
-│    – Heuristic / greedy                       │
-│    – Bayesian inference                       │
-│    – Neural net (future)                      │
-│  • Deterministic card-placement rules         │
-│  • Row-pickup decision logic                  │
-└──────────────────────────────────────────────┘
-                 │
-                 ▼
-┌──────────────────────────────────────────────┐
-│            Simulator / Benchmark CLI           │
-│  • Runs N games with configurable players     │
-│  • e.g. 1 bayesian vs 4 random               │
-│  • Outputs win rates, avg scores, etc.        │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│        GitHub Copilot Custom Agent                    │
+│        (.github/agents/)                              │
+│                                                       │
+│  ┌─────────────────────┐  ┌────────────────────────┐ │
+│  │  Playwright Skill    │  │  BGA Navigation Skill  │ │
+│  │  • Browser lifecycle │  │  • BGA login / lobby   │ │
+│  │  • Page interactions │  │  • DOM → GameState     │ │
+│  │  • Screenshots       │  │  • Click card / row    │ │
+│  │  • Generic DOM ops   │  │  • Game-specific       │ │
+│  └──────────┬───────────┘  └──────────┬─────────────┘ │
+│             │                         │               │
+│             └──────────┬──────────────┘               │
+│                        │                              │
+└────────────────────────┼──────────────────────────────┘
+                         │  GameState → RecommendedMove
+                         ▼
+┌──────────────────────────────────────────────────────┐
+│              Game Engine (TypeScript)                  │
+│              src/engine/                               │
+│  • Models the full game state                         │
+│  • Implements pluggable strategies:                   │
+│    – Random (baseline)                                │
+│    – Heuristic / greedy                               │
+│    – Bayesian inference                               │
+│    – Neural net (future)                              │
+│  • Deterministic card-placement rules                 │
+│  • Row-pickup decision logic                          │
+└──────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌──────────────────────────────────────────────────────┐
+│            Simulator / Benchmark CLI                   │
+│            src/sim/                                    │
+│  • Runs N games with configurable players             │
+│  • e.g. 1 bayesian vs 4 random                       │
+│  • Outputs win rates, avg scores, etc.                │
+└──────────────────────────────────────────────────────┘
 ```
 
 ## Components
@@ -55,18 +65,29 @@ A pure TypeScript library that:
   - **Neural Net** (future) — trained on game logs to predict optimal play.
 - When the played card is lower than all row ends, the engine also recommends **which row to pick up** (strategy-dependent).
 
-### 2. Headless Agent (`src/agent/`) — P0
+### 2. Copilot Custom Agent (`.github/agents/`)
 
-A headless browser automation layer (Puppeteer or Playwright) that:
+A GitHub Copilot custom agent that orchestrates gameplay via two skills:
 
-- Logs in to BGA and joins / creates a 6 Nimmt! game.
-- Reads the current game state from the DOM (rows, own hand, scores).
+#### Playwright Skill
+
+A general-purpose browser automation skill that:
+
+- Manages browser/page lifecycle (launch, navigate, close).
+- Provides generic DOM interaction primitives (click, type, wait, screenshot).
+- Is reusable beyond BGA — any web automation task.
+
+#### BGA Navigation Skill
+
+A BGA-specific skill that:
+
+- Handles BGA login, lobby navigation, and game join/creation.
+- Reads the 6 Nimmt! game state from the BGA DOM (rows, own hand, scores, turn status).
 - Translates DOM state → engine `GameState`.
-- Calls the engine for a recommendation.
-- Clicks the recommended card (and row, if needed).
-- Loops until the game ends.
+- Executes moves by clicking the recommended card (and row, if needed).
+- Understands BGA-specific DOM structure, CSS selectors, and page flow.
 
-### 3. Browser Extension (`src/extension/`) — Post-MVP
+### 3. Browser Extension — Post-MVP
 
 A Chrome extension overlay that:
 
@@ -85,12 +106,13 @@ A CLI tool that:
 ## Tech Stack
 
 - **Language:** TypeScript (Node.js)
-- **Browser Automation:** Puppeteer or Playwright
+- **Agent Framework:** GitHub Copilot custom agents (`.github/agents/`)
+- **Browser Automation:** Playwright (via Copilot skill)
 - **Testing:** Vitest or Jest
 - **CLI:** Node.js script (possibly with `commander` or similar)
 
 ## What This Repo Is *Not*
 
-- Not an LLM-based agent — the game logic is fully deterministic and computable.
+- Not an LLM-based agent — the game logic is fully deterministic and computable. The Copilot agent is the orchestration layer; all strategy lives in TypeScript.
 - Not a game server — it connects to existing online implementations (BGA).
 - Not a cheat tool — it's a research project for exploring and benchmarking game-playing strategies.
