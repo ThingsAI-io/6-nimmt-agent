@@ -24,8 +24,18 @@ The game's card-placement rules are entirely deterministic; the only decision po
 │             └──────────┬──────────────┘               │
 │                        │                              │
 └────────────────────────┼──────────────────────────────┘
-                         │  GameState → RecommendedMove
+                         │  MCP tool calls (preferred)
+                         │  or CLI exec (fallback)
                          ▼
+┌──────────────────────────────────────────────────────┐
+│         MCP Server (6nimmt serve — stdio)             │
+│         src/mcp/                                      │
+│  • Stateful game sessions (start/observe/recommend)  │
+│  • Drift detection & resync                          │
+│  • Same engine, same strategies — MCP transport      │
+└──────────────────────┬───────────────────────────────┘
+                       │
+                       ▼
 ┌──────────────────────────────────────────────────────┐
 │              Game Engine (TypeScript)                  │
 │              src/engine/                               │
@@ -37,12 +47,9 @@ The game's card-placement rules are entirely deterministic; the only decision po
 │    – Neural net (future)                              │
 │  • Deterministic card-placement rules                 │
 │  • Row-pickup decision logic                          │
-│  • `recommend` command for live play advisory          │
-│    (single-turn stateless recommendation from a       │
-│     given visible state)                              │
 └──────────────────────────────────────────────────────┘
-                         │
-                         ▼
+                       │
+                       ▼
 ┌──────────────────────────────────────────────────────┐
 │            Simulator / Benchmark CLI                   │
 │            src/sim/                                    │

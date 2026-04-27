@@ -10,6 +10,7 @@
 | [Strategies](strategies.md) | Strategy interface, random baseline, registration |
 | [Simulator](simulator.md) | GameRunner, BatchRunner, statistics |
 | [CLI](cli.md) | Commands, arguments, output formats |
+| [MCP Server](mcp.md) | MCP tool interface for AI agent live play |
 | [Harness](harness.md) | Agent-driven dev process, verification layers, trust architecture |
 
 ---
@@ -22,6 +23,7 @@
 - **Immutable game state.** Every engine operation returns a new state; no mutations. This makes replay, logging, and debugging trivial.
 - **Deterministic reproducibility.** The engine and simulator accept an optional random seed so that any game can be replayed exactly.
 - **AI-friendly CLI.** Argument names are explicit, unambiguous, and self-documenting. Output formats include both human-readable and structured JSON.
+- **MCP-native agent interface.** The game engine is exposed as an MCP server (`6nimmt serve`) for structured, drift-resilient communication with AI agents during live play.
 
 ---
 
@@ -53,10 +55,23 @@ src/
       simulate.ts
       strategies.ts
       play.ts
+      recommend.ts
+      serve.ts
     formatters/
       table.ts
       json.ts
       csv.ts
+  mcp/
+    server.ts
+    session.ts
+    tools/
+      stateless.ts
+      session-mgmt.ts
+      events.ts
+      recommend.ts
+    drift.ts
+    errors.ts
+    index.ts
 ```
 
 ---
@@ -76,8 +91,9 @@ src/
 2. Engine data model and core placement/scoring logic → [engine.md](engine.md)
 3. Random strategy → [strategies.md](strategies.md)
 4. Simulator (single game + batch) → [simulator.md](simulator.md)
-5. CLI with `simulate`, `strategies`, and `play` commands → [cli.md](cli.md)
-6. Unit and integration tests
+5. CLI with `simulate`, `strategies`, `play`, and `recommend` commands → [cli.md](cli.md)
+6. MCP server with session-aware advisory tools → [mcp.md](mcp.md)
+7. Unit and integration tests
 
 Out of scope for MVP: Bayesian strategy, neural net, BGA agent, browser extension.
 

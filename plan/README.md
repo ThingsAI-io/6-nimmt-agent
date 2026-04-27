@@ -1,10 +1,10 @@
-# Implementation Plan — 6 Nimmt! Engine + Simulation CLI
+# Implementation Plan — 6 Nimmt! Engine, Simulation CLI & MCP Server
 
-> **Milestone:** Engine and simulation CLI working end-to-end  
+> **Milestone:** Engine, simulation CLI, and MCP server working end-to-end  
 > **Approach:** Fully agent-driven — no human writes or reviews code  
 > **Execution:** Tasks dispatched via `/fleet` to parallel agent groups  
 > **Spec commit:** `f2fb510` (branch: `draft`)  
-> **Total tasks:** 26
+> **Total tasks:** 31
 
 ---
 
@@ -54,17 +54,25 @@ T0 (scaffold)
 │                    │                   │
 │                    ├───────────────────┘
 │                    ▼
-│              T5C (simulate + strategies + play commands)
+│              T5C (simulate + strategies + play + recommend commands)
 │                    │
 │              T5-TEST (CLI tests)
 │                    │
-│              T6-E2E (integration)
-│                    │
-│              T6-CI (CI pipeline)
-│                    │
-│              T6-REVIEW (final adversarial review)
-│                    │
-│                  ✅ MILESTONE
+│              ┌─────┴─────────────────┐
+│              ▼                       ▼
+│         T5D (MCP server core)   T5E (MCP session + events)
+│              │                       │
+│              ├───────────────────────┘
+│              ▼
+│         T5F-TEST (MCP tests)
+│              │
+│         T6-E2E (integration)
+│              │
+│         T6-CI (CI pipeline)
+│              │
+│         T6-REVIEW (final adversarial review)
+│              │
+│            ✅ MILESTONE
 ```
 
 ---
@@ -82,8 +90,9 @@ T0 (scaffold)
 | **Fleet 6bg** | T2-REVIEW | 1 agent (background) | Non-blocking; findings filed as issues |
 | **Fleet 7** | T3A, T3-TEST | 2 sequential | Strategy tests pass |
 | **Fleet 8** | T4A, T4B, T4-TEST | 3 sequential | Sim tests + parameterized smoke (2/5/10 players) pass |
-| **Fleet 9** | T5A, T5B, T5C, T5-TEST | 4 sequential | CLI tests pass |
-| **Fleet 10** | T6-E2E, T6-CI, T6-REVIEW | 3 sequential | Full CI green; E2E runs at 2/5/10 players; adversarial review produces 0 regressions |
+| **Fleet 9** | T5A, T5B, T5C, T5-TEST | 4 sequential | CLI tests pass (simulate, strategies, play, recommend, serve) |
+| **Fleet 10** | T5D, T5E, T5F-TEST | 3 sequential | MCP tools tested, session lifecycle verified |
+| **Fleet 11** | T6-E2E, T6-CI, T6-REVIEW | 3 sequential | Full CI green; E2E runs at 2/5/10 players; adversarial review produces 0 regressions |
 
 *Sequential within the fleet because of type dependencies, but dispatched as one fleet.
 
@@ -99,7 +108,7 @@ T0 (scaffold)
   - `tsconfig.json` — strict mode, ES2022 target, paths for `src/` and `test/`
   - `vitest.config.ts` — test runner config with separate projects for unit/fixture/smoke
   - `.eslintrc.cjs` — base config (anti-cheat rules added in T1H)
-  - Directory structure: `src/engine/`, `src/engine/strategies/`, `src/sim/`, `src/cli/`, `test/unit/`, `test/fixtures/`, `test/reference/`, `test/smoke/`, `test/invariant/`
+  - Directory structure: `src/engine/`, `src/engine/strategies/`, `src/sim/`, `src/cli/`, `src/mcp/`, `src/mcp/tools/`, `test/unit/`, `test/fixtures/`, `test/reference/`, `test/smoke/`, `test/invariant/`
   - Stub `src/engine/index.ts` (empty barrel) so TypeScript compiles
   - Stub `src/cli/index.ts` with shebang (`#!/usr/bin/env node`) so CLI entrypoint exists
 - **Acceptance:**
@@ -112,6 +121,7 @@ T0 (scaffold)
 - **Notes:**
   - Use `vitest` (not jest) — faster, native ESM, TypeScript-first
   - Use `commander` for CLI argument parsing
+  - Use `@modelcontextprotocol/sdk` for MCP server implementation
   - Pin dependency versions in package.json
   - Add `bin` field pointing to `dist/cli/index.js` (the built artifact, not raw TypeScript)
 
@@ -705,6 +715,7 @@ T0 (scaffold)
   - Shebang line for `npx 6nimmt` execution
 - **Requirements:**
   - Three subcommands: `simulate`, `strategies`, `play`
+  - Plus: `recommend` (live play advisory, see [CLI](../spec/cli.md)) and `serve` (MCP server, see [MCP](../spec/mcp.md))
   - Global `--format` / `-f` option (table/json/csv, default: table)
   - Short aliases for all flags: `-s` (strategies), `-n` (games), `-S` (seed), `-f` (format), `-v` (verbose)
   - Exit codes per spec: 0 success, 1 invalid args, 2 runtime error
@@ -734,14 +745,16 @@ T0 (scaffold)
   - Table output is readable
   - CSV output is importable into spreadsheets
 
-### T5C — Commands (simulate, strategies, play)
+### T5C — Commands (simulate, strategies, play, recommend, serve)
 - **Agent type:** `general-purpose`
 - **Depends on:** T5A, T5B
-- **Inputs:** `spec/cli.md` §2
+- **Inputs:** `spec/cli.md` §2, `spec/mcp.md` §7
 - **Creates:**
   - `src/cli/commands/simulate.ts` — `--strategies` / `-s`, `--games` / `-n`, `--seed` / `-S`, `--format` / `-f`, `--verbose` / `-v`, `--dry-run`
   - `src/cli/commands/strategies.ts` — list registered strategies
   - `src/cli/commands/play.ts` — single game with turn-by-turn output
+  - `src/cli/commands/recommend.ts` — stateless single-turn advisory (state via `--state`, `--state-file`, or stdin)
+  - `src/cli/commands/serve.ts` — MCP server bootstrap (`--log-level`, `--max-sessions`); delegates to `src/mcp/`
 - **Requirements:**
   - `--strategies` accepts both comma-separated and JSON array format
   - `simulate --games` defaults to **100** when omitted
@@ -749,7 +762,9 @@ T0 (scaffold)
   - Strategy name validation with "did you mean?" suggestions
   - Player count validation (2–10)
   - `play` command outputs complete game log per spec JSON schema
-  - All five structured error codes (`INVALID_STRATEGY`, `INVALID_PLAYER_COUNT`, `INVALID_SEED`, `INVALID_FORMAT`, `ENGINE_ERROR`) are validated and serialized through the formatter pipeline
+  - `recommend` command: accepts `--state` or `--state-file` (mutually exclusive), `--strategy`, `--decision` (auto-detect), `--timeout`; outputs recommendation JSON with confidence and alternatives; returns structured errors `INVALID_STATE`, `STALE_STATE`, `INCOMPATIBLE_DECISION`
+  - `serve` command: bootstraps MCP server on stdio, passes `--log-level` and `--max-sessions` to `src/mcp/server.ts`; logs to stderr, protocol on stdout
+  - All eight structured error codes (`INVALID_STRATEGY`, `INVALID_PLAYER_COUNT`, `INVALID_SEED`, `INVALID_FORMAT`, `ENGINE_ERROR`, `INVALID_STATE`, `STALE_STATE`, `INCOMPATIBLE_DECISION`) are validated and serialized through the formatter pipeline
   - Each error includes `validValues` where applicable and AI-self-correction context
 - **Acceptance:**
   - `npx 6nimmt simulate --strategies random,random,random,random --games 10 --seed test --format json` produces valid output
@@ -759,6 +774,8 @@ T0 (scaffold)
     - `strategyNamesCaseSensitive: true`
   - `npx 6nimmt play --strategies random,random --seed test --format json` outputs full game trace
   - `npx 6nimmt simulate --strategies nonexistent` produces `INVALID_STRATEGY` error with suggestions and `validValues`
+  - `npx 6nimmt recommend --state '{"hand":[3,17],"board":[[5],[10],[20],[30]],"playerScores":[],"playerCount":2,"round":1,"turn":1,"resolvedCardsThisRound":[],"initialBoardCards":[5,10,20,30]}' --strategy random --format json` produces valid recommendation
+  - `npx 6nimmt serve` starts MCP server on stdio (process stays alive, accepts MCP protocol messages)
 
 ### T5-TEST — CLI Tests
 - **Agent type:** `task`
@@ -767,13 +784,92 @@ T0 (scaffold)
   1. Create `test/unit/cli/simulate.test.ts` — argument parsing, dry-run, output format
   2. Create `test/unit/cli/strategies.test.ts` — list output, full JSON schema including `usage.*`
   3. Create `test/unit/cli/play.test.ts` — full game output schema validation
-  4. Create `test/unit/cli/errors.test.ts` — all five structured error codes (`INVALID_STRATEGY`, `INVALID_PLAYER_COUNT`, `INVALID_SEED`, `INVALID_FORMAT`, `ENGINE_ERROR`), "did you mean?" suggestions, `validValues` presence
-  5. Create `test/unit/cli/aliases.test.ts` — short aliases (`-s`, `-n`, `-S`, `-f`, `-v`) produce identical results to long flags
+  4. Create `test/unit/cli/errors.test.ts` — all eight structured error codes (`INVALID_STRATEGY`, `INVALID_PLAYER_COUNT`, `INVALID_SEED`, `INVALID_FORMAT`, `ENGINE_ERROR`, `INVALID_STATE`, `STALE_STATE`, `INCOMPATIBLE_DECISION`), "did you mean?" suggestions, `validValues` presence
+  5. Create `test/unit/cli/aliases.test.ts` — short aliases (`-s`, `-n`, `-S`, `-f`, `-v`, `-d`, `-t`, `-l`) produce identical results to long flags
   6. Create `test/unit/cli/defaults.test.ts` — omitted `--games` defaults to 100
   7. Create `test/unit/cli/output-routing.test.ts` — JSON errors route to stdout when `--format json`, human-readable errors route to stderr otherwise
   8. Snapshot tests for table/json/csv output formats
-  9. Run: `npx vitest run test/unit/cli/`
-- **Acceptance:** All tests pass. Output schemas match spec. All five error codes covered. Short aliases verified.
+  9. Create `test/unit/cli/recommend.test.ts` — state input (inline, file, stdin), decision auto-detect, timeout, state validation errors
+  10. Run: `npx vitest run test/unit/cli/`
+- **Acceptance:** All tests pass. Output schemas match spec. All eight error codes covered. Short aliases verified.
+
+---
+
+## Phase 5b: MCP Server
+
+> Depends on T5-TEST (CLI must be working first — MCP shares the same engine and strategy registry).  
+> MCP tasks can be parallelized within the phase.
+
+### T5D — MCP Server Core + Stateless Tools
+- **Agent type:** `general-purpose`
+- **Depends on:** T5-TEST
+- **Inputs:** `spec/mcp.md` §1–4, §6–7
+- **Creates:**
+  - `src/mcp/server.ts` — MCP server setup, stdio transport, tool registration
+  - `src/mcp/tools/stateless.ts` — `server_info`, `list_strategies`, `validate_state`, `recommend` tools
+  - `src/mcp/errors.ts` — domain error constructors (`DomainError` interface, all error codes from spec §4.2)
+  - `src/mcp/index.ts` — barrel export
+- **Requirements:**
+  - Uses MCP SDK for Node.js (`@modelcontextprotocol/sdk` or equivalent)
+  - All tools use the same engine functions and strategy registry as CLI commands
+  - `recommend` tool follows the same reconstruction contract as CLI `recommend`
+  - `validate_state` uses the same `validateCardChoiceState()` / `validateRowChoiceState()` from engine
+  - Domain errors returned as structured tool results (not MCP protocol errors) per spec §4
+  - MCP protocol errors (InvalidParams, MethodNotFound) use MCP's built-in error mechanism
+  - Logs to stderr; stdout reserved for MCP protocol
+- **Acceptance:**
+  - `npx tsc --noEmit` passes
+  - MCP server starts via `6nimmt serve` and responds to `server_info` tool call
+  - `list_strategies` returns registered strategies
+  - `validate_state` correctly validates/rejects game state JSON
+  - `recommend` produces valid recommendations matching CLI `recommend` output
+  - Invalid tool parameters return MCP InvalidParams error
+  - Unknown strategy in `recommend` returns structured `INVALID_STRATEGY` domain error
+
+### T5E — MCP Session Management + Event Tools
+- **Agent type:** `general-purpose`
+- **Depends on:** T5D
+- **Inputs:** `spec/mcp.md` §3.5–3.11, §5
+- **Creates:**
+  - `src/mcp/session.ts` — session state machine, versioning, lifecycle (awaiting-round → in-round → awaiting-round → ended)
+  - `src/mcp/tools/session-mgmt.ts` — `start_session`, `end_session`, `resync_session` tools
+  - `src/mcp/tools/events.ts` — `round_started`, `turn_resolved`, `round_ended` tools
+  - `src/mcp/tools/recommend.ts` — `session_recommend` tool
+  - `src/mcp/drift.ts` — state comparison / drift detection between agent snapshot and accumulated session state
+- **Requirements:**
+  - Session state machine enforces phase transitions per spec §5.1
+  - Every mutating tool requires `expectedVersion` — rejects `VERSION_MISMATCH` if stale
+  - Duplicate events detected and returned as `DUPLICATE_EVENT` (idempotency)
+  - `round_started` calls `onGameStart()` on first round; validates board and hand
+  - `turn_resolved` calls `strategy.onTurnResolved()` with the provided resolution data
+  - `round_ended` calls `strategy.onRoundEnd()` with scores
+  - `session_recommend` accepts `hand` and `board` from agent for drift detection; compares against accumulated state; returns `stateConsistent` flag
+  - Major drift → `STATE_MISMATCH` error recommending `resync_session`
+  - `resync_session` resets strategy state, replays `resolvedCardsThisRound` as synthetic `onTurnResolved()` calls
+  - Maximum concurrent sessions enforced (`maxConcurrentSessions`, default 4)
+  - Sessions are ephemeral (in-memory only, lost on process restart)
+- **Acceptance:**
+  - Full session lifecycle: `start_session` → `round_started` → `session_recommend` → `turn_resolved` × 10 → `round_ended` → `end_session` completes without error
+  - Version mismatch detected and rejected
+  - Duplicate `turn_resolved` for same round/turn returns `DUPLICATE_EVENT`
+  - Wrong-phase calls return `INVALID_PHASE` (e.g., `turn_resolved` before `round_started`)
+  - Drift detection: mismatched board in `session_recommend` triggers warning or `STATE_MISMATCH`
+  - `resync_session` rebuilds strategy state and subsequent `session_recommend` works
+  - `end_session` invalidates session; further calls return `UNKNOWN_SESSION`
+
+### T5F-TEST — MCP Server Tests
+- **Agent type:** `task`
+- **Depends on:** T5E
+- **Actions:**
+  1. Create `test/unit/mcp/stateless.test.ts` — `server_info`, `list_strategies`, `validate_state`, `recommend` tool tests
+  2. Create `test/unit/mcp/session.test.ts` — session state machine, phase transitions, version enforcement
+  3. Create `test/unit/mcp/events.test.ts` — `round_started`, `turn_resolved`, `round_ended` lifecycle hook invocation
+  4. Create `test/unit/mcp/session-recommend.test.ts` — drift detection, `stateConsistent` flag, `STATE_MISMATCH` error
+  5. Create `test/unit/mcp/resync.test.ts` — `resync_session` state rebuild, synthetic `onTurnResolved()` replay
+  6. Create `test/unit/mcp/errors.test.ts` — all domain error codes, `VERSION_MISMATCH`, `DUPLICATE_EVENT`, `INVALID_PHASE`, `UNKNOWN_SESSION`
+  7. Create `test/unit/mcp/concurrent.test.ts` — multiple concurrent sessions, `maxConcurrentSessions` enforcement
+  8. Run: `npx vitest run test/unit/mcp/`
+- **Acceptance:** All tests pass. Session lifecycle fully exercised. Drift detection verified. Error model complete.
 
 ---
 
@@ -781,7 +877,7 @@ T0 (scaffold)
 
 ### T6-E2E — End-to-End Integration Test
 - **Agent type:** `general-purpose`
-- **Depends on:** T5-TEST
+- **Depends on:** T5F-TEST
 - **Creates:**
   - `test/e2e/cli-e2e.test.ts` — run actual CLI commands against the **built executable artifact** (`dist/cli/index.js` or `npx 6nimmt`), not `src/cli/index.ts`
 - **Tests:**
@@ -791,6 +887,9 @@ T0 (scaffold)
   - Error scenarios (invalid strategies, bad player count)
   - Explicit player-count variations: **2 players**, **5 players**, and **10 players**
   - Performance: 1000 games completes within 30 seconds
+  - `recommend` command: inline state, file state, stdin pipe — all produce valid recommendations
+  - MCP server E2E: spawn `6nimmt serve`, send MCP tool calls via stdio, verify full session lifecycle (start → rounds → recommend → end)
+  - MCP drift recovery: trigger `STATE_MISMATCH`, call `resync_session`, verify subsequent `session_recommend` works
 - **Acceptance:** All E2E tests pass against the built artifact.
 
 ### T6-CI — CI Expansion
@@ -837,13 +936,13 @@ T0 (scaffold)
 
 | Metric | Count |
 |--------|-------|
-| Total tasks | 26 |
-| Fleet dispatches | 10 |
+| Total tasks | 31 |
+| Fleet dispatches | 11 |
 | Max parallelism (Fleet 2) | 8 agents |
 | Verification gates | 5 (T1-CI, T1-VERIFY, T2-GATE, T4-TEST, T6-CI) |
 | Review checkpoints | 2 (T2-REVIEW, T6-REVIEW) |
 
-### Milestone Definition: ✅ Engine + Simulation CLI E2E
+### Milestone Definition: ✅ Engine + Simulation CLI + MCP Server E2E
 
 The milestone is achieved when:
 - `npx 6nimmt simulate --strategies random,random --games 100 --seed bench2 --format json` produces correct, deterministic output (2 players)
@@ -851,5 +950,8 @@ The milestone is achieved when:
 - `npx 6nimmt simulate --strategies random,random,random,random,random,random,random,random,random,random --games 100 --seed bench10 --format json` produces correct, deterministic output (10 players)
 - `npx 6nimmt play --strategies random,random --seed demo --format json` outputs a complete, rule-correct game trace
 - `npx 6nimmt strategies` lists available strategies
+- `npx 6nimmt recommend --state '<JSON>' --strategy random --format json` produces valid recommendation
+- `6nimmt serve` starts MCP server; full session lifecycle (start → round_started → session_recommend → turn_resolved × 10 → round_ended → end_session) completes successfully via MCP protocol
+- MCP drift detection works: mismatched state triggers `STATE_MISMATCH`, `resync_session` recovers
 - All 7 verification layers pass in CI
 - No human has written or reviewed any code

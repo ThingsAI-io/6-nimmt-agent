@@ -1,6 +1,6 @@
 # 6 Nimmt! — Game Engine Specification
 
-> Part of the [Technical Specification](spec.md). See also: [Strategies](strategies.md) · [Simulator](simulator.md) · [CLI](cli.md) · [Game Rules](rules/6-nimmt.md)
+> Part of the [Technical Specification](spec.md). See also: [Strategies](strategies.md) · [Simulator](simulator.md) · [CLI](cli.md) · [MCP Server](mcp.md) · [Game Rules](rules/6-nimmt.md)
 
 ---
 

@@ -1,6 +1,6 @@
 # 6 Nimmt! — CLI Specification
 
-> Part of the [Technical Specification](spec.md). See also: [Engine](engine.md) · [Strategies](strategies.md) · [Simulator](simulator.md)
+> Part of the [Technical Specification](spec.md). See also: [Engine](engine.md) · [Strategies](strategies.md) · [Simulator](simulator.md) · [MCP Server](mcp.md)
 
 ---
 
@@ -129,6 +129,23 @@ Output for row decision:
 > **Confidence & alternatives:** These fields are strategy-dependent. The `random` strategy returns `confidence: null` and no alternatives. More sophisticated strategies populate these to aid debugging and transparency.
 
 > **Timeout behaviour:** When `timedOut: true` appears in the response, the strategy hit the `--timeout` limit and returned its best recommendation so far. The result may be suboptimal compared to a fully-computed recommendation.
+
+### `serve` — Start MCP server
+
+```
+6nimmt serve --log-level info
+```
+
+| Argument          | Alias | Type   | Default | Description                                |
+|-------------------|-------|--------|---------|--------------------------------------------|
+| `--log-level`     | `-l`  | string | `warn`  | Log verbosity: `debug`, `info`, `warn`, `error` |
+| `--max-sessions`  |       | number | `4`     | Maximum concurrent sessions                |
+
+Starts an MCP (Model Context Protocol) server on stdio. The agent spawns this process and communicates via structured MCP tool calls instead of constructing CLI arguments.
+
+The MCP server exposes advisory and session management tools for live play. See [MCP Server Specification](mcp.md) for the full tool reference.
+
+> **Logs go to stderr.** stdout is reserved for the MCP protocol. All diagnostic output uses stderr.
 
 ### `play` — Run and display a single game turn-by-turn
 
@@ -276,6 +293,7 @@ src/cli/
     strategies.ts    — strategies command handler
     play.ts          — play command handler
     recommend.ts     — recommend command handler
+    serve.ts         — serve command handler (MCP server bootstrap)
   formatters/
     table.ts         — Human-readable table output
     json.ts          — Structured JSON output
