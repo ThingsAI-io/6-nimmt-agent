@@ -1,0 +1,8159 @@
+[
+  {
+    "id": "2-player-short-game",
+    "seed": "trace-seed-001",
+    "playerCount": 2,
+    "rounds": [
+      {
+        "round": 1,
+        "deckOrder": [
+          56,
+          15,
+          30,
+          86,
+          62,
+          55,
+          36,
+          77,
+          16,
+          49,
+          83,
+          52,
+          96,
+          68,
+          14,
+          34,
+          13,
+          66,
+          63,
+          73,
+          99,
+          1,
+          54,
+          43,
+          45,
+          22,
+          25,
+          10,
+          40,
+          103,
+          37,
+          18,
+          76,
+          74,
+          88,
+          11,
+          46,
+          60,
+          90,
+          38,
+          31,
+          9,
+          26,
+          59,
+          48,
+          71,
+          28,
+          12,
+          27,
+          91,
+          2,
+          3,
+          89,
+          85,
+          101,
+          98,
+          80,
+          95,
+          69,
+          17,
+          87,
+          29,
+          81,
+          82,
+          8,
+          35,
+          64,
+          58,
+          24,
+          23,
+          72,
+          39,
+          79,
+          42,
+          65,
+          47,
+          33,
+          7,
+          93,
+          92,
+          5,
+          20,
+          21,
+          94,
+          44,
+          102,
+          97,
+          50,
+          61,
+          19,
+          67,
+          51,
+          6,
+          100,
+          78,
+          70,
+          53,
+          104,
+          4,
+          84,
+          57,
+          41,
+          32,
+          75
+        ],
+        "dealtHands": {
+          "p0": [
+            15,
+            16,
+            30,
+            36,
+            49,
+            55,
+            56,
+            62,
+            77,
+            86
+          ],
+          "p1": [
+            13,
+            14,
+            34,
+            52,
+            63,
+            66,
+            68,
+            73,
+            83,
+            96
+          ]
+        },
+        "initialBoard": [
+          [
+            99
+          ],
+          [
+            1
+          ],
+          [
+            54
+          ],
+          [
+            43
+          ]
+        ],
+        "turns": [
+          {
+            "turn": 1,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 13
+              },
+              {
+                "playerId": "p0",
+                "card": 15
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 13,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 15,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                1,
+                13,
+                15
+              ],
+              [
+                54
+              ],
+              [
+                43
+              ]
+            ]
+          },
+          {
+            "turn": 2,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 14
+              },
+              {
+                "playerId": "p0",
+                "card": 16
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 14,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 16,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 14,
+                "pickedRowIndex": 2,
+                "collectedCards": [
+                  54
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                1,
+                13,
+                15,
+                16
+              ],
+              [
+                14
+              ],
+              [
+                43
+              ]
+            ]
+          },
+          {
+            "turn": 3,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 30
+              },
+              {
+                "playerId": "p1",
+                "card": 34
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 30,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 34,
+                "rowIndex": 1,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                34
+              ],
+              [
+                14
+              ],
+              [
+                43
+              ]
+            ]
+          },
+          {
+            "turn": 4,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 36
+              },
+              {
+                "playerId": "p1",
+                "card": 52
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 36,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 52,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                34,
+                36
+              ],
+              [
+                14
+              ],
+              [
+                43,
+                52
+              ]
+            ]
+          },
+          {
+            "turn": 5,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 49
+              },
+              {
+                "playerId": "p1",
+                "card": 63
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 49,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 63,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                34,
+                36,
+                49
+              ],
+              [
+                14
+              ],
+              [
+                43,
+                52,
+                63
+              ]
+            ]
+          },
+          {
+            "turn": 6,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 55
+              },
+              {
+                "playerId": "p1",
+                "card": 66
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 55,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 66,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                34,
+                36,
+                49,
+                55
+              ],
+              [
+                14
+              ],
+              [
+                43,
+                52,
+                63,
+                66
+              ]
+            ]
+          },
+          {
+            "turn": 7,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 56
+              },
+              {
+                "playerId": "p1",
+                "card": 68
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 56,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 68,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                34,
+                36,
+                49,
+                55,
+                56
+              ],
+              [
+                14
+              ],
+              [
+                43,
+                52,
+                63,
+                66,
+                68
+              ]
+            ]
+          },
+          {
+            "turn": 8,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 62
+              },
+              {
+                "playerId": "p1",
+                "card": 73
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 62,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p1",
+                "card": 73,
+                "rowIndex": 3,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                62
+              ],
+              [
+                14
+              ],
+              [
+                73
+              ]
+            ]
+          },
+          {
+            "turn": 9,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 77
+              },
+              {
+                "playerId": "p1",
+                "card": 83
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 77,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 83,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                62
+              ],
+              [
+                14
+              ],
+              [
+                73,
+                77,
+                83
+              ]
+            ]
+          },
+          {
+            "turn": 10,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 86
+              },
+              {
+                "playerId": "p1",
+                "card": 96
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 86,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 96,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                99
+              ],
+              [
+                62
+              ],
+              [
+                14
+              ],
+              [
+                73,
+                77,
+                83,
+                86,
+                96
+              ]
+            ]
+          }
+        ],
+        "roundScores": [
+          {
+            "id": "p0",
+            "penalty": 11,
+            "totalScore": 11
+          },
+          {
+            "id": "p1",
+            "penalty": 18,
+            "totalScore": 18
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "deckOrder": [
+          88,
+          12,
+          34,
+          99,
+          80,
+          5,
+          83,
+          93,
+          58,
+          66,
+          32,
+          4,
+          17,
+          35,
+          61,
+          101,
+          36,
+          91,
+          100,
+          22,
+          23,
+          37,
+          98,
+          75,
+          30,
+          16,
+          1,
+          33,
+          94,
+          27,
+          11,
+          19,
+          74,
+          104,
+          76,
+          95,
+          38,
+          102,
+          15,
+          52,
+          65,
+          26,
+          87,
+          45,
+          70,
+          54,
+          60,
+          7,
+          55,
+          90,
+          29,
+          21,
+          40,
+          79,
+          14,
+          51,
+          86,
+          6,
+          89,
+          24,
+          62,
+          53,
+          41,
+          63,
+          46,
+          57,
+          64,
+          67,
+          92,
+          31,
+          48,
+          85,
+          9,
+          39,
+          68,
+          8,
+          56,
+          43,
+          103,
+          28,
+          3,
+          25,
+          97,
+          77,
+          18,
+          82,
+          73,
+          49,
+          59,
+          84,
+          2,
+          47,
+          78,
+          42,
+          71,
+          10,
+          69,
+          96,
+          44,
+          81,
+          50,
+          72,
+          20,
+          13
+        ],
+        "dealtHands": {
+          "p0": [
+            5,
+            12,
+            34,
+            58,
+            66,
+            80,
+            83,
+            88,
+            93,
+            99
+          ],
+          "p1": [
+            4,
+            17,
+            22,
+            32,
+            35,
+            36,
+            61,
+            91,
+            100,
+            101
+          ]
+        },
+        "initialBoard": [
+          [
+            23
+          ],
+          [
+            37
+          ],
+          [
+            98
+          ],
+          [
+            75
+          ]
+        ],
+        "turns": [
+          {
+            "turn": 1,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 4
+              },
+              {
+                "playerId": "p0",
+                "card": 5
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 4,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 5,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 4,
+                "pickedRowIndex": 0,
+                "collectedCards": [
+                  23
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                4,
+                5
+              ],
+              [
+                37
+              ],
+              [
+                98
+              ],
+              [
+                75
+              ]
+            ]
+          },
+          {
+            "turn": 2,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 12
+              },
+              {
+                "playerId": "p1",
+                "card": 17
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 12,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 17,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                4,
+                5,
+                12,
+                17
+              ],
+              [
+                37
+              ],
+              [
+                98
+              ],
+              [
+                75
+              ]
+            ]
+          },
+          {
+            "turn": 3,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 22
+              },
+              {
+                "playerId": "p0",
+                "card": 34
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 22,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 34,
+                "rowIndex": 0,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                34
+              ],
+              [
+                37
+              ],
+              [
+                98
+              ],
+              [
+                75
+              ]
+            ]
+          },
+          {
+            "turn": 4,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 32
+              },
+              {
+                "playerId": "p0",
+                "card": 58
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 32,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 58,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 32,
+                "pickedRowIndex": 0,
+                "collectedCards": [
+                  34
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                32
+              ],
+              [
+                37,
+                58
+              ],
+              [
+                98
+              ],
+              [
+                75
+              ]
+            ]
+          },
+          {
+            "turn": 5,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 35
+              },
+              {
+                "playerId": "p0",
+                "card": 66
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 35,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 66,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                32,
+                35
+              ],
+              [
+                37,
+                58,
+                66
+              ],
+              [
+                98
+              ],
+              [
+                75
+              ]
+            ]
+          },
+          {
+            "turn": 6,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 36
+              },
+              {
+                "playerId": "p0",
+                "card": 80
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 36,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 80,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                32,
+                35,
+                36
+              ],
+              [
+                37,
+                58,
+                66
+              ],
+              [
+                98
+              ],
+              [
+                75,
+                80
+              ]
+            ]
+          },
+          {
+            "turn": 7,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 61
+              },
+              {
+                "playerId": "p0",
+                "card": 83
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 61,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 83,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                32,
+                35,
+                36,
+                61
+              ],
+              [
+                37,
+                58,
+                66
+              ],
+              [
+                98
+              ],
+              [
+                75,
+                80,
+                83
+              ]
+            ]
+          },
+          {
+            "turn": 8,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 88
+              },
+              {
+                "playerId": "p1",
+                "card": 91
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 88,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 91,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                32,
+                35,
+                36,
+                61
+              ],
+              [
+                37,
+                58,
+                66
+              ],
+              [
+                98
+              ],
+              [
+                75,
+                80,
+                83,
+                88,
+                91
+              ]
+            ]
+          },
+          {
+            "turn": 9,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 93
+              },
+              {
+                "playerId": "p1",
+                "card": 100
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 93,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p1",
+                "card": 100,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                32,
+                35,
+                36,
+                61
+              ],
+              [
+                37,
+                58,
+                66
+              ],
+              [
+                98,
+                100
+              ],
+              [
+                93
+              ]
+            ]
+          },
+          {
+            "turn": 10,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 99
+              },
+              {
+                "playerId": "p1",
+                "card": 101
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 99,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 101,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                32,
+                35,
+                36,
+                61
+              ],
+              [
+                37,
+                58,
+                66
+              ],
+              [
+                98,
+                100,
+                101
+              ],
+              [
+                93,
+                99
+              ]
+            ]
+          }
+        ],
+        "roundScores": [
+          {
+            "id": "p0",
+            "penalty": 22,
+            "totalScore": 33
+          },
+          {
+            "id": "p1",
+            "penalty": 2,
+            "totalScore": 20
+          }
+        ]
+      },
+      {
+        "round": 3,
+        "deckOrder": [
+          65,
+          21,
+          33,
+          56,
+          36,
+          80,
+          74,
+          4,
+          17,
+          90,
+          103,
+          3,
+          83,
+          79,
+          42,
+          93,
+          41,
+          52,
+          8,
+          19,
+          60,
+          18,
+          82,
+          64,
+          75,
+          5,
+          88,
+          87,
+          39,
+          9,
+          98,
+          100,
+          95,
+          99,
+          51,
+          25,
+          81,
+          48,
+          70,
+          59,
+          66,
+          54,
+          53,
+          104,
+          77,
+          14,
+          28,
+          94,
+          57,
+          29,
+          69,
+          27,
+          76,
+          67,
+          47,
+          55,
+          78,
+          91,
+          63,
+          96,
+          10,
+          35,
+          73,
+          62,
+          92,
+          44,
+          11,
+          16,
+          24,
+          84,
+          49,
+          13,
+          37,
+          89,
+          85,
+          34,
+          15,
+          46,
+          6,
+          12,
+          101,
+          102,
+          31,
+          7,
+          86,
+          50,
+          23,
+          97,
+          72,
+          38,
+          68,
+          22,
+          40,
+          1,
+          58,
+          30,
+          45,
+          32,
+          20,
+          61,
+          71,
+          43,
+          2,
+          26
+        ],
+        "dealtHands": {
+          "p0": [
+            4,
+            17,
+            21,
+            33,
+            36,
+            56,
+            65,
+            74,
+            80,
+            90
+          ],
+          "p1": [
+            3,
+            8,
+            19,
+            41,
+            42,
+            52,
+            79,
+            83,
+            93,
+            103
+          ]
+        },
+        "initialBoard": [
+          [
+            60
+          ],
+          [
+            18
+          ],
+          [
+            82
+          ],
+          [
+            64
+          ]
+        ],
+        "turns": [
+          {
+            "turn": 1,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 3
+              },
+              {
+                "playerId": "p0",
+                "card": 4
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 3,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 4,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 3,
+                "pickedRowIndex": 1,
+                "collectedCards": [
+                  18
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                60
+              ],
+              [
+                3,
+                4
+              ],
+              [
+                82
+              ],
+              [
+                64
+              ]
+            ]
+          },
+          {
+            "turn": 2,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 8
+              },
+              {
+                "playerId": "p0",
+                "card": 17
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 8,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 17,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60
+              ],
+              [
+                3,
+                4,
+                8,
+                17
+              ],
+              [
+                82
+              ],
+              [
+                64
+              ]
+            ]
+          },
+          {
+            "turn": 3,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 19
+              },
+              {
+                "playerId": "p0",
+                "card": 21
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 19,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 21,
+                "rowIndex": 1,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60
+              ],
+              [
+                21
+              ],
+              [
+                82
+              ],
+              [
+                64
+              ]
+            ]
+          },
+          {
+            "turn": 4,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 33
+              },
+              {
+                "playerId": "p1",
+                "card": 41
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 33,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 41,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60
+              ],
+              [
+                21,
+                33,
+                41
+              ],
+              [
+                82
+              ],
+              [
+                64
+              ]
+            ]
+          },
+          {
+            "turn": 5,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 36
+              },
+              {
+                "playerId": "p1",
+                "card": 42
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 36,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 42,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p0",
+                "card": 36,
+                "pickedRowIndex": 2,
+                "collectedCards": [
+                  82
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                60
+              ],
+              [
+                21,
+                33,
+                41,
+                42
+              ],
+              [
+                36
+              ],
+              [
+                64
+              ]
+            ]
+          },
+          {
+            "turn": 6,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 52
+              },
+              {
+                "playerId": "p0",
+                "card": 56
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 52,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 56,
+                "rowIndex": 1,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60
+              ],
+              [
+                56
+              ],
+              [
+                36
+              ],
+              [
+                64
+              ]
+            ]
+          },
+          {
+            "turn": 7,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 65
+              },
+              {
+                "playerId": "p1",
+                "card": 79
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 65,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 79,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60
+              ],
+              [
+                56
+              ],
+              [
+                36
+              ],
+              [
+                64,
+                65,
+                79
+              ]
+            ]
+          },
+          {
+            "turn": 8,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 74
+              },
+              {
+                "playerId": "p1",
+                "card": 83
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 74,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 83,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60,
+                74
+              ],
+              [
+                56
+              ],
+              [
+                36
+              ],
+              [
+                64,
+                65,
+                79,
+                83
+              ]
+            ]
+          },
+          {
+            "turn": 9,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 80
+              },
+              {
+                "playerId": "p1",
+                "card": 93
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 80,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 93,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60,
+                74,
+                80
+              ],
+              [
+                56
+              ],
+              [
+                36
+              ],
+              [
+                64,
+                65,
+                79,
+                83,
+                93
+              ]
+            ]
+          },
+          {
+            "turn": 10,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 90
+              },
+              {
+                "playerId": "p1",
+                "card": 103
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 90,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 103,
+                "rowIndex": 3,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60,
+                74,
+                80,
+                90
+              ],
+              [
+                56
+              ],
+              [
+                36
+              ],
+              [
+                103
+              ]
+            ]
+          }
+        ],
+        "roundScores": [
+          {
+            "id": "p0",
+            "penalty": 15,
+            "totalScore": 48
+          },
+          {
+            "id": "p1",
+            "penalty": 7,
+            "totalScore": 27
+          }
+        ]
+      },
+      {
+        "round": 4,
+        "deckOrder": [
+          36,
+          47,
+          40,
+          93,
+          90,
+          25,
+          98,
+          31,
+          13,
+          43,
+          78,
+          91,
+          10,
+          9,
+          26,
+          41,
+          59,
+          104,
+          102,
+          15,
+          89,
+          82,
+          16,
+          101,
+          56,
+          99,
+          66,
+          96,
+          67,
+          48,
+          55,
+          85,
+          4,
+          88,
+          81,
+          18,
+          52,
+          17,
+          100,
+          97,
+          51,
+          50,
+          11,
+          22,
+          33,
+          73,
+          62,
+          21,
+          45,
+          63,
+          83,
+          80,
+          84,
+          7,
+          70,
+          1,
+          24,
+          65,
+          69,
+          37,
+          64,
+          20,
+          53,
+          14,
+          35,
+          32,
+          103,
+          86,
+          94,
+          29,
+          30,
+          46,
+          75,
+          54,
+          6,
+          38,
+          61,
+          27,
+          2,
+          72,
+          79,
+          39,
+          42,
+          87,
+          57,
+          92,
+          44,
+          77,
+          74,
+          49,
+          58,
+          23,
+          60,
+          76,
+          95,
+          3,
+          5,
+          68,
+          19,
+          8,
+          28,
+          12,
+          34,
+          71
+        ],
+        "dealtHands": {
+          "p0": [
+            13,
+            25,
+            31,
+            36,
+            40,
+            43,
+            47,
+            90,
+            93,
+            98
+          ],
+          "p1": [
+            9,
+            10,
+            15,
+            26,
+            41,
+            59,
+            78,
+            91,
+            102,
+            104
+          ]
+        },
+        "initialBoard": [
+          [
+            89
+          ],
+          [
+            82
+          ],
+          [
+            16
+          ],
+          [
+            101
+          ]
+        ],
+        "turns": [
+          {
+            "turn": 1,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 9
+              },
+              {
+                "playerId": "p0",
+                "card": 13
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 9,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 13,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 9,
+                "pickedRowIndex": 0,
+                "collectedCards": [
+                  89
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                9,
+                13
+              ],
+              [
+                82
+              ],
+              [
+                16
+              ],
+              [
+                101
+              ]
+            ]
+          },
+          {
+            "turn": 2,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 10
+              },
+              {
+                "playerId": "p0",
+                "card": 25
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 10,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 25,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 10,
+                "pickedRowIndex": 1,
+                "collectedCards": [
+                  82
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                9,
+                13
+              ],
+              [
+                10
+              ],
+              [
+                16,
+                25
+              ],
+              [
+                101
+              ]
+            ]
+          },
+          {
+            "turn": 3,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 15
+              },
+              {
+                "playerId": "p0",
+                "card": 31
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 15,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 31,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                9,
+                13,
+                15
+              ],
+              [
+                10
+              ],
+              [
+                16,
+                25,
+                31
+              ],
+              [
+                101
+              ]
+            ]
+          },
+          {
+            "turn": 4,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 26
+              },
+              {
+                "playerId": "p0",
+                "card": 36
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 26,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 36,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                9,
+                13,
+                15,
+                26
+              ],
+              [
+                10
+              ],
+              [
+                16,
+                25,
+                31,
+                36
+              ],
+              [
+                101
+              ]
+            ]
+          },
+          {
+            "turn": 5,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 40
+              },
+              {
+                "playerId": "p1",
+                "card": 41
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 40,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 41,
+                "rowIndex": 2,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                9,
+                13,
+                15,
+                26
+              ],
+              [
+                10
+              ],
+              [
+                41
+              ],
+              [
+                101
+              ]
+            ]
+          },
+          {
+            "turn": 6,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 43
+              },
+              {
+                "playerId": "p1",
+                "card": 59
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 43,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 59,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                9,
+                13,
+                15,
+                26
+              ],
+              [
+                10
+              ],
+              [
+                41,
+                43,
+                59
+              ],
+              [
+                101
+              ]
+            ]
+          },
+          {
+            "turn": 7,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 47
+              },
+              {
+                "playerId": "p1",
+                "card": 78
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 47,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 78,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                9,
+                13,
+                15,
+                26,
+                47
+              ],
+              [
+                10
+              ],
+              [
+                41,
+                43,
+                59,
+                78
+              ],
+              [
+                101
+              ]
+            ]
+          },
+          {
+            "turn": 8,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 90
+              },
+              {
+                "playerId": "p1",
+                "card": 91
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 90,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 91,
+                "rowIndex": 2,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                9,
+                13,
+                15,
+                26,
+                47
+              ],
+              [
+                10
+              ],
+              [
+                91
+              ],
+              [
+                101
+              ]
+            ]
+          },
+          {
+            "turn": 9,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 93
+              },
+              {
+                "playerId": "p1",
+                "card": 102
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 93,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 102,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                9,
+                13,
+                15,
+                26,
+                47
+              ],
+              [
+                10
+              ],
+              [
+                91,
+                93
+              ],
+              [
+                101,
+                102
+              ]
+            ]
+          },
+          {
+            "turn": 10,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 98
+              },
+              {
+                "playerId": "p1",
+                "card": 104
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 98,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 104,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                9,
+                13,
+                15,
+                26,
+                47
+              ],
+              [
+                10
+              ],
+              [
+                91,
+                93,
+                98
+              ],
+              [
+                101,
+                102,
+                104
+              ]
+            ]
+          }
+        ],
+        "roundScores": [
+          {
+            "id": "p0",
+            "penalty": 0,
+            "totalScore": 48
+          },
+          {
+            "id": "p1",
+            "penalty": 17,
+            "totalScore": 44
+          }
+        ]
+      },
+      {
+        "round": 5,
+        "deckOrder": [
+          36,
+          66,
+          40,
+          96,
+          43,
+          71,
+          31,
+          99,
+          24,
+          32,
+          102,
+          25,
+          90,
+          57,
+          15,
+          1,
+          42,
+          70,
+          78,
+          72,
+          47,
+          33,
+          5,
+          60,
+          8,
+          65,
+          49,
+          18,
+          92,
+          56,
+          6,
+          35,
+          48,
+          53,
+          101,
+          73,
+          17,
+          2,
+          104,
+          86,
+          29,
+          83,
+          69,
+          94,
+          81,
+          87,
+          19,
+          7,
+          93,
+          91,
+          84,
+          95,
+          63,
+          28,
+          74,
+          38,
+          50,
+          27,
+          97,
+          44,
+          37,
+          67,
+          51,
+          52,
+          10,
+          4,
+          100,
+          88,
+          75,
+          26,
+          12,
+          34,
+          58,
+          89,
+          22,
+          55,
+          45,
+          20,
+          14,
+          13,
+          39,
+          82,
+          103,
+          77,
+          62,
+          85,
+          41,
+          68,
+          11,
+          80,
+          79,
+          54,
+          76,
+          3,
+          23,
+          16,
+          30,
+          61,
+          9,
+          46,
+          21,
+          64,
+          59,
+          98
+        ],
+        "dealtHands": {
+          "p0": [
+            24,
+            31,
+            32,
+            36,
+            40,
+            43,
+            66,
+            71,
+            96,
+            99
+          ],
+          "p1": [
+            1,
+            15,
+            25,
+            42,
+            57,
+            70,
+            72,
+            78,
+            90,
+            102
+          ]
+        },
+        "initialBoard": [
+          [
+            47
+          ],
+          [
+            33
+          ],
+          [
+            5
+          ],
+          [
+            60
+          ]
+        ],
+        "turns": [
+          {
+            "turn": 1,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 1
+              },
+              {
+                "playerId": "p0",
+                "card": 24
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 1,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 24,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 1,
+                "pickedRowIndex": 0,
+                "collectedCards": [
+                  47
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                1
+              ],
+              [
+                33
+              ],
+              [
+                5,
+                24
+              ],
+              [
+                60
+              ]
+            ]
+          },
+          {
+            "turn": 2,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 15
+              },
+              {
+                "playerId": "p0",
+                "card": 31
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 15,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 31,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15
+              ],
+              [
+                33
+              ],
+              [
+                5,
+                24,
+                31
+              ],
+              [
+                60
+              ]
+            ]
+          },
+          {
+            "turn": 3,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 25
+              },
+              {
+                "playerId": "p0",
+                "card": 32
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 25,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 32,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15,
+                25
+              ],
+              [
+                33
+              ],
+              [
+                5,
+                24,
+                31,
+                32
+              ],
+              [
+                60
+              ]
+            ]
+          },
+          {
+            "turn": 4,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 36
+              },
+              {
+                "playerId": "p1",
+                "card": 42
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 36,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 42,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15,
+                25
+              ],
+              [
+                33,
+                36,
+                42
+              ],
+              [
+                5,
+                24,
+                31,
+                32
+              ],
+              [
+                60
+              ]
+            ]
+          },
+          {
+            "turn": 5,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 40
+              },
+              {
+                "playerId": "p1",
+                "card": 57
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 40,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 57,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15,
+                25
+              ],
+              [
+                33,
+                36,
+                42,
+                57
+              ],
+              [
+                5,
+                24,
+                31,
+                32,
+                40
+              ],
+              [
+                60
+              ]
+            ]
+          },
+          {
+            "turn": 6,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 43
+              },
+              {
+                "playerId": "p1",
+                "card": 70
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 43,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p1",
+                "card": 70,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15,
+                25
+              ],
+              [
+                33,
+                36,
+                42,
+                57
+              ],
+              [
+                43
+              ],
+              [
+                60,
+                70
+              ]
+            ]
+          },
+          {
+            "turn": 7,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 66
+              },
+              {
+                "playerId": "p1",
+                "card": 72
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 66,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 72,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15,
+                25
+              ],
+              [
+                33,
+                36,
+                42,
+                57,
+                66
+              ],
+              [
+                43
+              ],
+              [
+                60,
+                70,
+                72
+              ]
+            ]
+          },
+          {
+            "turn": 8,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 71
+              },
+              {
+                "playerId": "p1",
+                "card": 78
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 71,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p1",
+                "card": 78,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15,
+                25
+              ],
+              [
+                71
+              ],
+              [
+                43
+              ],
+              [
+                60,
+                70,
+                72,
+                78
+              ]
+            ]
+          },
+          {
+            "turn": 9,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 90
+              },
+              {
+                "playerId": "p0",
+                "card": 96
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 90,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 96,
+                "rowIndex": 3,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15,
+                25
+              ],
+              [
+                71
+              ],
+              [
+                43
+              ],
+              [
+                96
+              ]
+            ]
+          },
+          {
+            "turn": 10,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 99
+              },
+              {
+                "playerId": "p1",
+                "card": 102
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 99,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 102,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                1,
+                15,
+                25
+              ],
+              [
+                71
+              ],
+              [
+                43
+              ],
+              [
+                96,
+                99,
+                102
+              ]
+            ]
+          }
+        ],
+        "roundScores": [
+          {
+            "id": "p0",
+            "penalty": 32,
+            "totalScore": 80
+          },
+          {
+            "id": "p1",
+            "penalty": 1,
+            "totalScore": 45
+          }
+        ]
+      }
+    ],
+    "finalResults": [
+      {
+        "id": "p0",
+        "finalScore": 80,
+        "rank": 2
+      },
+      {
+        "id": "p1",
+        "finalScore": 45,
+        "rank": 1
+      }
+    ],
+    "winners": [
+      "p1"
+    ]
+  },
+  {
+    "id": "10-player-full-game",
+    "seed": "trace-seed-002",
+    "playerCount": 10,
+    "rounds": [
+      {
+        "round": 1,
+        "deckOrder": [
+          56,
+          69,
+          95,
+          41,
+          77,
+          28,
+          8,
+          48,
+          50,
+          59,
+          45,
+          49,
+          62,
+          27,
+          54,
+          29,
+          24,
+          7,
+          75,
+          6,
+          74,
+          103,
+          38,
+          97,
+          1,
+          61,
+          47,
+          57,
+          18,
+          30,
+          33,
+          90,
+          42,
+          32,
+          92,
+          16,
+          26,
+          84,
+          15,
+          19,
+          37,
+          89,
+          98,
+          10,
+          3,
+          52,
+          88,
+          17,
+          67,
+          64,
+          2,
+          31,
+          36,
+          13,
+          44,
+          43,
+          21,
+          91,
+          73,
+          55,
+          86,
+          79,
+          76,
+          70,
+          53,
+          93,
+          101,
+          46,
+          78,
+          39,
+          87,
+          23,
+          72,
+          65,
+          94,
+          99,
+          66,
+          83,
+          22,
+          85,
+          9,
+          81,
+          14,
+          63,
+          20,
+          96,
+          60,
+          5,
+          102,
+          80,
+          104,
+          82,
+          40,
+          4,
+          58,
+          68,
+          35,
+          11,
+          71,
+          12,
+          25,
+          34,
+          51,
+          100
+        ],
+        "dealtHands": {
+          "p0": [
+            8,
+            28,
+            41,
+            48,
+            50,
+            56,
+            59,
+            69,
+            77,
+            95
+          ],
+          "p1": [
+            6,
+            7,
+            24,
+            27,
+            29,
+            45,
+            49,
+            54,
+            62,
+            75
+          ],
+          "p2": [
+            1,
+            18,
+            30,
+            38,
+            47,
+            57,
+            61,
+            74,
+            97,
+            103
+          ],
+          "p3": [
+            15,
+            16,
+            19,
+            26,
+            32,
+            33,
+            42,
+            84,
+            90,
+            92
+          ],
+          "p4": [
+            3,
+            10,
+            17,
+            37,
+            52,
+            64,
+            67,
+            88,
+            89,
+            98
+          ],
+          "p5": [
+            2,
+            13,
+            21,
+            31,
+            36,
+            43,
+            44,
+            55,
+            73,
+            91
+          ],
+          "p6": [
+            39,
+            46,
+            53,
+            70,
+            76,
+            78,
+            79,
+            86,
+            93,
+            101
+          ],
+          "p7": [
+            22,
+            23,
+            65,
+            66,
+            72,
+            83,
+            85,
+            87,
+            94,
+            99
+          ],
+          "p8": [
+            5,
+            9,
+            14,
+            20,
+            60,
+            63,
+            80,
+            81,
+            96,
+            102
+          ],
+          "p9": [
+            4,
+            11,
+            12,
+            35,
+            40,
+            58,
+            68,
+            71,
+            82,
+            104
+          ]
+        },
+        "initialBoard": [
+          [
+            25
+          ],
+          [
+            34
+          ],
+          [
+            51
+          ],
+          [
+            100
+          ]
+        ],
+        "turns": [
+          {
+            "turn": 1,
+            "plays": [
+              {
+                "playerId": "p2",
+                "card": 1
+              },
+              {
+                "playerId": "p5",
+                "card": 2
+              },
+              {
+                "playerId": "p4",
+                "card": 3
+              },
+              {
+                "playerId": "p9",
+                "card": 4
+              },
+              {
+                "playerId": "p8",
+                "card": 5
+              },
+              {
+                "playerId": "p1",
+                "card": 6
+              },
+              {
+                "playerId": "p0",
+                "card": 8
+              },
+              {
+                "playerId": "p3",
+                "card": 15
+              },
+              {
+                "playerId": "p7",
+                "card": 22
+              },
+              {
+                "playerId": "p6",
+                "card": 39
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p2",
+                "card": 1,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 2,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 3,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 4,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 5,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 6,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p0",
+                "card": 8,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 15,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 22,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 39,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p2",
+                "card": 1,
+                "pickedRowIndex": 1,
+                "collectedCards": [
+                  34
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                25,
+                39
+              ],
+              [
+                6,
+                8,
+                15,
+                22
+              ],
+              [
+                51
+              ],
+              [
+                100
+              ]
+            ]
+          },
+          {
+            "turn": 2,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 7
+              },
+              {
+                "playerId": "p8",
+                "card": 9
+              },
+              {
+                "playerId": "p4",
+                "card": 10
+              },
+              {
+                "playerId": "p9",
+                "card": 11
+              },
+              {
+                "playerId": "p5",
+                "card": 13
+              },
+              {
+                "playerId": "p3",
+                "card": 16
+              },
+              {
+                "playerId": "p2",
+                "card": 18
+              },
+              {
+                "playerId": "p7",
+                "card": 23
+              },
+              {
+                "playerId": "p0",
+                "card": 28
+              },
+              {
+                "playerId": "p6",
+                "card": 46
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 7,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 9,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 10,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 11,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 13,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 16,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p2",
+                "card": 18,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 23,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 28,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p6",
+                "card": 46,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 7,
+                "pickedRowIndex": 2,
+                "collectedCards": [
+                  51
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                25,
+                39,
+                46
+              ],
+              [
+                28
+              ],
+              [
+                16,
+                18
+              ],
+              [
+                100
+              ]
+            ]
+          },
+          {
+            "turn": 3,
+            "plays": [
+              {
+                "playerId": "p9",
+                "card": 12
+              },
+              {
+                "playerId": "p8",
+                "card": 14
+              },
+              {
+                "playerId": "p4",
+                "card": 17
+              },
+              {
+                "playerId": "p3",
+                "card": 19
+              },
+              {
+                "playerId": "p5",
+                "card": 21
+              },
+              {
+                "playerId": "p1",
+                "card": 24
+              },
+              {
+                "playerId": "p2",
+                "card": 30
+              },
+              {
+                "playerId": "p0",
+                "card": 41
+              },
+              {
+                "playerId": "p6",
+                "card": 53
+              },
+              {
+                "playerId": "p7",
+                "card": 65
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p9",
+                "card": 12,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 14,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 17,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 19,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 21,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 24,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 30,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p0",
+                "card": 41,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 53,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 65,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p9",
+                "card": 12,
+                "pickedRowIndex": 1,
+                "collectedCards": [
+                  28
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                25,
+                39,
+                46,
+                53,
+                65
+              ],
+              [
+                12,
+                14,
+                17
+              ],
+              [
+                30,
+                41
+              ],
+              [
+                100
+              ]
+            ]
+          },
+          {
+            "turn": 4,
+            "plays": [
+              {
+                "playerId": "p8",
+                "card": 20
+              },
+              {
+                "playerId": "p3",
+                "card": 26
+              },
+              {
+                "playerId": "p1",
+                "card": 27
+              },
+              {
+                "playerId": "p5",
+                "card": 31
+              },
+              {
+                "playerId": "p9",
+                "card": 35
+              },
+              {
+                "playerId": "p4",
+                "card": 37
+              },
+              {
+                "playerId": "p2",
+                "card": 38
+              },
+              {
+                "playerId": "p0",
+                "card": 48
+              },
+              {
+                "playerId": "p7",
+                "card": 66
+              },
+              {
+                "playerId": "p6",
+                "card": 70
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p8",
+                "card": 20,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 26,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 27,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p5",
+                "card": 31,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 35,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 37,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 38,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 48,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 66,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p6",
+                "card": 70,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                66,
+                70
+              ],
+              [
+                27,
+                31,
+                35,
+                37,
+                38
+              ],
+              [
+                30,
+                41,
+                48
+              ],
+              [
+                100
+              ]
+            ]
+          },
+          {
+            "turn": 5,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 29
+              },
+              {
+                "playerId": "p3",
+                "card": 32
+              },
+              {
+                "playerId": "p5",
+                "card": 36
+              },
+              {
+                "playerId": "p9",
+                "card": 40
+              },
+              {
+                "playerId": "p2",
+                "card": 47
+              },
+              {
+                "playerId": "p0",
+                "card": 50
+              },
+              {
+                "playerId": "p4",
+                "card": 52
+              },
+              {
+                "playerId": "p8",
+                "card": 60
+              },
+              {
+                "playerId": "p7",
+                "card": 72
+              },
+              {
+                "playerId": "p6",
+                "card": 76
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 29,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 32,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 36,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 40,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p2",
+                "card": 47,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 50,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 52,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 60,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p7",
+                "card": 72,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 76,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p1",
+                "card": 29,
+                "pickedRowIndex": 3,
+                "collectedCards": [
+                  100
+                ],
+                "cattleHeadsCollected": 3
+              }
+            ],
+            "boardAfter": [
+              [
+                66,
+                70,
+                72,
+                76
+              ],
+              [
+                40,
+                47
+              ],
+              [
+                60
+              ],
+              [
+                29,
+                32,
+                36
+              ]
+            ]
+          },
+          {
+            "turn": 6,
+            "plays": [
+              {
+                "playerId": "p3",
+                "card": 33
+              },
+              {
+                "playerId": "p5",
+                "card": 43
+              },
+              {
+                "playerId": "p1",
+                "card": 45
+              },
+              {
+                "playerId": "p0",
+                "card": 56
+              },
+              {
+                "playerId": "p2",
+                "card": 57
+              },
+              {
+                "playerId": "p9",
+                "card": 58
+              },
+              {
+                "playerId": "p8",
+                "card": 63
+              },
+              {
+                "playerId": "p4",
+                "card": 64
+              },
+              {
+                "playerId": "p6",
+                "card": 78
+              },
+              {
+                "playerId": "p7",
+                "card": 83
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p3",
+                "card": 33,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 43,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 45,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 56,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 57,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 58,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 63,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p4",
+                "card": 64,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 78,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 83,
+                "rowIndex": 0,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p3",
+                "card": 33,
+                "pickedRowIndex": 2,
+                "collectedCards": [
+                  60
+                ],
+                "cattleHeadsCollected": 3
+              }
+            ],
+            "boardAfter": [
+              [
+                83
+              ],
+              [
+                63,
+                64
+              ],
+              [
+                33
+              ],
+              [
+                29,
+                32,
+                36,
+                43,
+                45
+              ]
+            ]
+          },
+          {
+            "turn": 7,
+            "plays": [
+              {
+                "playerId": "p3",
+                "card": 42
+              },
+              {
+                "playerId": "p5",
+                "card": 44
+              },
+              {
+                "playerId": "p1",
+                "card": 49
+              },
+              {
+                "playerId": "p0",
+                "card": 59
+              },
+              {
+                "playerId": "p2",
+                "card": 61
+              },
+              {
+                "playerId": "p4",
+                "card": 67
+              },
+              {
+                "playerId": "p9",
+                "card": 68
+              },
+              {
+                "playerId": "p6",
+                "card": 79
+              },
+              {
+                "playerId": "p8",
+                "card": 80
+              },
+              {
+                "playerId": "p7",
+                "card": 85
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p3",
+                "card": 42,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 44,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 49,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p0",
+                "card": 59,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 61,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 67,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 68,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 79,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 80,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p7",
+                "card": 85,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                83,
+                85
+              ],
+              [
+                80
+              ],
+              [
+                33,
+                42,
+                44
+              ],
+              [
+                49,
+                59,
+                61
+              ]
+            ]
+          },
+          {
+            "turn": 8,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 54
+              },
+              {
+                "playerId": "p5",
+                "card": 55
+              },
+              {
+                "playerId": "p0",
+                "card": 69
+              },
+              {
+                "playerId": "p9",
+                "card": 71
+              },
+              {
+                "playerId": "p2",
+                "card": 74
+              },
+              {
+                "playerId": "p8",
+                "card": 81
+              },
+              {
+                "playerId": "p3",
+                "card": 84
+              },
+              {
+                "playerId": "p6",
+                "card": 86
+              },
+              {
+                "playerId": "p7",
+                "card": 87
+              },
+              {
+                "playerId": "p4",
+                "card": 88
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 54,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 55,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 69,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 71,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 74,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p8",
+                "card": 81,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 84,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 86,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 87,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 88,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                83,
+                85,
+                86,
+                87,
+                88
+              ],
+              [
+                80,
+                81,
+                84
+              ],
+              [
+                33,
+                42,
+                44,
+                54,
+                55
+              ],
+              [
+                74
+              ]
+            ]
+          },
+          {
+            "turn": 9,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 62
+              },
+              {
+                "playerId": "p5",
+                "card": 73
+              },
+              {
+                "playerId": "p0",
+                "card": 77
+              },
+              {
+                "playerId": "p9",
+                "card": 82
+              },
+              {
+                "playerId": "p4",
+                "card": 89
+              },
+              {
+                "playerId": "p3",
+                "card": 90
+              },
+              {
+                "playerId": "p6",
+                "card": 93
+              },
+              {
+                "playerId": "p7",
+                "card": 94
+              },
+              {
+                "playerId": "p8",
+                "card": 96
+              },
+              {
+                "playerId": "p2",
+                "card": 97
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 62,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p5",
+                "card": 73,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 77,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 82,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 89,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p3",
+                "card": 90,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 93,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 94,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 96,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 97,
+                "rowIndex": 0,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                97
+              ],
+              [
+                80,
+                81,
+                84
+              ],
+              [
+                62,
+                73
+              ],
+              [
+                74,
+                77,
+                82
+              ]
+            ]
+          },
+          {
+            "turn": 10,
+            "plays": [
+              {
+                "playerId": "p1",
+                "card": 75
+              },
+              {
+                "playerId": "p5",
+                "card": 91
+              },
+              {
+                "playerId": "p3",
+                "card": 92
+              },
+              {
+                "playerId": "p0",
+                "card": 95
+              },
+              {
+                "playerId": "p4",
+                "card": 98
+              },
+              {
+                "playerId": "p7",
+                "card": 99
+              },
+              {
+                "playerId": "p6",
+                "card": 101
+              },
+              {
+                "playerId": "p8",
+                "card": 102
+              },
+              {
+                "playerId": "p2",
+                "card": 103
+              },
+              {
+                "playerId": "p9",
+                "card": 104
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p1",
+                "card": 75,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 91,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 92,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 95,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p4",
+                "card": 98,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 99,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 101,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 102,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 103,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p9",
+                "card": 104,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                103,
+                104
+              ],
+              [
+                95
+              ],
+              [
+                62,
+                73,
+                75
+              ],
+              [
+                74,
+                77,
+                82
+              ]
+            ]
+          }
+        ],
+        "roundScores": [
+          {
+            "id": "p0",
+            "penalty": 17,
+            "totalScore": 17
+          },
+          {
+            "id": "p1",
+            "penalty": 42,
+            "totalScore": 42
+          },
+          {
+            "id": "p2",
+            "penalty": 27,
+            "totalScore": 27
+          },
+          {
+            "id": "p3",
+            "penalty": 14,
+            "totalScore": 14
+          },
+          {
+            "id": "p4",
+            "penalty": 10,
+            "totalScore": 10
+          },
+          {
+            "id": "p5",
+            "penalty": 0,
+            "totalScore": 0
+          },
+          {
+            "id": "p6",
+            "penalty": 0,
+            "totalScore": 0
+          },
+          {
+            "id": "p7",
+            "penalty": 18,
+            "totalScore": 18
+          },
+          {
+            "id": "p8",
+            "penalty": 21,
+            "totalScore": 21
+          },
+          {
+            "id": "p9",
+            "penalty": 7,
+            "totalScore": 7
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "deckOrder": [
+          52,
+          82,
+          2,
+          99,
+          50,
+          54,
+          64,
+          80,
+          69,
+          77,
+          66,
+          104,
+          84,
+          21,
+          34,
+          28,
+          17,
+          3,
+          45,
+          98,
+          32,
+          23,
+          26,
+          93,
+          90,
+          4,
+          24,
+          48,
+          78,
+          101,
+          91,
+          19,
+          22,
+          95,
+          94,
+          43,
+          29,
+          97,
+          100,
+          1,
+          96,
+          51,
+          5,
+          10,
+          75,
+          7,
+          6,
+          44,
+          20,
+          79,
+          92,
+          103,
+          16,
+          37,
+          13,
+          68,
+          35,
+          14,
+          88,
+          85,
+          33,
+          11,
+          9,
+          81,
+          57,
+          41,
+          40,
+          72,
+          15,
+          36,
+          74,
+          62,
+          12,
+          31,
+          60,
+          47,
+          102,
+          89,
+          87,
+          25,
+          70,
+          46,
+          71,
+          65,
+          61,
+          83,
+          38,
+          67,
+          76,
+          63,
+          53,
+          39,
+          55,
+          58,
+          8,
+          27,
+          56,
+          73,
+          49,
+          59,
+          42,
+          30,
+          18,
+          86
+        ],
+        "dealtHands": {
+          "p0": [
+            2,
+            50,
+            52,
+            54,
+            64,
+            69,
+            77,
+            80,
+            82,
+            99
+          ],
+          "p1": [
+            3,
+            17,
+            21,
+            28,
+            34,
+            45,
+            66,
+            84,
+            98,
+            104
+          ],
+          "p2": [
+            4,
+            23,
+            24,
+            26,
+            32,
+            48,
+            78,
+            90,
+            93,
+            101
+          ],
+          "p3": [
+            1,
+            19,
+            22,
+            29,
+            43,
+            91,
+            94,
+            95,
+            97,
+            100
+          ],
+          "p4": [
+            5,
+            6,
+            7,
+            10,
+            20,
+            44,
+            51,
+            75,
+            79,
+            96
+          ],
+          "p5": [
+            13,
+            14,
+            16,
+            35,
+            37,
+            68,
+            85,
+            88,
+            92,
+            103
+          ],
+          "p6": [
+            9,
+            11,
+            15,
+            33,
+            36,
+            40,
+            41,
+            57,
+            72,
+            81
+          ],
+          "p7": [
+            12,
+            25,
+            31,
+            47,
+            60,
+            62,
+            74,
+            87,
+            89,
+            102
+          ],
+          "p8": [
+            38,
+            46,
+            61,
+            63,
+            65,
+            67,
+            70,
+            71,
+            76,
+            83
+          ],
+          "p9": [
+            8,
+            27,
+            39,
+            49,
+            53,
+            55,
+            56,
+            58,
+            59,
+            73
+          ]
+        },
+        "initialBoard": [
+          [
+            42
+          ],
+          [
+            30
+          ],
+          [
+            18
+          ],
+          [
+            86
+          ]
+        ],
+        "turns": [
+          {
+            "turn": 1,
+            "plays": [
+              {
+                "playerId": "p3",
+                "card": 1
+              },
+              {
+                "playerId": "p0",
+                "card": 2
+              },
+              {
+                "playerId": "p1",
+                "card": 3
+              },
+              {
+                "playerId": "p2",
+                "card": 4
+              },
+              {
+                "playerId": "p4",
+                "card": 5
+              },
+              {
+                "playerId": "p9",
+                "card": 8
+              },
+              {
+                "playerId": "p6",
+                "card": 9
+              },
+              {
+                "playerId": "p7",
+                "card": 12
+              },
+              {
+                "playerId": "p5",
+                "card": 13
+              },
+              {
+                "playerId": "p8",
+                "card": 38
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p3",
+                "card": 1,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 2,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 3,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 4,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 5,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 8,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p6",
+                "card": 9,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 12,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 13,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 38,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p3",
+                "card": 1,
+                "pickedRowIndex": 0,
+                "collectedCards": [
+                  42
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                8,
+                9,
+                12,
+                13
+              ],
+              [
+                30,
+                38
+              ],
+              [
+                18
+              ],
+              [
+                86
+              ]
+            ]
+          },
+          {
+            "turn": 2,
+            "plays": [
+              {
+                "playerId": "p4",
+                "card": 6
+              },
+              {
+                "playerId": "p6",
+                "card": 11
+              },
+              {
+                "playerId": "p5",
+                "card": 14
+              },
+              {
+                "playerId": "p1",
+                "card": 17
+              },
+              {
+                "playerId": "p3",
+                "card": 19
+              },
+              {
+                "playerId": "p2",
+                "card": 23
+              },
+              {
+                "playerId": "p7",
+                "card": 25
+              },
+              {
+                "playerId": "p9",
+                "card": 27
+              },
+              {
+                "playerId": "p8",
+                "card": 46
+              },
+              {
+                "playerId": "p0",
+                "card": 50
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p4",
+                "card": 6,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 11,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 14,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 17,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p3",
+                "card": 19,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 23,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 25,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 27,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 46,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 50,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p4",
+                "card": 6,
+                "pickedRowIndex": 2,
+                "collectedCards": [
+                  18
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                17,
+                19,
+                23,
+                25,
+                27
+              ],
+              [
+                30,
+                38,
+                46,
+                50
+              ],
+              [
+                6,
+                11
+              ],
+              [
+                86
+              ]
+            ]
+          },
+          {
+            "turn": 3,
+            "plays": [
+              {
+                "playerId": "p4",
+                "card": 7
+              },
+              {
+                "playerId": "p6",
+                "card": 15
+              },
+              {
+                "playerId": "p5",
+                "card": 16
+              },
+              {
+                "playerId": "p1",
+                "card": 21
+              },
+              {
+                "playerId": "p3",
+                "card": 22
+              },
+              {
+                "playerId": "p2",
+                "card": 24
+              },
+              {
+                "playerId": "p7",
+                "card": 31
+              },
+              {
+                "playerId": "p9",
+                "card": 39
+              },
+              {
+                "playerId": "p0",
+                "card": 52
+              },
+              {
+                "playerId": "p8",
+                "card": 61
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p4",
+                "card": 7,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 15,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 16,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 21,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 22,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p2",
+                "card": 24,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 31,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p9",
+                "card": 39,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 52,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 61,
+                "rowIndex": 1,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p4",
+                "card": 7,
+                "pickedRowIndex": 3,
+                "collectedCards": [
+                  86
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                31,
+                39
+              ],
+              [
+                61
+              ],
+              [
+                22,
+                24
+              ],
+              [
+                7
+              ]
+            ]
+          },
+          {
+            "turn": 4,
+            "plays": [
+              {
+                "playerId": "p4",
+                "card": 10
+              },
+              {
+                "playerId": "p2",
+                "card": 26
+              },
+              {
+                "playerId": "p1",
+                "card": 28
+              },
+              {
+                "playerId": "p3",
+                "card": 29
+              },
+              {
+                "playerId": "p6",
+                "card": 33
+              },
+              {
+                "playerId": "p5",
+                "card": 35
+              },
+              {
+                "playerId": "p7",
+                "card": 47
+              },
+              {
+                "playerId": "p9",
+                "card": 49
+              },
+              {
+                "playerId": "p0",
+                "card": 54
+              },
+              {
+                "playerId": "p8",
+                "card": 63
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p4",
+                "card": 10,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 26,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 28,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 29,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 33,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p5",
+                "card": 35,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 47,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 49,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 54,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 63,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                31,
+                39,
+                47,
+                49,
+                54
+              ],
+              [
+                61,
+                63
+              ],
+              [
+                33,
+                35
+              ],
+              [
+                7,
+                10
+              ]
+            ]
+          },
+          {
+            "turn": 5,
+            "plays": [
+              {
+                "playerId": "p4",
+                "card": 20
+              },
+              {
+                "playerId": "p2",
+                "card": 32
+              },
+              {
+                "playerId": "p1",
+                "card": 34
+              },
+              {
+                "playerId": "p6",
+                "card": 36
+              },
+              {
+                "playerId": "p5",
+                "card": 37
+              },
+              {
+                "playerId": "p3",
+                "card": 43
+              },
+              {
+                "playerId": "p9",
+                "card": 53
+              },
+              {
+                "playerId": "p7",
+                "card": 60
+              },
+              {
+                "playerId": "p0",
+                "card": 64
+              },
+              {
+                "playerId": "p8",
+                "card": 65
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p4",
+                "card": 20,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 32,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 34,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 36,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 37,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 43,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 53,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p7",
+                "card": 60,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p0",
+                "card": 64,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 65,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60
+              ],
+              [
+                61,
+                63,
+                64,
+                65
+              ],
+              [
+                53
+              ],
+              [
+                7,
+                10,
+                20,
+                32,
+                34
+              ]
+            ]
+          },
+          {
+            "turn": 6,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 40
+              },
+              {
+                "playerId": "p4",
+                "card": 44
+              },
+              {
+                "playerId": "p1",
+                "card": 45
+              },
+              {
+                "playerId": "p2",
+                "card": 48
+              },
+              {
+                "playerId": "p9",
+                "card": 55
+              },
+              {
+                "playerId": "p7",
+                "card": 62
+              },
+              {
+                "playerId": "p8",
+                "card": 67
+              },
+              {
+                "playerId": "p5",
+                "card": 68
+              },
+              {
+                "playerId": "p0",
+                "card": 69
+              },
+              {
+                "playerId": "p3",
+                "card": 91
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 40,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p4",
+                "card": 44,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 45,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 48,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 55,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 62,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 67,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 68,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p0",
+                "card": 69,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 91,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                60,
+                62
+              ],
+              [
+                68,
+                69,
+                91
+              ],
+              [
+                53,
+                55
+              ],
+              [
+                40,
+                44,
+                45,
+                48
+              ]
+            ]
+          },
+          {
+            "turn": 7,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 41
+              },
+              {
+                "playerId": "p4",
+                "card": 51
+              },
+              {
+                "playerId": "p9",
+                "card": 56
+              },
+              {
+                "playerId": "p1",
+                "card": 66
+              },
+              {
+                "playerId": "p8",
+                "card": 70
+              },
+              {
+                "playerId": "p7",
+                "card": 74
+              },
+              {
+                "playerId": "p0",
+                "card": 77
+              },
+              {
+                "playerId": "p2",
+                "card": 78
+              },
+              {
+                "playerId": "p5",
+                "card": 85
+              },
+              {
+                "playerId": "p3",
+                "card": 94
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 41,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 51,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 56,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 66,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 70,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 74,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 77,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p2",
+                "card": 78,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 85,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 94,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p6",
+                "card": 41,
+                "pickedRowIndex": 1,
+                "collectedCards": [
+                  68,
+                  69,
+                  91
+                ],
+                "cattleHeadsCollected": 3
+              }
+            ],
+            "boardAfter": [
+              [
+                77,
+                78,
+                85,
+                94
+              ],
+              [
+                41
+              ],
+              [
+                53,
+                55,
+                56
+              ],
+              [
+                40,
+                44,
+                45,
+                48,
+                51
+              ]
+            ]
+          },
+          {
+            "turn": 8,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 57
+              },
+              {
+                "playerId": "p9",
+                "card": 58
+              },
+              {
+                "playerId": "p8",
+                "card": 71
+              },
+              {
+                "playerId": "p4",
+                "card": 75
+              },
+              {
+                "playerId": "p0",
+                "card": 80
+              },
+              {
+                "playerId": "p1",
+                "card": 84
+              },
+              {
+                "playerId": "p7",
+                "card": 87
+              },
+              {
+                "playerId": "p5",
+                "card": 88
+              },
+              {
+                "playerId": "p2",
+                "card": 90
+              },
+              {
+                "playerId": "p3",
+                "card": 95
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 57,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 58,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 71,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p4",
+                "card": 75,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 80,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 84,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 87,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 88,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p2",
+                "card": 90,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 95,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                77,
+                78,
+                85,
+                94,
+                95
+              ],
+              [
+                41
+              ],
+              [
+                88,
+                90
+              ],
+              [
+                40,
+                44,
+                45,
+                48,
+                51
+              ]
+            ]
+          },
+          {
+            "turn": 9,
+            "plays": [
+              {
+                "playerId": "p9",
+                "card": 59
+              },
+              {
+                "playerId": "p6",
+                "card": 72
+              },
+              {
+                "playerId": "p8",
+                "card": 76
+              },
+              {
+                "playerId": "p4",
+                "card": 79
+              },
+              {
+                "playerId": "p0",
+                "card": 82
+              },
+              {
+                "playerId": "p7",
+                "card": 89
+              },
+              {
+                "playerId": "p5",
+                "card": 92
+              },
+              {
+                "playerId": "p2",
+                "card": 93
+              },
+              {
+                "playerId": "p3",
+                "card": 97
+              },
+              {
+                "playerId": "p1",
+                "card": 98
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p9",
+                "card": 59,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p6",
+                "card": 72,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 76,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 79,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 82,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 89,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p5",
+                "card": 92,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 93,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 97,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p1",
+                "card": 98,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                97,
+                98
+              ],
+              [
+                41
+              ],
+              [
+                88,
+                90,
+                92,
+                93
+              ],
+              [
+                89
+              ]
+            ]
+          },
+          {
+            "turn": 10,
+            "plays": [
+              {
+                "playerId": "p9",
+                "card": 73
+              },
+              {
+                "playerId": "p6",
+                "card": 81
+              },
+              {
+                "playerId": "p8",
+                "card": 83
+              },
+              {
+                "playerId": "p4",
+                "card": 96
+              },
+              {
+                "playerId": "p0",
+                "card": 99
+              },
+              {
+                "playerId": "p3",
+                "card": 100
+              },
+              {
+                "playerId": "p2",
+                "card": 101
+              },
+              {
+                "playerId": "p7",
+                "card": 102
+              },
+              {
+                "playerId": "p5",
+                "card": 103
+              },
+              {
+                "playerId": "p1",
+                "card": 104
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p9",
+                "card": 73,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 81,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 83,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 96,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 99,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 100,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 101,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 102,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p5",
+                "card": 103,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 104,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                102,
+                103,
+                104
+              ],
+              [
+                41,
+                73,
+                81,
+                83
+              ],
+              [
+                88,
+                90,
+                92,
+                93,
+                96
+              ],
+              [
+                89
+              ]
+            ]
+          }
+        ],
+        "roundScores": [
+          {
+            "id": "p0",
+            "penalty": 13,
+            "totalScore": 30
+          },
+          {
+            "id": "p1",
+            "penalty": 5,
+            "totalScore": 47
+          },
+          {
+            "id": "p2",
+            "penalty": 0,
+            "totalScore": 27
+          },
+          {
+            "id": "p3",
+            "penalty": 22,
+            "totalScore": 36
+          },
+          {
+            "id": "p4",
+            "penalty": 2,
+            "totalScore": 12
+          },
+          {
+            "id": "p5",
+            "penalty": 14,
+            "totalScore": 14
+          },
+          {
+            "id": "p6",
+            "penalty": 21,
+            "totalScore": 21
+          },
+          {
+            "id": "p7",
+            "penalty": 27,
+            "totalScore": 45
+          },
+          {
+            "id": "p8",
+            "penalty": 20,
+            "totalScore": 41
+          },
+          {
+            "id": "p9",
+            "penalty": 28,
+            "totalScore": 35
+          }
+        ]
+      },
+      {
+        "round": 3,
+        "deckOrder": [
+          13,
+          89,
+          75,
+          12,
+          46,
+          24,
+          64,
+          101,
+          25,
+          1,
+          34,
+          102,
+          85,
+          21,
+          14,
+          40,
+          90,
+          6,
+          7,
+          100,
+          97,
+          41,
+          11,
+          50,
+          66,
+          57,
+          93,
+          44,
+          20,
+          95,
+          26,
+          53,
+          55,
+          37,
+          70,
+          36,
+          88,
+          77,
+          32,
+          28,
+          23,
+          68,
+          71,
+          49,
+          103,
+          92,
+          27,
+          9,
+          48,
+          98,
+          76,
+          61,
+          96,
+          81,
+          63,
+          78,
+          72,
+          15,
+          30,
+          52,
+          8,
+          4,
+          17,
+          5,
+          99,
+          38,
+          18,
+          19,
+          22,
+          35,
+          86,
+          16,
+          87,
+          79,
+          69,
+          33,
+          84,
+          73,
+          29,
+          67,
+          82,
+          31,
+          58,
+          42,
+          45,
+          65,
+          94,
+          51,
+          3,
+          60,
+          54,
+          104,
+          39,
+          56,
+          62,
+          74,
+          47,
+          10,
+          59,
+          83,
+          80,
+          91,
+          43,
+          2
+        ],
+        "dealtHands": {
+          "p0": [
+            1,
+            12,
+            13,
+            24,
+            25,
+            46,
+            64,
+            75,
+            89,
+            101
+          ],
+          "p1": [
+            6,
+            7,
+            14,
+            21,
+            34,
+            40,
+            85,
+            90,
+            100,
+            102
+          ],
+          "p2": [
+            11,
+            20,
+            41,
+            44,
+            50,
+            57,
+            66,
+            93,
+            95,
+            97
+          ],
+          "p3": [
+            26,
+            28,
+            32,
+            36,
+            37,
+            53,
+            55,
+            70,
+            77,
+            88
+          ],
+          "p4": [
+            9,
+            23,
+            27,
+            48,
+            49,
+            68,
+            71,
+            92,
+            98,
+            103
+          ],
+          "p5": [
+            15,
+            30,
+            52,
+            61,
+            63,
+            72,
+            76,
+            78,
+            81,
+            96
+          ],
+          "p6": [
+            4,
+            5,
+            8,
+            17,
+            18,
+            19,
+            22,
+            35,
+            38,
+            99
+          ],
+          "p7": [
+            16,
+            29,
+            33,
+            67,
+            69,
+            73,
+            79,
+            84,
+            86,
+            87
+          ],
+          "p8": [
+            3,
+            31,
+            42,
+            45,
+            51,
+            58,
+            60,
+            65,
+            82,
+            94
+          ],
+          "p9": [
+            10,
+            39,
+            47,
+            54,
+            56,
+            59,
+            62,
+            74,
+            83,
+            104
+          ]
+        },
+        "initialBoard": [
+          [
+            80
+          ],
+          [
+            91
+          ],
+          [
+            43
+          ],
+          [
+            2
+          ]
+        ],
+        "turns": [
+          {
+            "turn": 1,
+            "plays": [
+              {
+                "playerId": "p0",
+                "card": 1
+              },
+              {
+                "playerId": "p8",
+                "card": 3
+              },
+              {
+                "playerId": "p6",
+                "card": 4
+              },
+              {
+                "playerId": "p1",
+                "card": 6
+              },
+              {
+                "playerId": "p4",
+                "card": 9
+              },
+              {
+                "playerId": "p9",
+                "card": 10
+              },
+              {
+                "playerId": "p2",
+                "card": 11
+              },
+              {
+                "playerId": "p5",
+                "card": 15
+              },
+              {
+                "playerId": "p7",
+                "card": 16
+              },
+              {
+                "playerId": "p3",
+                "card": 26
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p0",
+                "card": 1,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 3,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 4,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 6,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 9,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 10,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p2",
+                "card": 11,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 15,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 16,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 26,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p0",
+                "card": 1,
+                "pickedRowIndex": 1,
+                "collectedCards": [
+                  91
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                80
+              ],
+              [
+                1
+              ],
+              [
+                43
+              ],
+              [
+                10,
+                11,
+                15,
+                16,
+                26
+              ]
+            ]
+          },
+          {
+            "turn": 2,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 5
+              },
+              {
+                "playerId": "p1",
+                "card": 7
+              },
+              {
+                "playerId": "p0",
+                "card": 12
+              },
+              {
+                "playerId": "p2",
+                "card": 20
+              },
+              {
+                "playerId": "p4",
+                "card": 23
+              },
+              {
+                "playerId": "p3",
+                "card": 28
+              },
+              {
+                "playerId": "p7",
+                "card": 29
+              },
+              {
+                "playerId": "p5",
+                "card": 30
+              },
+              {
+                "playerId": "p8",
+                "card": 31
+              },
+              {
+                "playerId": "p9",
+                "card": 39
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 5,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 7,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 12,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 20,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 23,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p3",
+                "card": 28,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p7",
+                "card": 29,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 30,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 31,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 39,
+                "rowIndex": 3,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                80
+              ],
+              [
+                23
+              ],
+              [
+                43
+              ],
+              [
+                28,
+                29,
+                30,
+                31,
+                39
+              ]
+            ]
+          },
+          {
+            "turn": 3,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 8
+              },
+              {
+                "playerId": "p0",
+                "card": 13
+              },
+              {
+                "playerId": "p1",
+                "card": 14
+              },
+              {
+                "playerId": "p4",
+                "card": 27
+              },
+              {
+                "playerId": "p3",
+                "card": 32
+              },
+              {
+                "playerId": "p7",
+                "card": 33
+              },
+              {
+                "playerId": "p2",
+                "card": 41
+              },
+              {
+                "playerId": "p8",
+                "card": 42
+              },
+              {
+                "playerId": "p9",
+                "card": 47
+              },
+              {
+                "playerId": "p5",
+                "card": 52
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 8,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 13,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 14,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 27,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 32,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 33,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p2",
+                "card": 41,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p8",
+                "card": 42,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 47,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 52,
+                "rowIndex": 2,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p6",
+                "card": 8,
+                "pickedRowIndex": 1,
+                "collectedCards": [
+                  23
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                80
+              ],
+              [
+                33
+              ],
+              [
+                43,
+                47,
+                52
+              ],
+              [
+                41,
+                42
+              ]
+            ]
+          },
+          {
+            "turn": 4,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 17
+              },
+              {
+                "playerId": "p1",
+                "card": 21
+              },
+              {
+                "playerId": "p0",
+                "card": 24
+              },
+              {
+                "playerId": "p3",
+                "card": 36
+              },
+              {
+                "playerId": "p2",
+                "card": 44
+              },
+              {
+                "playerId": "p8",
+                "card": 45
+              },
+              {
+                "playerId": "p4",
+                "card": 48
+              },
+              {
+                "playerId": "p9",
+                "card": 54
+              },
+              {
+                "playerId": "p5",
+                "card": 61
+              },
+              {
+                "playerId": "p7",
+                "card": 67
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 17,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 21,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 24,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 36,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 44,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 45,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 48,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 54,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 61,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 67,
+                "rowIndex": 2,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p6",
+                "card": 17,
+                "pickedRowIndex": 3,
+                "collectedCards": [
+                  41,
+                  42
+                ],
+                "cattleHeadsCollected": 2
+              }
+            ],
+            "boardAfter": [
+              [
+                80
+              ],
+              [
+                33,
+                36,
+                44,
+                45,
+                48
+              ],
+              [
+                67
+              ],
+              [
+                17,
+                21,
+                24
+              ]
+            ]
+          },
+          {
+            "turn": 5,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 18
+              },
+              {
+                "playerId": "p0",
+                "card": 25
+              },
+              {
+                "playerId": "p1",
+                "card": 34
+              },
+              {
+                "playerId": "p3",
+                "card": 37
+              },
+              {
+                "playerId": "p4",
+                "card": 49
+              },
+              {
+                "playerId": "p2",
+                "card": 50
+              },
+              {
+                "playerId": "p8",
+                "card": 51
+              },
+              {
+                "playerId": "p9",
+                "card": 56
+              },
+              {
+                "playerId": "p5",
+                "card": 63
+              },
+              {
+                "playerId": "p7",
+                "card": 69
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 18,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 25,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 34,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 37,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p4",
+                "card": 49,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p2",
+                "card": 50,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 51,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 56,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 63,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 69,
+                "rowIndex": 1,
+                "causedOverflow": true
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p6",
+                "card": 18,
+                "pickedRowIndex": 2,
+                "collectedCards": [
+                  67
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                80
+              ],
+              [
+                69
+              ],
+              [
+                18
+              ],
+              [
+                37
+              ]
+            ]
+          },
+          {
+            "turn": 6,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 19
+              },
+              {
+                "playerId": "p1",
+                "card": 40
+              },
+              {
+                "playerId": "p0",
+                "card": 46
+              },
+              {
+                "playerId": "p3",
+                "card": 53
+              },
+              {
+                "playerId": "p2",
+                "card": 57
+              },
+              {
+                "playerId": "p8",
+                "card": 58
+              },
+              {
+                "playerId": "p9",
+                "card": 59
+              },
+              {
+                "playerId": "p4",
+                "card": 68
+              },
+              {
+                "playerId": "p5",
+                "card": 72
+              },
+              {
+                "playerId": "p7",
+                "card": 73
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 19,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 40,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 46,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 53,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 57,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 58,
+                "rowIndex": 3,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p9",
+                "card": 59,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 68,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 72,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 73,
+                "rowIndex": 1,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                80
+              ],
+              [
+                69,
+                72,
+                73
+              ],
+              [
+                18,
+                19
+              ],
+              [
+                58,
+                59,
+                68
+              ]
+            ]
+          },
+          {
+            "turn": 7,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 22
+              },
+              {
+                "playerId": "p3",
+                "card": 55
+              },
+              {
+                "playerId": "p8",
+                "card": 60
+              },
+              {
+                "playerId": "p9",
+                "card": 62
+              },
+              {
+                "playerId": "p0",
+                "card": 64
+              },
+              {
+                "playerId": "p2",
+                "card": 66
+              },
+              {
+                "playerId": "p4",
+                "card": 71
+              },
+              {
+                "playerId": "p5",
+                "card": 76
+              },
+              {
+                "playerId": "p7",
+                "card": 79
+              },
+              {
+                "playerId": "p1",
+                "card": 85
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 22,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 55,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 60,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 62,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p0",
+                "card": 64,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 66,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 71,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 76,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 79,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 85,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                80,
+                85
+              ],
+              [
+                69,
+                72,
+                73,
+                76,
+                79
+              ],
+              [
+                62,
+                64,
+                66
+              ],
+              [
+                58,
+                59,
+                68,
+                71
+              ]
+            ]
+          },
+          {
+            "turn": 8,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 35
+              },
+              {
+                "playerId": "p8",
+                "card": 65
+              },
+              {
+                "playerId": "p3",
+                "card": 70
+              },
+              {
+                "playerId": "p9",
+                "card": 74
+              },
+              {
+                "playerId": "p0",
+                "card": 75
+              },
+              {
+                "playerId": "p5",
+                "card": 78
+              },
+              {
+                "playerId": "p7",
+                "card": 84
+              },
+              {
+                "playerId": "p1",
+                "card": 90
+              },
+              {
+                "playerId": "p4",
+                "card": 92
+              },
+              {
+                "playerId": "p2",
+                "card": 93
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 35,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 65,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 70,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 74,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p0",
+                "card": 75,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p5",
+                "card": 78,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 84,
+                "rowIndex": 1,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p1",
+                "card": 90,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 92,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 93,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p6",
+                "card": 35,
+                "pickedRowIndex": 3,
+                "collectedCards": [
+                  58,
+                  59,
+                  68,
+                  71
+                ],
+                "cattleHeadsCollected": 4
+              }
+            ],
+            "boardAfter": [
+              [
+                80,
+                85,
+                90,
+                92,
+                93
+              ],
+              [
+                84
+              ],
+              [
+                75,
+                78
+              ],
+              [
+                35,
+                65
+              ]
+            ]
+          },
+          {
+            "turn": 9,
+            "plays": [
+              {
+                "playerId": "p6",
+                "card": 38
+              },
+              {
+                "playerId": "p3",
+                "card": 77
+              },
+              {
+                "playerId": "p5",
+                "card": 81
+              },
+              {
+                "playerId": "p8",
+                "card": 82
+              },
+              {
+                "playerId": "p9",
+                "card": 83
+              },
+              {
+                "playerId": "p7",
+                "card": 86
+              },
+              {
+                "playerId": "p0",
+                "card": 89
+              },
+              {
+                "playerId": "p2",
+                "card": 95
+              },
+              {
+                "playerId": "p4",
+                "card": 98
+              },
+              {
+                "playerId": "p1",
+                "card": 100
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p6",
+                "card": 38,
+                "rowIndex": 1,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 77,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 81,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 82,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p9",
+                "card": 83,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p7",
+                "card": 86,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p0",
+                "card": 89,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 95,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p4",
+                "card": 98,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 100,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [
+              {
+                "playerId": "p6",
+                "card": 38,
+                "pickedRowIndex": 1,
+                "collectedCards": [
+                  84
+                ],
+                "cattleHeadsCollected": 1
+              }
+            ],
+            "boardAfter": [
+              [
+                95,
+                98,
+                100
+              ],
+              [
+                38
+              ],
+              [
+                86,
+                89
+              ],
+              [
+                35,
+                65,
+                77
+              ]
+            ]
+          },
+          {
+            "turn": 10,
+            "plays": [
+              {
+                "playerId": "p7",
+                "card": 87
+              },
+              {
+                "playerId": "p3",
+                "card": 88
+              },
+              {
+                "playerId": "p8",
+                "card": 94
+              },
+              {
+                "playerId": "p5",
+                "card": 96
+              },
+              {
+                "playerId": "p2",
+                "card": 97
+              },
+              {
+                "playerId": "p6",
+                "card": 99
+              },
+              {
+                "playerId": "p0",
+                "card": 101
+              },
+              {
+                "playerId": "p1",
+                "card": 102
+              },
+              {
+                "playerId": "p4",
+                "card": 103
+              },
+              {
+                "playerId": "p9",
+                "card": 104
+              }
+            ],
+            "resolutions": [
+              {
+                "playerId": "p7",
+                "card": 87,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p3",
+                "card": 88,
+                "rowIndex": 3,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p8",
+                "card": 94,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p5",
+                "card": 96,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p2",
+                "card": 97,
+                "rowIndex": 2,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p6",
+                "card": 99,
+                "rowIndex": 2,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p0",
+                "card": 101,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p1",
+                "card": 102,
+                "rowIndex": 0,
+                "causedOverflow": false
+              },
+              {
+                "playerId": "p4",
+                "card": 103,
+                "rowIndex": 0,
+                "causedOverflow": true
+              },
+              {
+                "playerId": "p9",
+                "card": 104,
+                "rowIndex": 0,
+                "causedOverflow": false
+              }
+            ],
+            "rowPicks": [],
+            "boardAfter": [
+              [
+                103,
+                104
+              ],
+              [
+                38
+              ],
+              [
+                99
+              ],
+              [
+                35,
+                65,
+                77,
+                87,
+                88
+              ]
+            ]
+          }
+        ],
+        "roundScores": [
+          {
+            "id": "p0",
+            "penalty": 12,
+            "totalScore": 42
+          },
+          {
+            "id": "p1",
+            "penalty": 0,
+            "totalScore": 47
+          },
+          {
+            "id": "p2",
+            "penalty": 17,
+            "totalScore": 44
+          },
+          {
+            "id": "p3",
+            "penalty": 18,
+            "totalScore": 54
+          },
+          {
+            "id": "p4",
+            "penalty": 30,
+            "totalScore": 42
+          },
+          {
+            "id": "p5",
+            "penalty": 0,
+            "totalScore": 14
+          },
+          {
+            "id": "p6",
+            "penalty": 14,
+            "totalScore": 35
+          },
+          {
+            "id": "p7",
+            "penalty": 28,
+            "totalScore": 73
+          },
+          {
+            "id": "p8",
+            "penalty": 7,
+            "totalScore": 48
+          },
+          {
+            "id": "p9",
+            "penalty": 22,
+            "totalScore": 57
+          }
+        ]
+      }
+    ],
+    "finalResults": [
+      {
+        "id": "p0",
+        "finalScore": 42,
+        "rank": 3
+      },
+      {
+        "id": "p1",
+        "finalScore": 47,
+        "rank": 6
+      },
+      {
+        "id": "p2",
+        "finalScore": 44,
+        "rank": 5
+      },
+      {
+        "id": "p3",
+        "finalScore": 54,
+        "rank": 8
+      },
+      {
+        "id": "p4",
+        "finalScore": 42,
+        "rank": 3
+      },
+      {
+        "id": "p5",
+        "finalScore": 14,
+        "rank": 1
+      },
+      {
+        "id": "p6",
+        "finalScore": 35,
+        "rank": 2
+      },
+      {
+        "id": "p7",
+        "finalScore": 73,
+        "rank": 10
+      },
+      {
+        "id": "p8",
+        "finalScore": 48,
+        "rank": 7
+      },
+      {
+        "id": "p9",
+        "finalScore": 57,
+        "rank": 9
+      }
+    ],
+    "winners": [
+      "p5"
+    ]
+  }
+]
