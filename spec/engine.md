@@ -55,13 +55,21 @@ interface Board {
 }
 ```
 
-**Board serialization:** When serialized to JSON (e.g., in CLI output or `recommend` input), a Board is represented as:
-```json
-{
-  "rows": [[3, 17, 42], [8], [55, 60, 71, 88, 99], [12, 25]]
-}
-```
-where each inner array is the cards in placement order. This is the only valid representation — arrays of arrays, not objects with `cards` properties.
+**Board serialization:**
+
+- **Internal TypeScript type:** `Board` with `readonly rows: readonly [Row, Row, Row, Row]`
+- **JSON serialization (CLI, MCP, fixtures):** A board is represented as a bare array of arrays:
+  ```json
+  [[3, 17, 42], [8], [55, 60, 71, 88, 99], [12, 25]]
+  ```
+  Each inner array contains card numbers in placement order. The outer array always has exactly 4 elements (one per row).
+
+- **Deserialization:** `number[][]` input is validated (exactly 4 rows, each 1-5 cards, all valid card numbers) and converted to the internal `Board` type.
+
+This distinction means:
+- Engine functions accept/return `Board` (typed, with `rows` property)
+- CLI/MCP input/output uses `number[][]` (simpler for agents and JSON)
+- Conversion functions (`boardToJson()` / `boardFromJson()`) handle the mapping
 
 ### 1.4 Player State
 
@@ -90,8 +98,10 @@ interface GameState {
   readonly phase: GamePhase;
   /** In-flight turn resolution state. Present only during "resolving" / "awaiting-row-pick". */
   readonly pendingResolution?: PendingTurnResolution;
-  /** Cards played and resolved in previous turns this round, with player attribution. Reset by dealRound(). Includes the turn number for each card, enabling strategies to distinguish simultaneous plays within a turn from plays across turns. Ordered by turn ascending, then by card number ascending within each turn. */
-  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber; turn: number }[];
+  /** Full resolution history for previous turns this round. Reset by dealRound().
+   *  Ordered by turn ascending. Each entry contains enough data to replay
+   *  onTurnResolved() for stateful strategy reconstruction. */
+  readonly turnHistory: readonly TurnHistoryEntry[];
   /** Seed for deterministic replay. */
   readonly seed: string;
 }
@@ -102,6 +112,14 @@ type GamePhase =
   | "awaiting-row-pick"  // a player must choose which row to take
   | "round-over"         // all 10 turns played, scoring
   | "game-over";         // a player hit 66+, final standings
+
+/** Complete record of a resolved turn, sufficient for strategy reconstruction. */
+interface TurnHistoryEntry {
+  readonly turn: number;
+  readonly plays: readonly { playerId: string; card: CardNumber }[];
+  readonly rowPicks: readonly { playerId: string; rowIndex: number; collectedCards: readonly CardNumber[] }[];
+  readonly boardAfter: readonly CardNumber[][];  // serialized board state after resolution
+}
 
 /** Tracks the state of a turn being resolved card-by-card. */
 interface PendingTurnResolution {
@@ -134,8 +152,9 @@ interface CardChoiceState {
   readonly playerCount: number;
   readonly round: number;
   readonly turn: number;
-  /** Cards resolved in previous turns this round (all players, public info). Includes the turn number for each card, enabling strategies to distinguish simultaneous plays within a turn from plays across turns. Ordered by turn ascending, then by card number ascending within each turn. All played cards included regardless of overflow or row picks. */
-  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber; turn: number }[];
+  /** Full resolution history for previous turns this round.
+   *  Sufficient for strategy reconstruction via synthetic onTurnResolved() calls. */
+  readonly turnHistory: readonly TurnHistoryEntry[];
   /** The 4 cards that started the board rows at the beginning of this round. */
   readonly initialBoardCards: readonly CardNumber[];
 }
@@ -157,11 +176,12 @@ interface RowChoiceState {
   readonly playerCount: number;
   readonly round: number;
   readonly turn: number;
-  /** Cards resolved in previous turns this round (all players, public info). Includes the turn number for each card, enabling strategies to distinguish simultaneous plays within a turn from plays across turns. Ordered by turn ascending, then by card number ascending within each turn. All played cards included regardless of overflow or row picks. */
-  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber; turn: number }[];
+  /** Full resolution history for previous turns this round.
+   *  Sufficient for strategy reconstruction via synthetic onTurnResolved() calls. */
+  readonly turnHistory: readonly TurnHistoryEntry[];
   /** The 4 cards that started the board rows at the beginning of this round. */
   readonly initialBoardCards: readonly CardNumber[];
-  /** The card this player played that triggered the forced row pick. */
+  /** The card this player playedthat triggered the forced row pick. */
   readonly triggeringCard: CardNumber;
   /** All cards revealed this turn (all players). Cards resolved before this one have already been placed. */
   readonly revealedThisTurn: readonly { playerId: string; card: CardNumber }[];
@@ -404,6 +424,6 @@ The following conditions produce **errors** — the state is unusable and the st
 The following conditions produce **warnings** — the state is usable but may indicate stale or inconsistent input:
 
 - Hand size doesn't match expected `11 - turn` (could indicate stale state)
-- Cards in `resolvedCardsThisRound` overlap with cards on board (possible stale read)
-- `initialBoardCards` not all present as row heads or in resolved cards (could be stale)
+- Cards in `turnHistory` overlap with cards on board (possible stale read)
+- `initialBoardCards` not all present as row heads or in turn history (could be stale)
 - Total visible cards exceeds expected count for turn/player configuration
