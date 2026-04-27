@@ -91,7 +91,7 @@ src/
 2. Engine data model and core placement/scoring logic → [engine.md](engine.md)
 3. Random strategy → [strategies.md](strategies.md)
 4. Simulator (single game + batch) → [simulator.md](simulator.md)
-5. CLI with `simulate`, `strategies`, `play`, and `recommend` commands → [cli.md](cli.md)
+5. CLI with `simulate`, `strategies`, `play`, `recommend`, and `serve` commands → [cli.md](cli.md)
 6. MCP server with session-aware advisory tools → [mcp.md](mcp.md)
 7. Unit and integration tests
 
