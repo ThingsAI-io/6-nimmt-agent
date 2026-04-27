@@ -398,6 +398,14 @@ Gets a recommendation using the strategy's full accumulated state from the sessi
 - **Minor drift** (`stateConsistent: false`, `stateWarnings` populated): Agent snapshot differs slightly (e.g., board state diverged after a missed event). Recommendation still produced using agent-provided snapshot as override, but server logs the discrepancy.
 - **Major drift** → returns `STATE_MISMATCH` error recommending `resync_session`.
 
+**Drift classification thresholds:**
+
+- **Consistent** (`stateConsistent: true`): Agent hand and board match server shadow state exactly (same cards, same row assignment, same order within rows).
+- **Minor drift** (`stateConsistent: false`, recommendation still produced): Hand size matches but ≤ 2 individual cards differ, OR board rows have the same cards but ≤ 2 cards are in different positions. The server produces a recommendation using the agent-provided snapshot as override and populates `stateWarnings`.
+- **Major drift** (`STATE_MISMATCH` error): Hand size differs by > 1, OR board row count ≠ 4, OR > 2 cards in board differ from server state, OR agent-provided state contains cards that violate game rules (e.g., duplicates, out-of-range values). The server cannot produce a reliable recommendation and returns an error.
+
+**Shadow state computation:** The server maintains an internal shadow board by applying each `turn_resolved` resolution to its state (starting from the `round_started` board). When `boardAfter` is provided in `turn_resolved`, it is validated against the server's computed board. The drift comparison in `session_recommend` compares the agent-provided snapshot against this server-computed shadow state — not against previously agent-provided state.
+
 **Errors:**
 - `UNKNOWN_SESSION` — Session ID not found or already ended.
 - `INVALID_PHASE` — Called during `awaiting-round` or `game-over` phase when no recommendation is possible.
