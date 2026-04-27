@@ -3,8 +3,8 @@
 > **Milestone:** Engine, simulation CLI, and MCP server working end-to-end  
 > **Approach:** Fully agent-driven — no human writes or reviews code  
 > **Execution:** Tasks dispatched via `/fleet` to parallel agent groups  
-> **Spec commit:** `f2fb510` (branch: `draft`)  
-> **Total tasks:** 31
+> **Spec commit:** `ed5af02` (branch: `draft`)  
+> **Total tasks:** 33
 
 ---
 
@@ -199,9 +199,9 @@ T0 (scaffold)
   {
     "id": "placement-basic-closest-tail",
     "description": "Card 33 placed on row with tail 30, not 29",
-    "board": { "rows": [[25, 29], [10, 17, 30], [40], [80, 90]] },
+    "board": [[25, 29], [10, 17, 30], [40], [80, 90]],
     "card": 33,
-    "expected": { "kind": "place", "rowIndex": 1, "causesOverflow": false }
+    "expected": { "kind": "place", "rowIndex": 1, "causedOverflow": false }
   }
   ```
 - **Schema — multi-play variant:**
@@ -209,18 +209,18 @@ T0 (scaffold)
   {
     "id": "turn-resolution-2-players-no-interaction",
     "description": "Two cards placed on different rows, no interaction",
-    "board": { "rows": [[10], [20], [30], [40]] },
+    "board": [[10], [20], [30], [40]],
     "plays": [
       { "playerId": "p0", "card": 15 },
       { "playerId": "p1", "card": 35 }
     ],
     "expected": {
-      "resolution": [
-        { "card": 15, "playerId": "p0", "placement": { "kind": "place", "rowIndex": 0, "causesOverflow": false } },
-        { "card": 35, "playerId": "p1", "placement": { "kind": "place", "rowIndex": 2, "causesOverflow": false } }
+      "resolutions": [
+        { "playerId": "p0", "card": 15, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p1", "card": 35, "rowIndex": 2, "causedOverflow": false }
       ],
       "collected": {},
-      "boardAfter": { "rows": [[10, 15], [20], [30, 35], [40]] }
+      "boardAfter": [[10, 15], [20], [30, 35], [40]]
     }
   }
   ```
@@ -228,7 +228,7 @@ T0 (scaffold)
   - Each scenario hand-verified against rules
   - Include at least 3 single-card scenarios from each placement category
   - Include at least 2 multi-play scenarios for each of the 2-, 5-, and 10-player counts
-  - Multi-play scenarios include `plays` array (sorted ascending by card for resolution), expected per-card placements, and `boardAfter`
+  - Multi-play scenarios include `plays` array (sorted ascending by card for resolution), expected `resolutions` with per-card placements, `rowPicks`, and `boardAfter`
 
 ### T1C — Golden Fixture: `overflow-scenarios.json`
 - **Agent type:** `general-purpose`
@@ -246,11 +246,11 @@ T0 (scaffold)
   {
     "id": "overflow-basic",
     "description": "6th card on row 0 triggers collection of 5 cards",
-    "board": { "rows": [[3, 12, 24, 55, 78], [40], [60], [90]] },
+    "board": [[3, 12, 24, 55, 78], [40], [60], [90]],
     "plays": [{ "playerId": "p0", "card": 80 }],
     "expected": {
       "collected": { "p0": [3, 12, 24, 55, 78] },
-      "boardAfter": { "rows": [[80], [40], [60], [90]] }
+      "boardAfter": [[80], [40], [60], [90]]
     }
   }
   ```
@@ -273,12 +273,12 @@ T0 (scaffold)
   {
     "id": "must-pick-1-card-row",
     "description": "Card 2 < all tails, player picks row 2 (1 card, tail=60)",
-    "board": { "rows": [[10, 20], [30, 40, 50], [60], [70, 80, 90, 95]] },
+    "board": [[10, 20], [30, 40, 50], [60], [70, 80, 90, 95]],
     "plays": [{ "playerId": "p0", "card": 2 }],
     "rowChoice": { "playerId": "p0", "rowIndex": 2 },
     "expected": {
       "collected": { "p0": [60] },
-      "boardAfter": { "rows": [[10, 20], [30, 40, 50], [2], [70, 80, 90, 95]] }
+      "boardAfter": [[10, 20], [30, 40, 50], [2], [70, 80, 90, 95]]
     }
   }
   ```
@@ -348,10 +348,11 @@ T0 (scaffold)
           {
             "turn": 1,
             "plays": [{ "playerId": "p0", "card": 12 }, { "playerId": "p1", "card": 55 }],
-            "resolution": [
-              { "card": 12, "playerId": "p0", "placement": { "kind": "place", "rowIndex": 0, "causesOverflow": false } },
-              { "card": 55, "playerId": "p1", "placement": { "kind": "place", "rowIndex": 2, "causesOverflow": false } }
+            "resolutions": [
+              { "playerId": "p0", "card": 12, "rowIndex": 0, "causedOverflow": false },
+              { "playerId": "p1", "card": 55, "rowIndex": 2, "causedOverflow": false }
             ],
+            "rowPicks": [],
             "boardAfter": [[17, 12], ...]
           }
         ],
@@ -616,7 +617,7 @@ T0 (scaffold)
     - `onGameStart({ playerId, playerCount, rng })`
     - `onTurnResolved(resolution)`
     - `onRoundEnd(scores)`
-  - `TurnResolution` shape contains at least: `turn`, `plays`, `rowPickups`, `boardAfter`
+  - `TurnResolution` shape contains at least: `turn`, `plays`, `resolutions`, `rowPicks`, `boardAfter`
 
 ### T3-TEST — Strategy Validation
 - **Agent type:** `task`
@@ -669,7 +670,7 @@ T0 (scaffold)
   - `src/sim/stats.ts` — aggregation functions (win rate, avg/median/min/max/stddev)
   - `src/sim/index.ts` — barrel export
 - **Requirements:**
-  - Per-game seed derivation: `hash(batchSeed + gameIndex)`
+  - Per-game seed derivation: `SHA256(batchSeed + '/' + gameIndex)`
   - Results pooled per strategy name (not per seat)
   - Win rate = wins / (gamesPlayed × playersWithThisStrategy)
   - Shared wins (tie at lowest score) count for all tied players
@@ -774,7 +775,7 @@ T0 (scaffold)
     - `strategyNamesCaseSensitive: true`
   - `npx 6nimmt play --strategies random,random --seed test --format json` outputs full game trace
   - `npx 6nimmt simulate --strategies nonexistent` produces `INVALID_STRATEGY` error with suggestions and `validValues`
-  - `npx 6nimmt recommend --state '{"hand":[3,17],"board":[[5],[10],[20],[30]],"playerScores":[],"playerCount":2,"round":1,"turn":1,"resolvedCardsThisRound":[],"initialBoardCards":[5,10,20,30]}' --strategy random --format json` produces valid recommendation
+  - `npx 6nimmt recommend --state '{"hand":[3,17],"board":[[5],[10],[20],[30]],"playerScores":[],"playerCount":2,"round":1,"turn":1,"turnHistory":[],"initialBoardCards":[5,10,20,30]}' --strategy random --format json` produces valid recommendation
   - `npx 6nimmt serve` starts MCP server on stdio (process stays alive, accepts MCP protocol messages)
 
 ### T5-TEST — CLI Tests
@@ -806,25 +807,26 @@ T0 (scaffold)
 - **Inputs:** `spec/mcp.md` §1–4, §6–7
 - **Creates:**
   - `src/mcp/server.ts` — MCP server setup, stdio transport, tool registration
-  - `src/mcp/tools/stateless.ts` — `server_info`, `list_strategies`, `validate_state`, `recommend` tools
-  - `src/mcp/errors.ts` — domain error constructors (`DomainError` interface, all error codes from spec §4.2)
+  - `src/mcp/tools/stateless.ts` — `list_strategies`, `validate_state`, `recommend_once` tools
+  - `src/mcp/errors.ts` — domain error constructors (`DomainError` interface with `suggestedAction` field, all error codes from spec §4.2 including `MAX_SESSIONS_REACHED`)
   - `src/mcp/index.ts` — barrel export
 - **Requirements:**
   - Uses MCP SDK for Node.js (`@modelcontextprotocol/sdk` or equivalent)
   - All tools use the same engine functions and strategy registry as CLI commands
-  - `recommend` tool follows the same reconstruction contract as CLI `recommend`
+  - `recommend_once` tool follows the same reconstruction contract as CLI `recommend`
   - `validate_state` uses the same `validateCardChoiceState()` / `validateRowChoiceState()` from engine
-  - Domain errors returned as structured tool results (not MCP protocol errors) per spec §4
+  - Domain errors returned as structured tool results (not MCP protocol errors) per spec §4; every `DomainError` includes `suggestedAction` field per spec §4.2
   - MCP protocol errors (InvalidParams, MethodNotFound) use MCP's built-in error mechanism
   - Logs to stderr; stdout reserved for MCP protocol
+  - `server_info` response includes 12 tools in the `tools` array
 - **Acceptance:**
   - `npx tsc --noEmit` passes
-  - MCP server starts via `6nimmt serve` and responds to `server_info` tool call
+  - MCP server starts via `6nimmt serve` and responds to `server_info` tool call with 12 tools listed
   - `list_strategies` returns registered strategies
   - `validate_state` correctly validates/rejects game state JSON
-  - `recommend` produces valid recommendations matching CLI `recommend` output
+  - `recommend_once` produces valid recommendations matching CLI `recommend` output; includes `strategyFallback: boolean` in response
   - Invalid tool parameters return MCP InvalidParams error
-  - Unknown strategy in `recommend` returns structured `INVALID_STRATEGY` domain error
+  - Unknown strategy in `recommend_once` returns structured `INVALID_STRATEGY` domain error with `suggestedAction: "none"`
 
 ### T5E — MCP Session Management + Event Tools
 - **Agent type:** `general-purpose`
@@ -832,44 +834,55 @@ T0 (scaffold)
 - **Inputs:** `spec/mcp.md` §3.5–3.11, §5
 - **Creates:**
   - `src/mcp/session.ts` — session state machine, versioning, lifecycle (awaiting-round → in-round → awaiting-round → ended)
-  - `src/mcp/tools/session-mgmt.ts` — `start_session`, `end_session`, `resync_session` tools
+  - `src/mcp/tools/session-mgmt.ts` — `start_session`, `end_session`, `resync_session`, `session_status` tools
   - `src/mcp/tools/events.ts` — `round_started`, `turn_resolved`, `round_ended` tools
   - `src/mcp/tools/recommend.ts` — `session_recommend` tool
-  - `src/mcp/drift.ts` — state comparison / drift detection between agent snapshot and accumulated session state
+  - `src/mcp/drift.ts` — state comparison / drift detection between agent snapshot and shadow board; implements three-tier drift classification: consistent (exact match), minor (≤2 card differences → warning), major (hand size differs by >1 or >2 board cards differ → `STATE_MISMATCH`)
 - **Requirements:**
-  - Session state machine enforces phase transitions per spec §5.1
+  - Session state machine enforces phase transitions per spec §5.1 phase-tools matrix (all 4 phases × allowed/rejected tools)
   - Every mutating tool requires `expectedVersion` — rejects `VERSION_MISMATCH` if stale
+  - Non-versioned tools (`session_recommend`, `session_status`, `end_session`) do not require `expectedVersion` and do not increment version
+  - `session_status` returns current session phase, version, strategy, round/turn, and is read-only (no state mutation)
   - Duplicate events detected and returned as `DUPLICATE_EVENT` (idempotency)
   - `round_started` calls `onGameStart()` on first round; validates board and hand
-  - `turn_resolved` calls `strategy.onTurnResolved()` with the provided resolution data
-  - `round_ended` calls `strategy.onRoundEnd()` with scores
-  - `session_recommend` accepts `hand` and `board` from agent for drift detection; compares against accumulated state; returns `stateConsistent` flag
-  - Major drift → `STATE_MISMATCH` error recommending `resync_session`
-  - `resync_session` resets strategy state, replays `resolvedCardsThisRound` as synthetic `onTurnResolved()` calls
-  - Maximum concurrent sessions enforced (`maxConcurrentSessions`, default 4)
+  - `turn_resolved` calls `strategy.onTurnResolved()` with the provided resolution data; server maintains shadow board by applying resolutions
+  - `round_ended` calls `strategy.onRoundEnd()` with cumulative scores (not per-round deltas)
+  - `session_recommend` accepts `hand` and `board` from agent for drift detection; compares against shadow board; returns `stateConsistent` flag and `strategyFallback: boolean`
+  - Major drift → `STATE_MISMATCH` error with `suggestedAction: "resync_session"`
+  - `resync_session` resets strategy state, replays `turnHistory` as synthetic `onTurnResolved()` calls; increments version by exactly 1 regardless of turnHistory length
+  - Maximum concurrent sessions enforced (`maxConcurrentSessions`, default 4); excess returns `MAX_SESSIONS_REACHED`
   - Sessions are ephemeral (in-memory only, lost on process restart)
+  - Session expiry: 30 min inactivity timer; any valid tool call resets timer; expired sessions return `SESSION_EXPIRED`
+  - Session cannot be reused after game-over — calling `round_started` after `game-over` returns `INVALID_PHASE`
 - **Acceptance:**
   - Full session lifecycle: `start_session` → `round_started` → `session_recommend` → `turn_resolved` × 10 → `round_ended` → `end_session` completes without error
+  - `session_status` returns current phase/version at every point in lifecycle without mutating state
   - Version mismatch detected and rejected
+  - `resync_session` increments version by exactly 1 (not by turnHistory length)
   - Duplicate `turn_resolved` for same round/turn returns `DUPLICATE_EVENT`
-  - Wrong-phase calls return `INVALID_PHASE` (e.g., `turn_resolved` before `round_started`)
-  - Drift detection: mismatched board in `session_recommend` triggers warning or `STATE_MISMATCH`
-  - `resync_session` rebuilds strategy state and subsequent `session_recommend` works
+  - Wrong-phase calls return `INVALID_PHASE` (e.g., `turn_resolved` before `round_started`, `round_started` after `game-over`)
+  - Phase-tools matrix fully enforced: `round_ended` allowed in `in-round`, `session_recommend(decision:"card")` rejected in `awaiting-row-pick`
+  - Drift detection: mismatched board in `session_recommend` triggers warning (minor) or `STATE_MISMATCH` (major) based on drift thresholds
+  - `session_recommend` response includes `strategyFallback: boolean`
+  - `resync_session` rebuilds strategy state (shadow board + strategy hooks) and subsequent `session_recommend` works
   - `end_session` invalidates session; further calls return `UNKNOWN_SESSION`
+  - Session expiry: inactive session returns `SESSION_EXPIRED` after timeout
+  - `MAX_SESSIONS_REACHED` returned when concurrent session limit exceeded
 
 ### T5F-TEST — MCP Server Tests
 - **Agent type:** `task`
 - **Depends on:** T5E
 - **Actions:**
-  1. Create `test/unit/mcp/stateless.test.ts` — `server_info`, `list_strategies`, `validate_state`, `recommend` tool tests
-  2. Create `test/unit/mcp/session.test.ts` — session state machine, phase transitions, version enforcement
-  3. Create `test/unit/mcp/events.test.ts` — `round_started`, `turn_resolved`, `round_ended` lifecycle hook invocation
-  4. Create `test/unit/mcp/session-recommend.test.ts` — drift detection, `stateConsistent` flag, `STATE_MISMATCH` error
-  5. Create `test/unit/mcp/resync.test.ts` — `resync_session` state rebuild, synthetic `onTurnResolved()` replay
-  6. Create `test/unit/mcp/errors.test.ts` — all domain error codes, `VERSION_MISMATCH`, `DUPLICATE_EVENT`, `INVALID_PHASE`, `UNKNOWN_SESSION`
-  7. Create `test/unit/mcp/concurrent.test.ts` — multiple concurrent sessions, `maxConcurrentSessions` enforcement
-  8. Run: `npx vitest run test/unit/mcp/`
-- **Acceptance:** All tests pass. Session lifecycle fully exercised. Drift detection verified. Error model complete.
+  1. Create `test/unit/mcp/stateless.test.ts` — `server_info` (12 tools listed), `list_strategies`, `validate_state`, `recommend_once` (including `strategyFallback` field) tool tests
+  2. Create `test/unit/mcp/session.test.ts` — session state machine, phase transitions (full phase-tools matrix), version enforcement, session expiry
+  3. Create `test/unit/mcp/events.test.ts` — `round_started`, `turn_resolved`, `round_ended` lifecycle hook invocation; shadow board computation
+  4. Create `test/unit/mcp/session-recommend.test.ts` — drift detection (consistent/minor/major thresholds), `stateConsistent` flag, `strategyFallback` flag, `STATE_MISMATCH` error with `suggestedAction`
+  5. Create `test/unit/mcp/resync.test.ts` — `resync_session` state rebuild, synthetic `onTurnResolved()` replay, version increments by exactly 1
+  6. Create `test/unit/mcp/session-status.test.ts` — `session_status` returns correct phase/version/strategy, read-only (no version increment), works in all phases, `UNKNOWN_SESSION` for invalid ID
+  7. Create `test/unit/mcp/errors.test.ts` — all domain error codes with `suggestedAction` field, `VERSION_MISMATCH`, `DUPLICATE_EVENT`, `INVALID_PHASE`, `UNKNOWN_SESSION`, `SESSION_EXPIRED`, `MAX_SESSIONS_REACHED`
+  8. Create `test/unit/mcp/concurrent.test.ts` — multiple concurrent sessions, `maxConcurrentSessions` enforcement, `MAX_SESSIONS_REACHED` error code
+  9. Run: `npx vitest run test/unit/mcp/`
+- **Acceptance:** All tests pass. Session lifecycle fully exercised. Drift detection verified (three-tier thresholds). Error model complete (all codes + `suggestedAction`). All 12 tools tested.
 
 ---
 
@@ -888,7 +901,7 @@ T0 (scaffold)
   - Explicit player-count variations: **2 players**, **5 players**, and **10 players**
   - Performance: 1000 games completes within 30 seconds
   - `recommend` command: inline state, file state, stdin pipe — all produce valid recommendations
-  - MCP server E2E: spawn `6nimmt serve`, send MCP tool calls via stdio, verify full session lifecycle (start → rounds → recommend → end)
+  - MCP server E2E: spawn `6nimmt serve`, send MCP tool calls via stdio, verify all 12 tools are registered and callable, verify full session lifecycle (start → rounds → recommend → end) including `session_status` and `recommend_once`
   - MCP drift recovery: trigger `STATE_MISMATCH`, call `resync_session`, verify subsequent `session_recommend` works
 - **Acceptance:** All E2E tests pass against the built artifact.
 
@@ -936,7 +949,7 @@ T0 (scaffold)
 
 | Metric | Count |
 |--------|-------|
-| Total tasks | 31 |
+| Total tasks | 33 |
 | Fleet dispatches | 11 |
 | Max parallelism (Fleet 2) | 8 agents |
 | Verification gates | 5 (T1-CI, T1-VERIFY, T2-GATE, T4-TEST, T6-CI) |
@@ -951,7 +964,7 @@ The milestone is achieved when:
 - `npx 6nimmt play --strategies random,random --seed demo --format json` outputs a complete, rule-correct game trace
 - `npx 6nimmt strategies` lists available strategies
 - `npx 6nimmt recommend --state '<JSON>' --strategy random --format json` produces valid recommendation
-- `6nimmt serve` starts MCP server; full session lifecycle (start → round_started → session_recommend → turn_resolved × 10 → round_ended → end_session) completes successfully via MCP protocol
-- MCP drift detection works: mismatched state triggers `STATE_MISMATCH`, `resync_session` recovers
+- `6nimmt serve` starts MCP server; full session lifecycle (start → round_started → session_recommend → turn_resolved × 10 → round_ended → end_session) completes successfully via MCP protocol; `session_status` and `recommend_once` tools respond correctly
+- MCP drift detection works: mismatched state triggers `STATE_MISMATCH` with `suggestedAction: "resync_session"`, `resync_session` recovers
 - All 7 verification layers pass in CI
 - No human has written or reviewed any code
