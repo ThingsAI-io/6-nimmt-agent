@@ -796,3 +796,5 @@ The following normative examples clarify common edge cases:
 2. **Another player triggers Rule 4 (row pick):** This appears in `turn_resolved` as part of the `placements` array (the placement entry will have `overflow: true` and include `collectedCards`). The agent does NOT need to call any special tool — just reports the full turn resolution including the other player's forced pick.
 
 3. **Agent's own card triggers Rule 4:** The agent calls `session_recommend(decision: "row", ...)` BEFORE calling `turn_resolved`. The recommendation helps the agent decide which row to pick on BGA. After picking and observing the full turn resolution on BGA, the agent calls `turn_resolved` with the complete data (all plays, all placements including the agent's row pick).
+
+   > The agent should capture `revealedThisTurn` immediately upon card reveal (when BGA shows all played cards face-up), before BGA begins resolution animations. This ensures the list is complete and unaffected by subsequent DOM changes during resolution.
