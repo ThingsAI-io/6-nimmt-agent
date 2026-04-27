@@ -160,7 +160,7 @@ Creates a stateful game session. One session = one live game. The server instant
 |--------------|--------|----------|-------------|
 | `strategy`   | string | yes      | Strategy name from registry |
 | `playerCount`| number | yes      | Number of players (2–10) |
-| `playerId`   | string | yes      | This player's identifier (e.g., BGA username) |
+| `playerId`   | string | yes      | This player's identifier. Must be the BGA display username visible in the game DOM. All subsequent tool calls (plays, scores, rowPicks) must use the same identifier format for all players. |
 | `seatIndex`  | number | no       | 0-based table position. Informational; `playerId` is the primary identity. |
 | `seed`       | string | no       | Optional seed for strategy RNG derivation. If omitted, a random seed is generated. Providing a seed enables reproducible recommendations for the same game state. |
 
@@ -259,6 +259,8 @@ Tells the server how a turn resolved. The server calls `strategy.onTurnResolved(
 - `DUPLICATE_EVENT` — Exact same round/turn and payload already processed. Safe to ignore.
 - `EVENT_CONFLICT` — Same round/turn already recorded with different data. Use `resync_session`.
 
+> **Rule 4 resolution semantics:** When a player's card triggers Rule 4 (lower than all row tails), their entry in `resolutions` has `rowIndex` set to the row they **picked** (which is also where their card is placed as the new sole card). `causedOverflow` is `true` and `collectedCards` contains the cards from the picked row. The same information appears in `rowPicks` with attribution context. Both fields are consistent — `resolutions[].rowIndex` == `rowPicks[].rowIndex` for the same player.
+
 > **Note:** The server normalizes `resolutions` to ascending card order upon receipt. The agent may provide them in any order.
 
 ---
@@ -274,7 +276,7 @@ Tells the server a round ended. The server calls `strategy.onRoundEnd()`.
 | `sessionId`      | string   | yes      | Session identifier |
 | `expectedVersion`| number   | yes      | Expected session version |
 | `round`          | number   | yes      | Round that just ended |
-| `scores`         | `{ playerId: string, score: number }[]` | yes | All player scores after this round |
+| `scores`         | `{ playerId: string, score: number }[]` | yes | Cumulative scores across all rounds (not per-round deltas). Used for game-over detection (any player ≥ 66). |
 
 **Result:**
 ```json
@@ -331,6 +333,8 @@ Gets a recommendation using the strategy's full accumulated state from the sessi
 | `revealedThisTurn` | array | no | Required when `decision` is `"row"`. Cards revealed so far this turn: `[{ playerId, card }]`. |
 | `resolutionIndex` | number | no | Required when `decision` is `"row"`. 0-based index into the turn's resolution order indicating how many cards have resolved before this row pick. |
 
+> **Cascading Rule 4 picks:** In rare cases, multiple players' cards may trigger Rule 4 in the same turn. Cards are resolved in ascending order (lowest first). After the first player picks a row, their card becomes the new tail of that row, potentially changing whether subsequent cards still trigger Rule 4. The `resolutionIndex` reflects how many cards have been fully resolved (placed on rows) before the current row-pick decision. For the lowest card in a turn, `resolutionIndex` is always `0`.
+
 **Result (card decision):**
 ```json
 {
@@ -374,6 +378,10 @@ Gets a recommendation using the strategy's full accumulated state from the sessi
 }
 ```
 
+> **Row recommendation is optional:** Calling `session_recommend(decision:"row")` before `turn_resolved` during Rule 4 is **recommended but not required** for the state machine. If the agent skips the recommendation (e.g., the row choice is obvious) and calls `turn_resolved` directly with `rowPicks` data, the server accepts it without entering the `awaiting-row-pick` phase. The `awaiting-row-pick` phase is triggered **only** by a `session_recommend(decision:"row")` call, not by the presence of `rowPicks` in `turn_resolved`.
+
+> **Read-only semantics:** `session_recommend` does not increment `sessionVersion`. The `sessionVersion` in the response reflects the current (unchanged) version. The agent may call `session_recommend` multiple times without affecting version tracking.
+
 **Drift detection:** The server compares the agent-provided `hand` and `board` against its accumulated session state:
 - **Consistent** (`stateConsistent: true`): Agent snapshot matches server state. Recommendation uses full session history.
 - **Minor drift** (`stateConsistent: false`, `stateWarnings` populated): Agent snapshot differs slightly (e.g., board state diverged after a missed event). Recommendation still produced using agent-provided snapshot as override, but server logs the discrepancy.
@@ -415,6 +423,9 @@ Resets the session's accumulated state to match the agent's current view of the 
 2. Calls `onGameStart()` on the strategy instance (fresh start).
 3. If `turnHistory` is provided, replays each entry as a synthetic `onTurnResolved()` call (same reconstruction contract as CLI `recommend_once` — see [Strategies §7](strategies.md)). The `resolutions` field in each entry provides per-card placement details (`rowIndex`, `causedOverflow`, `collectedCards`), enabling full `TurnResolution` reconstruction for stateful strategies.
 4. Cross-round strategy memory is lost. This is an acceptable trade-off for recovery.
+5. Unconditionally resets the session phase (including `awaiting-row-pick`) to match the provided round/turn state. After resync, phase is always `in-round` (if `turn` > 0 within a round) or `awaiting-round` (if at a round boundary).
+
+> **Degradation note:** BGA DOM may not retain full turn history for all rounds. `turnHistory` quality depends on what the agent can scrape from the current page. Strategy reconstruction quality degrades proportionally to missing entries — strategies that rely heavily on opponent modeling (e.g., bayesian) will produce lower-quality recommendations with incomplete history.
 
 ---
 
@@ -499,27 +510,31 @@ interface DomainError {
   ok: false;
   code: string;
   recoverable: boolean;
+  suggestedAction: "retry_with_version" | "resync_session" | "start_fresh" | "none";
   message: string;
   details?: Record<string, unknown>;
 }
 ```
 
-| Code | Recoverable | Description |
-|------|-------------|-------------|
-| `UNKNOWN_SESSION` | no | Session ID not found or already ended |
-| `INVALID_PHASE` | yes | Tool called in wrong session phase (e.g., `turn_resolved` before `round_started`) |
-| `VERSION_MISMATCH` | yes | `expectedVersion` doesn't match. Response includes `currentVersion`. |
-| `DUPLICATE_EVENT` | yes | Exact same round/turn AND same payload already processed. Safe to ignore — no state change. |
-| `INVALID_ROUND` | yes | Round number not sequential |
-| `INVALID_TURN` | yes | Turn number not sequential within round |
-| `INVALID_BOARD` | yes | Board structure invalid (wrong row count, cards out of range) |
-| `INVALID_HAND` | yes | Hand invalid (wrong size, cards out of range, duplicates) |
-| `INVALID_RESOLUTIONS` | yes | Resolutions array invalid (wrong order, missing fields, card mismatch with plays) |
-| `INVALID_STRATEGY` | no | Strategy name not found in registry |
-| `INVALID_PLAYER_COUNT` | no | Player count outside 2–10 |
-| `STATE_MISMATCH` | yes | Agent snapshot vs server state diverged significantly. Use `resync_session`. |
-| `EVENT_CONFLICT` | no | Same round/turn already recorded with different data. Session state may be corrupted. Use `resync_session`. |
-| `SESSION_EXPIRED` | yes | Session expired due to inactivity. Start a new session. |
+| Code | Recoverable | suggestedAction | Description |
+|------|-------------|-----------------|-------------|
+| `UNKNOWN_SESSION` | no | `start_fresh` | Session ID not found or already ended |
+| `INVALID_PHASE` | yes | `none` | Tool called in wrong session phase (e.g., `turn_resolved` before `round_started`) |
+| `VERSION_MISMATCH` | yes | `retry_with_version` | `expectedVersion` doesn't match. Response includes `currentVersion`. |
+| `DUPLICATE_EVENT` | yes | `none` | Exact same round/turn AND same payload already processed. Safe to ignore — no state change. Response includes `currentVersion` for convenience. |
+| `INVALID_ROUND` | yes | `none` | Round number not sequential |
+| `INVALID_TURN` | yes | `none` | Turn number not sequential within round |
+| `INVALID_BOARD` | yes | `none` | Board structure invalid (wrong row count, cards out of range) |
+| `INVALID_HAND` | yes | `none` | Hand invalid (wrong size, cards out of range, duplicates) |
+| `INVALID_RESOLUTIONS` | yes | `none` | Resolutions array invalid (wrong order, missing fields, card mismatch with plays) |
+| `INVALID_STRATEGY` | no | `none` | Strategy name not found in registry |
+| `INVALID_PLAYER_COUNT` | no | `none` | Player count outside 2–10 |
+| `STATE_MISMATCH` | yes | `resync_session` | Agent snapshot vs server state diverged significantly. Use `resync_session`. |
+| `EVENT_CONFLICT` | no | `resync_session` | Same round/turn already recorded with different data. Session state may be corrupted. Use `resync_session`. |
+| `SESSION_EXPIRED` | yes | `start_fresh` | Session expired due to inactivity. Start a new session. |
+| `MAX_SESSIONS_REACHED` | no | `none` | All session slots are in use. End an existing session or wait for one to expire. |
+
+> **`recoverable` semantics:** `true` means the session is still usable — the agent can retry the call, fix the parameters, or use a recovery mechanism (resync). `false` means the session is unusable for this call — the agent must start a new session or abandon the operation. Note: even `recoverable: false` errors (like `EVENT_CONFLICT`) may allow session recovery via `resync_session`; the flag indicates whether a *simple retry* of the same operation can succeed.
 
 **Design principle:** Errors include enough context for an AI agent to self-correct. `VERSION_MISMATCH` includes `currentVersion`. `INVALID_STRATEGY` includes `validStrategies`. `STATE_MISMATCH` includes a summary of the drift.
 
@@ -581,7 +596,9 @@ Every mutating tool requires `expectedVersion` — if it doesn't match, the serv
 
 Read-only tools (`session_recommend`, `end_session`) do not require `expectedVersion`.
 
-> **Note:** `resync_session` is **exempt** from version checking despite being a mutating tool. Rationale: resync is a recovery mechanism invoked when the agent has lost track of the current version (e.g., after a `STATE_MISMATCH` error). Requiring `expectedVersion` would create a catch-22. The resync result provides the new `sessionVersion` for all subsequent calls.
+> **Implementation note:** For `turn_resolved`, the server SHOULD check for duplicate events (same round/turn + same payload) before checking `expectedVersion`. This allows retries of already-applied events to return `DUPLICATE_EVENT` directly, avoiding an unnecessary VERSION_MISMATCH → retry → DUPLICATE_EVENT round-trip.
+
+> **Note:** `resync_session` is **exempt**from version checking despite being a mutating tool. Rationale: resync is a recovery mechanism invoked when the agent has lost track of the current version (e.g., after a `STATE_MISMATCH` error). Requiring `expectedVersion` would create a catch-22. The resync result provides the new `sessionVersion` for all subsequent calls.
 
 ### 5.3 Restart and Recovery
 
@@ -604,6 +621,8 @@ This enables:
 - Testing multiple strategies against the same live game state.
 - Running one active session and one "shadow" session for comparison.
 
+> **Serialization guarantee:** Tool calls targeting the same session are processed in FIFO (arrival) order. The server never reorders concurrent calls within a single session. If the agent sends `session_recommend` and `turn_resolved` simultaneously, the server processes them in arrival order, which may mean the recommendation uses pre-turn state.
+
 ### 5.5 Recovery Ladder
 
 When errors occur, the agent should escalate through these steps in order:
@@ -613,6 +632,8 @@ When errors occur, the agent should escalate through these steps in order:
 3. **`resync_session` failure** (e.g. `UNKNOWN_SESSION`) → Call `end_session` + `start_session` + `resync_session` to rebuild from scratch.
 4. **`UNKNOWN_SESSION` on any call** → Session lost; start fresh with `start_session`.
 5. **MCP process died** (stdin/stdout closed) → Restart `6nimmt serve`, create a new session.
+
+> **Circuit-breaker rule:** If the same error recurs 3 consecutive times at one recovery level, escalate to the next level immediately. If all levels are exhausted (process restart fails), the agent should abort the game gracefully and report the failure. This prevents infinite retry loops.
 
 ### 5.6 Session Expiry
 
@@ -630,7 +651,7 @@ src/mcp/
   session.ts         — Session state machine, versioning, lifecycle
   tools/
     stateless.ts     — list_strategies, validate_state, recommend_once
-    session-mgmt.ts  — start_session, end_session, resync_session
+    session-mgmt.ts  — start_session, end_session, resync_session, session_status
     events.ts        — round_started, turn_resolved, round_ended
     recommend.ts     — session_recommend
   drift.ts           — State comparison / drift detection logic
