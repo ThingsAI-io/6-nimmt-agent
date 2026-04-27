@@ -33,6 +33,14 @@ export type GamePhase =
   | 'resolving'
   | 'awaiting-row-pick';
 
+// ── Pending row pick ───────────────────────────────────────────────────
+
+export interface PendingRowPick {
+  readonly playerId: string;
+  readonly triggeringCard: CardNumber;
+  readonly revealedThisTurn: readonly PlayCardMove[];
+}
+
 // ── Game state ─────────────────────────────────────────────────────────
 
 export interface GameState {
@@ -43,6 +51,9 @@ export interface GameState {
   readonly turn: number;
   readonly phase: GamePhase;
   readonly seed: string;
+  readonly turnHistory: readonly TurnHistoryEntry[];
+  readonly initialBoardCards: Board;
+  readonly pendingRowPick?: PendingRowPick;
 }
 
 // ── Moves ──────────────────────────────────────────────────────────────

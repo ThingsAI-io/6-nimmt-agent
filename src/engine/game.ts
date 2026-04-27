@@ -8,6 +8,8 @@ import type {
   PlayerState,
   PlayCardMove,
   PlacementResult,
+  TurnHistoryEntry,
+  TurnResolutionResult,
 } from './types';
 import type { MustPickRow } from './board';
 import { createDeck, cattleHeads } from './card';
@@ -56,6 +58,8 @@ export function createGame(playerIds: string[], seed: string): GameState {
     turn: 0,
     phase: 'round-over',
     seed,
+    turnHistory: [],
+    initialBoardCards: board,
   };
 }
 
@@ -105,6 +109,8 @@ export function dealRound(state: GameState): GameState {
     deck: remainder,
     turn: 1,
     phase: 'awaiting-cards',
+    turnHistory: [],
+    initialBoardCards: board,
   };
 }
 
@@ -162,6 +168,9 @@ export function resolveTurn(
     collectedMap.set(p.id, []);
   }
 
+  const resolutions: TurnResolutionResult['resolutions'][number][] = [];
+  const rowPicks: TurnResolutionResult['rowPicks'][number][] = [];
+
   // Resolve each card sequentially
   for (const play of sortedPlays) {
     const result = determinePlacement(board, play.card);
@@ -176,6 +185,15 @@ export function resolveTurn(
       const penalty = collected.reduce((s, c) => s + cattleHeads(c), 0);
       scoreDeltas.set(play.playerId, scoreDeltas.get(play.playerId)! + penalty);
       collectedMap.get(play.playerId)!.push(...collected);
+
+      resolutions.push({
+        playerId: play.playerId,
+        card: play.card,
+        rowIndex: pickedRow,
+        causedOverflow: false,
+        collectedCards: [...collected],
+      });
+      rowPicks.push({ playerId: play.playerId, rowIndex: pickedRow });
     } else if (result.causedOverflow) {
       // Overflow: collect 5 cards, place triggering card
       const collected = result.collectedCards!;
@@ -184,9 +202,24 @@ export function resolveTurn(
       const penalty = collected.reduce((s, c) => s + cattleHeads(c), 0);
       scoreDeltas.set(play.playerId, scoreDeltas.get(play.playerId)! + penalty);
       collectedMap.get(play.playerId)!.push(...collected);
+
+      resolutions.push({
+        playerId: play.playerId,
+        card: play.card,
+        rowIndex: result.rowIndex,
+        causedOverflow: true,
+        collectedCards: [...collected],
+      });
     } else {
       // Normal placement
       board = placeCard(board, play.card, result.rowIndex);
+
+      resolutions.push({
+        playerId: play.playerId,
+        card: play.card,
+        rowIndex: result.rowIndex,
+        causedOverflow: false,
+      });
     }
   }
 
@@ -204,12 +237,21 @@ export function resolveTurn(
 
   const isFinalTurn = state.turn === 10;
 
+  const turnEntry: TurnHistoryEntry = {
+    turn: state.turn,
+    plays: sortedPlays.map((p) => ({ playerId: p.playerId, card: p.card })),
+    resolutions,
+    rowPicks,
+    boardAfter: board,
+  };
+
   return {
     ...state,
     players,
     board,
     turn: isFinalTurn ? state.turn : state.turn + 1,
     phase: isFinalTurn ? 'round-over' : 'awaiting-cards',
+    turnHistory: [...state.turnHistory, turnEntry],
   };
 }
 
