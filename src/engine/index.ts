@@ -13,6 +13,7 @@ export type {
   PickRowMove,
   PlacementResult,
   TurnResolutionResult,
+  PendingRowPick,
 } from './types';
 
 export { cattleHeads, isValidCardNumber, createDeck } from './card';
@@ -40,3 +41,5 @@ export {
   isGameOver,
   getWinners,
 } from './game';
+
+export { toCardChoiceState, toRowChoiceState } from './visible-state';
