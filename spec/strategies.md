@@ -136,14 +136,14 @@ The CLI `recommend` command, MCP `recommend_once` tool, and MCP `resync_session`
 
 This means:
 - **Stateless strategies** (e.g., random) work unchanged — they don't use lifecycle hooks.
-- **Stateful strategies** (e.g., Bayesian) receive full `TurnResolution` data (plays, row picks, board state) for each previous turn.
+- **Stateful strategies** (e.g., Bayesian) receive full `TurnResolution` data (plays, per-card resolutions, row picks, board state) for each previous turn.
 - **Cross-round state is lost.** This is an acceptable limitation — cross-round memory requires a persistent session.
 - **The reconstruction is now complete** — no data is missing from the history.
 
 ### 7.2 Strategy Requirements for Live Play
 
 Strategies that want to work well in live play SHOULD:
-- Derive maximum insight from `turnHistory` (which provides full per-turn resolution including row picks and board states)
+- Derive maximum insight from `turnHistory` (which provides full per-turn resolution including per-card resolutions, row picks, and board states)
 - Not depend on `onRoundEnd()` for current-round decisions
 - Be tolerant of incomplete state (warnings from state validation should not crash the strategy)
 

@@ -117,6 +117,14 @@ type GamePhase =
 interface TurnHistoryEntry {
   readonly turn: number;
   readonly plays: readonly { playerId: string; card: CardNumber }[];
+  /** Per-card resolution details — what happened when each card was placed. */
+  readonly resolutions: readonly {
+    playerId: string;
+    card: CardNumber;
+    rowIndex: number;
+    causedOverflow: boolean;
+    collectedCards?: readonly CardNumber[];
+  }[];
   readonly rowPicks: readonly { playerId: string; rowIndex: number; collectedCards: readonly CardNumber[] }[];
   readonly boardAfter: readonly CardNumber[][];  // serialized board state after resolution
 }

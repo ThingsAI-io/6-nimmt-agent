@@ -48,7 +48,7 @@ Returns server metadata for compatibility checking.
   "version": "1.0.0",
   "tools": ["server_info", "list_strategies", "validate_state", "recommend_once",
             "start_session", "round_started", "turn_resolved", "round_ended",
-            "session_recommend", "resync_session", "end_session"],
+            "session_recommend", "resync_session", "session_status", "end_session"],
   "sessionSupport": true,
   "maxConcurrentSessions": 4
 }
@@ -238,7 +238,7 @@ Tells the server how a turn resolved. The server calls `strategy.onTurnResolved(
 | `plays`          | `{ playerId: string, card: number }[]` | yes | All players' revealed cards for this turn |
 | `resolutions`    | `{ playerId: string, card: number, rowIndex: number, causedOverflow: boolean, collectedCards?: number[] }[]` | yes | Per-card resolution results, ordered lowest card first |
 | `rowPicks`       | `{ playerId: string, rowIndex: number, collectedCards: number[] }[]` | no | Rule 4 forced row picks. Only present when a player's card was lower than all row tails and they had to pick a row. |
-| `boardAfter`     | `{ rows: number[][] }` | yes | Board state after all resolutions (4 rows) |
+| `boardAfter`     | `number[][]` | no | Board state after all resolutions (4 rows). If omitted, server computes expected board from resolutions + previous state. If provided, used for drift validation. |
 
 **Result:**
 ```json
@@ -258,6 +258,8 @@ Tells the server how a turn resolved. The server calls `strategy.onTurnResolved(
 - `INVALID_RESOLUTIONS` — Resolutions array is invalid (wrong order, missing fields, card mismatch with `plays`).
 - `DUPLICATE_EVENT` — Exact same round/turn and payload already processed. Safe to ignore.
 - `EVENT_CONFLICT` — Same round/turn already recorded with different data. Use `resync_session`.
+
+> **Note:** The server normalizes `resolutions` to ascending card order upon receipt. The agent may provide them in any order.
 
 ---
 
@@ -393,7 +395,7 @@ Resets the session's accumulated state to match the agent's current view of the 
 | `board`      | number[][]| yes      | Current board state from BGA |
 | `hand`       | number[]  | yes      | Current hand from BGA |
 | `scores`     | `{ playerId: string, score: number }[]` | yes | Current scores from BGA |
-| `turnHistory` | `{ turn: number, plays: { playerId: string, card: number }[], rowPicks: { playerId: string, rowIndex: number, collectedCards: number[] }[], boardAfter: number[][] }[]` | no | Known turn resolution history this round. Enables full strategy reconstruction. |
+| `turnHistory` | `{ turn: number, plays: { playerId: string, card: number }[], resolutions: { playerId: string, card: number, rowIndex: number, causedOverflow: boolean, collectedCards?: number[] }[], rowPicks: { playerId: string, rowIndex: number, collectedCards: number[] }[], boardAfter: number[][] }[]` | no | Known turn resolution history this round. Includes per-card `resolutions` for full `TurnResolution` reconstruction. Enables complete strategy replay. |
 
 **Result:**
 ```json
@@ -411,12 +413,48 @@ Resets the session's accumulated state to match the agent's current view of the 
 **Behaviour:**
 1. Resets session round/turn/phase to provided values.
 2. Calls `onGameStart()` on the strategy instance (fresh start).
-3. If `turnHistory` is provided, replays each entry as a synthetic `onTurnResolved()` call (same reconstruction contract as CLI `recommend_once` — see [Strategies §7](strategies.md)).
+3. If `turnHistory` is provided, replays each entry as a synthetic `onTurnResolved()` call (same reconstruction contract as CLI `recommend_once` — see [Strategies §7](strategies.md)). The `resolutions` field in each entry provides per-card placement details (`rowIndex`, `causedOverflow`, `collectedCards`), enabling full `TurnResolution` reconstruction for stateful strategies.
 4. Cross-round strategy memory is lost. This is an acceptable trade-off for recovery.
 
 ---
 
-### 3.11 `end_session` — Terminate a game session
+### 3.11 `session_status` — Query session state (read-only)
+
+Returns the current session state without mutation. Useful after network hiccups or to verify session state before acting.
+
+**Parameters:**
+
+| Parameter    | Type   | Required | Description |
+|-------------|--------|----------|-------------|
+| `sessionId` | string | yes      | Session identifier |
+
+**Result:**
+```json
+{
+  "sessionId": "s-a1b2c3d4",
+  "sessionVersion": 8,
+  "phase": "in-round",
+  "round": 2,
+  "turn": 3,
+  "strategy": "bayesian",
+  "board": [[5, 22, 44], [10, 33], [67], [99, 101]],
+  "hand": [12, 28, 45, 61, 73, 88, 94],
+  "scores": [
+    { "playerId": "copilot-ai", "score": 12 },
+    { "playerId": "alice", "score": 8 }
+  ],
+  "lastEvent": "turn_resolved(round:2, turn:2)"
+}
+```
+
+**Errors:**
+- `UNKNOWN_SESSION` — Session ID not found or already ended.
+
+This tool is read-only — it does not require `expectedVersion` and does not increment `sessionVersion`.
+
+---
+
+### 3.12 `end_session` — Terminate a game session
 
 Cleans up the session and releases resources.
 
@@ -520,6 +558,17 @@ interface DomainError {
               │          ▼                    │
               └──────► ended ◄────────────────┘
 ```
+
+#### Allowed tools per phase
+
+| Phase | Allowed tools | Rejected (returns `INVALID_PHASE`) |
+|-------|---------------|------------------------------------|
+| `awaiting-round` | `round_started`, `session_status`, `resync_session`, `end_session` | `turn_resolved`, `round_ended`, `session_recommend` |
+| `in-round` | `session_recommend(decision:"card")`, `turn_resolved`, `session_recommend(decision:"row")`, `session_status`, `resync_session`, `end_session` | `round_started` |
+| `awaiting-row-pick` | `session_recommend(decision:"row")` (re-query), `turn_resolved` (exit phase), `session_status` (read-only), `resync_session` (recovery), `end_session` (abort) | `session_recommend(decision:"card")`, `round_started`, `round_ended` |
+| `game-over` | `end_session`, `session_status` | `round_started`, `turn_resolved`, `round_ended`, `session_recommend` |
+
+> **Note:** In the `awaiting-row-pick` phase, the agent may re-query `session_recommend(decision:"row")` if it needs to re-evaluate (e.g., after a timeout). Calling `turn_resolved` exits the phase back to `in-round`. All other mutating tools are rejected with `INVALID_PHASE`.
 
 ### 5.2 Session Versioning
 
