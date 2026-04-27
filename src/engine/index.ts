@@ -25,3 +25,5 @@ export {
 } from './prng';
 
 export type { Prng } from './prng';
+
+export { tail, penalty, rowLength, appendCard, isOverflowing } from './row';
