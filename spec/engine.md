@@ -55,6 +55,14 @@ interface Board {
 }
 ```
 
+**Board serialization:** When serialized to JSON (e.g., in CLI output or `recommend` input), a Board is represented as:
+```json
+{
+  "rows": [[3, 17, 42], [8], [55, 60, 71, 88, 99], [12, 25]]
+}
+```
+where each inner array is the cards in placement order. This is the only valid representation — arrays of arrays, not objects with `cards` properties.
+
 ### 1.4 Player State
 
 ```typescript
@@ -82,8 +90,8 @@ interface GameState {
   readonly phase: GamePhase;
   /** In-flight turn resolution state. Present only during "resolving" / "awaiting-row-pick". */
   readonly pendingResolution?: PendingTurnResolution;
-  /** Cards played and resolved in previous turns this round, with player attribution. Reset by dealRound(). */
-  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber }[];
+  /** Cards played and resolved in previous turns this round, with player attribution. Reset by dealRound(). Includes the turn number for each card, enabling strategies to distinguish simultaneous plays within a turn from plays across turns. Ordered by turn ascending, then by card number ascending within each turn. */
+  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber; turn: number }[];
   /** Seed for deterministic replay. */
   readonly seed: string;
 }
@@ -126,8 +134,8 @@ interface CardChoiceState {
   readonly playerCount: number;
   readonly round: number;
   readonly turn: number;
-  /** Cards resolved in previous turns this round (all players, public info). Ordered ascending by card number within each turn. All played cards included regardless of overflow or row picks. */
-  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber }[];
+  /** Cards resolved in previous turns this round (all players, public info). Includes the turn number for each card, enabling strategies to distinguish simultaneous plays within a turn from plays across turns. Ordered by turn ascending, then by card number ascending within each turn. All played cards included regardless of overflow or row picks. */
+  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber; turn: number }[];
   /** The 4 cards that started the board rows at the beginning of this round. */
   readonly initialBoardCards: readonly CardNumber[];
 }
@@ -149,8 +157,8 @@ interface RowChoiceState {
   readonly playerCount: number;
   readonly round: number;
   readonly turn: number;
-  /** Cards resolved in previous turns this round (all players, public info). Ordered ascending by card number within each turn. All played cards included regardless of overflow or row picks. */
-  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber }[];
+  /** Cards resolved in previous turns this round (all players, public info). Includes the turn number for each card, enabling strategies to distinguish simultaneous plays within a turn from plays across turns. Ordered by turn ascending, then by card number ascending within each turn. All played cards included regardless of overflow or row picks. */
+  readonly resolvedCardsThisRound: readonly { playerId: string; card: CardNumber; turn: number }[];
   /** The 4 cards that started the board rows at the beginning of this round. */
   readonly initialBoardCards: readonly CardNumber[];
   /** The card this player played that triggered the forced row pick. */
@@ -355,3 +363,47 @@ Each engine function validates its preconditions and throws on violation (these 
 | `scoreRound()` | `"round-over"` | Turn = 10 (all turns completed) |
 | `toCardChoiceState()` | `"awaiting-cards"` | playerId exists |
 | `toRowChoiceState()` | `"awaiting-row-pick"` | playerId matches pending pick |
+
+---
+
+## 4. State Validation
+
+The engine provides validation utilities that check a `CardChoiceState` or `RowChoiceState` for internal consistency. The `recommend` command calls these before running the strategy, and reports the result via `stateValid` and `stateWarnings`.
+
+### 4.1 Validation Interface
+
+```typescript
+interface ValidationResult {
+  readonly valid: boolean;
+  readonly errors: readonly string[];   // hard failures — state is unusable
+  readonly warnings: readonly string[]; // soft issues — state is usable but suspicious
+}
+
+/** Validates a CardChoiceState or RowChoiceState for internal consistency. */
+function validateCardChoiceState(state: CardChoiceState): ValidationResult;
+function validateRowChoiceState(state: RowChoiceState): ValidationResult;
+```
+
+### 4.2 Error Checks (state is invalid)
+
+The following conditions produce **errors** — the state is unusable and the strategy must not run:
+
+- All card numbers in range 1–104
+- No duplicate cards across hand + board rows
+- Exactly 4 rows on the board
+- Each row has 1–5 cards
+- Rows are strictly increasing (each card > previous)
+- Player count 2–10
+- Round ≥ 1
+- Turn 1–10
+- Hand is non-empty (for card choice)
+- `triggeringCard` present for `RowChoiceState`, absent for `CardChoiceState`
+
+### 4.3 Warning Checks (suspicious but not fatal)
+
+The following conditions produce **warnings** — the state is usable but may indicate stale or inconsistent input:
+
+- Hand size doesn't match expected `11 - turn` (could indicate stale state)
+- Cards in `resolvedCardsThisRound` overlap with cards on board (possible stale read)
+- `initialBoardCards` not all present as row heads or in resolved cards (could be stale)
+- Total visible cards exceeds expected count for turn/player configuration
