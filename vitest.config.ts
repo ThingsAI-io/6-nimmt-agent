@@ -48,6 +48,12 @@ export default defineConfig({
           include: ['test/cli/**/*.test.ts'],
           testTimeout: 60_000,
         }
+      },
+      {
+        name: 'mcp',
+        test: {
+          include: ['test/mcp/**/*.test.ts']
+        }
       }
     ]
   }
