@@ -45,6 +45,8 @@ Derived properties (pure functions, not stored):
 - `penalty(row)` → sum of cattleHeads for all cards in the row
 - `length(row)` → number of cards (if 5, next placement triggers overflow)
 
+> When overflow occurs, the placing player collects all 5 existing cards in the row as penalty (adding their cattle-head values to the player's score), and their played card becomes the sole card in that row.
+
 ### 1.3 Board
 
 The board is exactly 4 rows.
@@ -79,7 +81,7 @@ interface PlayerState {
   readonly hand: readonly CardNumber[];
   /** Cards collected as penalties this round (not mixed with hand). */
   readonly collected: readonly CardNumber[];
-  /** Cumulative score across all rounds. */
+  /** Cumulative cattle-head score across all rounds. Starts at 0. Lower is better. */
   readonly score: number;
 }
 ```
@@ -189,7 +191,7 @@ interface RowChoiceState {
   readonly turnHistory: readonly TurnHistoryEntry[];
   /** The 4 cards that started the board rows at the beginning of this round. */
   readonly initialBoardCards: readonly CardNumber[];
-  /** The card this player playedthat triggered the forced row pick. */
+  /** The card this player played that triggered the forced row pick. */
   readonly triggeringCard: CardNumber;
   /** All cards revealed this turn (all players). Cards resolved before this one have already been placed. */
   readonly revealedThisTurn: readonly { playerId: string; card: CardNumber }[];
@@ -288,6 +290,8 @@ All testing must cover at minimum **2, 5, and 10** player configurations.
 
 If multiple players share the lowest score at game end, they all win (shared victory). The [CLI](cli.md) reports all winners.
 
+> If multiple players exceed 66 cattle heads in the same round, the game still ends and the player(s) with the lowest cumulative score win.
+
 ---
 
 ## 3. Engine API
@@ -315,7 +319,13 @@ src/engine/
  *  Returns: round=1, turn=0, phase="round-over", empty hands/collected/board,
  *  full 104-card deck, score=0 for all players. */
 function createGame(players: readonly { id: string }[], seed: string): GameState;
+```
 
+> **Note:** Turn 0 is a sentinel value indicating no turn has started within the current round. It is valid only in the `round-over` phase. The validation rules in §4 apply to visible state (`CardChoiceState`/`RowChoiceState`), not the internal `GameState`. Turn values in visible state are always 1–10.
+
+> The initial `round-over` phase is a bootstrap state — no round has actually ended. It exists so that the first `dealRound()` call follows the same precondition as subsequent rounds (requires `phase === "round-over"`).
+
+```typescript
 /** Create a shuffled 104-card deck from a seed. */
 function createDeck(seed: string): CardNumber[];
 

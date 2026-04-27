@@ -98,7 +98,7 @@ Runs a single game to completion:
 
 Runs N games with the same configuration:
 
-1. Derive per-game seeds from base seed: `hash(batchSeed + gameIndex)`.
+1. Derive per-game seeds from base seed: `SHA256(batchSeed + '/' + gameIndex)`.
 2. Run each game via `GameRunner`.
 3. Aggregate results into `BatchResult` via `stats.ts`.
 
@@ -108,8 +108,8 @@ Runs N games with the same configuration:
 
 See [Engine spec §2.2](engine.md#22-seed--prng) for full seed/PRNG specification.
 
-- Batch base seed → per-game seed: `hash(batchSeed + gameIndex)`
-- Per-game seed → per-round seed: `hash(gameSeed + round)`
+- Batch base seed → per-game seed: `SHA256(batchSeed + '/' + gameIndex)`
+- Per-game seed → per-round seed: `SHA256(gameSeed + '/' + round)`
 
 ---
 
