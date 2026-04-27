@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  verify:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,11 +14,38 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npx eslint .
-      - run: npx vitest run test/fixtures/
-      # TODO: Add runtime sandbox isolation for fixture tests (e.g. network/fs restrictions)
-      - run: npx vitest run test/reference/
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Fixture tests
+        run: npx vitest run test/fixtures/
+
+      - name: Reference model tests
+        run: npx vitest run test/reference/
+
+      - name: Strategy tests
+        run: npx vitest run test/strategies/
+
+      - name: Invariant tests
+        run: npx vitest run test/invariant/
+
+      - name: Simulator tests
+        run: npx vitest run test/sim/
+
+      - name: CLI tests
+        run: npx vitest run test/cli/
+
+      - name: MCP tests
+        run: npx vitest run test/mcp/
+
+      - name: E2E tests
+        run: npx vitest run test/e2e/
+
+      # TODO: Add holdout fixture tests generated from SHA256(CI_RUN_ID + '/holdout/' + index)
 
   harness-protection:
     runs-on: ubuntu-latest
