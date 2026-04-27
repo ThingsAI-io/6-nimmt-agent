@@ -90,8 +90,8 @@
         { "playerId": "p0", "card": 26, "rowIndex": 0, "causedOverflow": true, "collectedCards": [5, 10, 15, 20, 25] },
         { "playerId": "p1", "card": 31, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
         { "playerId": "p2", "card": 51, "rowIndex": 1, "causedOverflow": true, "collectedCards": [30, 35, 40, 45, 50] },
-        { "playerId": "p3", "card": 52, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
-        { "playerId": "p4", "card": 53, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p3", "card": 52, "rowIndex": 1, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p4", "card": 53, "rowIndex": 1, "causedOverflow": false, "collectedCards": [] },
         { "playerId": "p5", "card": 54, "rowIndex": 1, "causedOverflow": false, "collectedCards": [] },
         { "playerId": "p6", "card": 55, "rowIndex": 1, "causedOverflow": false, "collectedCards": [] },
         { "playerId": "p7", "card": 61, "rowIndex": 2, "causedOverflow": false, "collectedCards": [] },
@@ -100,7 +100,7 @@
       ],
       "rowPicks": [],
       "collected": { "p0": [5, 10, 15, 20, 25], "p2": [30, 35, 40, 45, 50] },
-      "boardAfter": [[26, 31, 52, 53], [51, 54, 55], [60, 61], [80, 81, 85]]
+      "boardAfter": [[26, 31], [51, 52, 53, 54, 55], [60, 61], [80, 81, 85]]
     }
   },
   {
