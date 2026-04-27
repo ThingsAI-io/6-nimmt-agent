@@ -7,6 +7,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { listStrategies, validateState, recommendOnce } from './tools/stateless.js';
+import { SessionManager } from './session.js';
 import { notImplemented, type DomainError } from './errors.js';
 
 // ── Tool definitions ────────────────────────────────────────────────
@@ -194,18 +195,14 @@ function toolError(error: DomainError) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(error) }], isError: true };
 }
 
-// ── Session tool stub ───────────────────────────────────────────────
+// ── Result helper ───────────────────────────────────────────────────
 
-const SESSION_TOOLS = new Set([
-  'start_session',
-  'round_started',
-  'turn_resolved',
-  'round_ended',
-  'session_recommend',
-  'resync_session',
-  'session_status',
-  'end_session',
-]);
+function resultOrError(result: object | DomainError) {
+  if ('ok' in result && (result as DomainError).ok === false) {
+    return toolError(result as DomainError);
+  }
+  return toolResult(result);
+}
 
 // ── Server creation ─────────────────────────────────────────────────
 
@@ -216,6 +213,7 @@ export interface ServerConfig {
 
 export function createServer(config: ServerConfig = {}) {
   const maxSessions = config.maxSessions ?? 4;
+  const sessionManager = new SessionManager(maxSessions);
 
   const server = new Server(
     { name: '6nimmt', version: '1.0.0' },
@@ -263,10 +261,31 @@ export function createServer(config: ServerConfig = {}) {
         return toolResult(result);
       }
 
+      case 'start_session':
+        return resultOrError(sessionManager.startSession(args as any));
+
+      case 'round_started':
+        return resultOrError(sessionManager.roundStarted(args as any));
+
+      case 'turn_resolved':
+        return resultOrError(sessionManager.turnResolved(args as any));
+
+      case 'round_ended':
+        return resultOrError(sessionManager.roundEnded(args as any));
+
+      case 'session_recommend':
+        return resultOrError(sessionManager.sessionRecommend(args as any));
+
+      case 'resync_session':
+        return resultOrError(sessionManager.resyncSession(args as any));
+
+      case 'session_status':
+        return resultOrError(sessionManager.sessionStatus(args as any));
+
+      case 'end_session':
+        return resultOrError(sessionManager.endSession(args as any));
+
       default:
-        if (SESSION_TOOLS.has(name)) {
-          return toolError(notImplemented(name));
-        }
         return toolError(notImplemented(name));
     }
   });
