@@ -27,3 +27,7 @@ export {
 export type { Prng } from './prng';
 
 export { tail, penalty, rowLength, appendCard, isOverflowing } from './row';
+
+export { determinePlacement, placeCard, collectRow } from './board';
+
+export type { MustPickRow } from './board';
