@@ -190,10 +190,10 @@ export function resolveTurn(
         playerId: play.playerId,
         card: play.card,
         rowIndex: pickedRow,
-        causedOverflow: false,
+        causedOverflow: true,
         collectedCards: [...collected],
       });
-      rowPicks.push({ playerId: play.playerId, rowIndex: pickedRow });
+      rowPicks.push({ playerId: play.playerId, rowIndex: pickedRow, collectedCards: [...collected] });
     } else if (result.causedOverflow) {
       // Overflow: collect 5 cards, place triggering card
       const collected = result.collectedCards!;
