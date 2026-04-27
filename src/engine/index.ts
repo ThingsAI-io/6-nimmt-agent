@@ -31,3 +31,12 @@ export { tail, penalty, rowLength, appendCard, isOverflowing } from './row';
 export { determinePlacement, placeCard, collectRow } from './board';
 
 export type { MustPickRow } from './board';
+
+export {
+  createGame,
+  dealRound,
+  resolveTurn,
+  scoreRound,
+  isGameOver,
+  getWinners,
+} from './game';
