@@ -37,6 +37,9 @@ The game's card-placement rules are entirely deterministic; the only decision po
 │    – Neural net (future)                              │
 │  • Deterministic card-placement rules                 │
 │  • Row-pickup decision logic                          │
+│  • `recommend` command for live play advisory          │
+│    (single-turn stateless recommendation from a       │
+│     given visible state)                              │
 └──────────────────────────────────────────────────────┘
                          │
                          ▼
@@ -86,6 +89,40 @@ A BGA-specific skill that:
 - Translates DOM state → engine `GameState`.
 - Executes moves by clicking the recommended card (and row, if needed).
 - Understands BGA-specific DOM structure, CSS selectors, and page flow.
+
+##### BGA Event Handling
+
+The BGA Navigation Skill must also handle non-turn events that occur during a game session:
+
+- **Player disconnects** — detect when an opponent leaves mid-game; wait for reconnection or handle game abort gracefully.
+- **Turn timer warnings** — detect approaching timeout notifications and ensure the agent plays before the timer expires.
+- **Game cancellation** — handle cases where the host cancels the game or a server error terminates the session; clean up state and report.
+- **Chat messages** — ignore BGA chat events; do not process or respond.
+- **Spectator joins** — ignore spectator join/leave notifications; no action required.
+- **Network interruption** — detect connection loss and follow a reconnect flow (reload page, re-read game state, resume play).
+
+##### DOM Mapping Constraints for `RowChoiceState`
+
+- `RowChoiceState` fields like `resolutionIndex` and `revealedThisTurn` are engine-internal concepts with no direct DOM equivalent.
+- The BGA DOM shows cards being placed visually (animated), but does not expose resolution order as structured data.
+- The BGA skill must track resolution order by observing DOM mutations (e.g., watching cards animate onto rows in sequence).
+- `revealedThisTurn` must be assembled from observing all cards that appear during the current turn's resolution animation.
+- This tracking is inherently fragile. Fallback behavior: if DOM mutation tracking fails, construct a partial `RowChoiceState` with the best available data and log a warning.
+
+##### Initial Board State Caching
+
+- When a new round begins (new cards dealt), the BGA skill snapshots the 4 board row heads.
+- These are stored in agent memory for the duration of the round.
+- Needed because `CardChoiceState.initialBoardCards` is required by strategies but is not visible on the BGA DOM after turn 1.
+- The cache is invalidated when a new round is detected (all players receive new cards).
+
+#### Credential Management
+
+- BGA credentials (username/password) are stored in environment variables: `BGA_USERNAME`, `BGA_PASSWORD`.
+- Credentials must never be hardcoded in agent code or committed to the repository.
+- The agent checks for credentials at startup and fails with a clear error message if they are missing.
+- Future enhancement: support for BGA OAuth or session token reuse.
+- Credential configuration lives in `.github/agents/` configuration, not in source code.
 
 ### 3. Browser Extension — Post-MVP
 
