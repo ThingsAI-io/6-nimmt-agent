@@ -137,10 +137,14 @@ Stateless, one-shot recommendation. No session required. Equivalent to `6nimmt r
     ]
   },
   "timedOut": false,
+  "strategyFallback": false,
+  "warnings": [],
   "stateValid": true,
   "stateWarnings": []
 }
 ```
+
+When `timedOut` is `true`, the recommendation is the best computed so far — still valid to play. When `strategyFallback` is `true`, the chosen strategy threw an error and a fallback heuristic (lowest card / fewest-heads row) was used; `warnings` explains what happened. Both are successful responses (`ok` is not present — success is implied).
 
 Internally, follows the same reconstruction contract as CLI `recommend` (see [Strategies §7](strategies.md)).
 
@@ -164,6 +168,7 @@ Creates a stateful game session. One session = one live game. The server instant
 ```json
 {
   "sessionId": "s-a1b2c3d4",
+  "seed": "auto-7f3a2b",
   "sessionVersion": 0,
   "phase": "awaiting-round",
   "strategy": "bayesian",
@@ -230,10 +235,10 @@ Tells the server how a turn resolved. The server calls `strategy.onTurnResolved(
 | `expectedVersion`| number   | yes      | Expected session version |
 | `round`          | number   | yes      | Current round number |
 | `turn`           | number   | yes      | Turn number (1–10) |
-| `plays`          | array    | yes      | All players' revealed cards: `[{ playerId, card }]` |
-| `resolutions`    | array    | yes      | Per-card resolution results, ordered lowest card first: `[{ playerId, card, rowIndex, causedOverflow, collectedCards? }]` |
-| `rowPicks`       | array    | no       | Rule 4 forced row picks: `[{ playerId, rowIndex, collectedCards }]`. Only present when a player's card was lower than all row tails and they had to pick a row. |
-| `boardAfter`     | object   | yes      | Board state after all resolutions: `{ rows: number[][] }` (4 rows) |
+| `plays`          | `{ playerId: string, card: number }[]` | yes | All players' revealed cards for this turn |
+| `resolutions`    | `{ playerId: string, card: number, rowIndex: number, causedOverflow: boolean, collectedCards?: number[] }[]` | yes | Per-card resolution results, ordered lowest card first |
+| `rowPicks`       | `{ playerId: string, rowIndex: number, collectedCards: number[] }[]` | no | Rule 4 forced row picks. Only present when a player's card was lower than all row tails and they had to pick a row. |
+| `boardAfter`     | `{ rows: number[][] }` | yes | Board state after all resolutions (4 rows) |
 
 **Result:**
 ```json
@@ -251,7 +256,8 @@ Tells the server how a turn resolved. The server calls `strategy.onTurnResolved(
 - `INVALID_PHASE` — Session not in `in-round` or `awaiting-row-pick` phase.
 - `INVALID_TURN` — Turn number not sequential within round.
 - `INVALID_RESOLUTIONS` — Resolutions array is invalid (wrong order, missing fields, card mismatch with `plays`).
-- `DUPLICATE_EVENT` — This round/turn combination already processed (idempotency guard).
+- `DUPLICATE_EVENT` — Exact same round/turn and payload already processed. Safe to ignore.
+- `EVENT_CONFLICT` — Same round/turn already recorded with different data. Use `resync_session`.
 
 ---
 
@@ -266,7 +272,7 @@ Tells the server a round ended. The server calls `strategy.onRoundEnd()`.
 | `sessionId`      | string   | yes      | Session identifier |
 | `expectedVersion`| number   | yes      | Expected session version |
 | `round`          | number   | yes      | Round that just ended |
-| `scores`         | array    | yes      | All player scores: `[{ playerId, score }]` |
+| `scores`         | `{ playerId: string, score: number }[]` | yes | All player scores after this round |
 
 **Result:**
 ```json
@@ -386,8 +392,8 @@ Resets the session's accumulated state to match the agent's current view of the 
 | `turn`       | number    | yes      | Current turn number |
 | `board`      | number[][]| yes      | Current board state from BGA |
 | `hand`       | number[]  | yes      | Current hand from BGA |
-| `scores`     | array     | yes      | Current scores: `[{ playerId, score }]` |
-| `resolvedCardsThisRound` | array | no | Known resolved cards this round: `[{ playerId, card, turn }]` |
+| `scores`     | `{ playerId: string, score: number }[]` | yes | Current scores from BGA |
+| `resolvedCardsThisRound` | `{ playerId: string, card: number, turn: number }[]` | no | Known resolved cards this round |
 
 **Result:**
 ```json
@@ -474,8 +480,8 @@ interface DomainError {
 | `INVALID_STRATEGY` | no | Strategy name not found in registry |
 | `INVALID_PLAYER_COUNT` | no | Player count outside 2–10 |
 | `STATE_MISMATCH` | yes | Agent snapshot vs server state diverged significantly. Use `resync_session`. |
-| `STRATEGY_ERROR` | yes | Strategy threw or returned invalid output. Fallback recommendation used. |
-| `TIMEOUT` | yes | Computation exceeded timeout. Best-so-far recommendation returned. |
+| `EVENT_CONFLICT` | no | Same round/turn already recorded with different data. Session state may be corrupted. Use `resync_session`. |
+| `SESSION_EXPIRED` | yes | Session expired due to inactivity. Start a new session. |
 
 **Design principle:** Errors include enough context for an AI agent to self-correct. `VERSION_MISMATCH` includes `currentVersion`. `INVALID_STRATEGY` includes `validStrategies`. `STATE_MISMATCH` includes a summary of the drift.
 
@@ -543,11 +549,27 @@ Session persistence is a **post-MVP enhancement**.
 
 ### 5.4 Concurrent Sessions
 
-The server supports up to 4 concurrent sessions (`maxConcurrentSessions`). Each session is independent — different strategies, different games, different players.
+The server supports up to 4 concurrent sessions (`maxConcurrentSessions`). Each session is independent — different strategies, different games, different players. Each session receives its own independent strategy instance and RNG state, even when multiple sessions use the same strategy name.
 
 This enables:
 - Testing multiple strategies against the same live game state.
 - Running one active session and one "shadow" session for comparison.
+
+### 5.5 Recovery Ladder
+
+When errors occur, the agent should escalate through these steps in order:
+
+1. **`VERSION_MISMATCH`** → Retry the same tool call with `currentVersion` from the error response.
+2. **`STATE_MISMATCH`** → Call `resync_session` with the current BGA DOM state.
+3. **`resync_session` failure** (e.g. `UNKNOWN_SESSION`) → Call `end_session` + `start_session` + `resync_session` to rebuild from scratch.
+4. **`UNKNOWN_SESSION` on any call** → Session lost; start fresh with `start_session`.
+5. **MCP process died** (stdin/stdout closed) → Restart `6nimmt serve`, create a new session.
+
+### 5.6 Session Expiry
+
+Sessions expire after **30 minutes** of inactivity (no tool calls for that session). Expired sessions return `SESSION_EXPIRED`. The agent should start a new session when this occurs.
+
+The `maxConcurrentSessions` limit applies only to active (non-expired) sessions. Expired sessions are automatically cleaned up and do not count against the limit.
 
 ---
 
@@ -694,3 +716,13 @@ Agent                              MCP Server (6nimmt serve)
   ├── session_recommend ───────────────────►│  hand, board
   │◄── {card:38, confidence:0.72} ─────────┤
 ```
+
+### 9.1 Edge Cases
+
+The following normative examples clarify common edge cases:
+
+1. **Turn 1, Round 1:** The agent calls `round_started` then immediately `session_recommend`. No prior `turn_resolved` is needed — there is nothing to resolve yet. This is the normal start-of-round flow.
+
+2. **Another player triggers Rule 4 (row pick):** This appears in `turn_resolved` as part of the `placements` array (the placement entry will have `overflow: true` and include `collectedCards`). The agent does NOT need to call any special tool — just reports the full turn resolution including the other player's forced pick.
+
+3. **Agent's own card triggers Rule 4:** The agent calls `session_recommend(decision: "row", ...)` BEFORE calling `turn_resolved`. The recommendation helps the agent decide which row to pick on BGA. After picking and observing the full turn resolution on BGA, the agent calls `turn_resolved` with the complete data (all plays, all placements including the agent's row pick).
