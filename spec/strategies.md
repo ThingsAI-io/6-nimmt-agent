@@ -42,16 +42,25 @@ interface Strategy {
   onRoundEnd?(scores: readonly { id: string; score: number }[]): void;
 }
 
-/** Public information about a resolved turn. */
+/** Public information about a resolved turn.
+ *  Structurally identical to TurnHistoryEntry (engine.md §1.5).
+ *  Used as the argument to strategy.onTurnResolved(). */
 interface TurnResolution {
   readonly turn: number;
   readonly plays: readonly { playerId: string; card: CardNumber }[];
-  readonly rowPickups: readonly {
+  readonly resolutions: readonly {
+    playerId: string;
+    card: CardNumber;
+    rowIndex: number;
+    causedOverflow: boolean;
+    collectedCards?: readonly CardNumber[];
+  }[];
+  readonly rowPicks: readonly {
     playerId: string;
     rowIndex: number;
     collectedCards: readonly CardNumber[];
   }[];
-  readonly boardAfter: Board;
+  readonly boardAfter: readonly CardNumber[][];
 }
 ```
 
@@ -130,7 +139,7 @@ When invoked via `6nimmt recommend` (see [CLI](cli.md)) or the MCP `recommend` t
 The CLI `recommend` command, MCP `recommend_once` tool, and MCP `resync_session`:
 1. Instantiates a fresh strategy via the registry factory
 2. Calls `onGameStart({ playerId, playerCount, rng })` using a deterministic RNG
-3. Replays `turnHistory` entries as synthetic `onTurnResolved()` calls — each entry directly maps to a `TurnResolution`
+3. Replays `turnHistory` entries as synthetic `onTurnResolved()` calls — each `TurnHistoryEntry` is structurally identical to `TurnResolution`, so the mapping is direct with no field renames needed
 4. Calls `chooseCard(state)` or `chooseRow(state)` as appropriate
 5. Returns the result
 
