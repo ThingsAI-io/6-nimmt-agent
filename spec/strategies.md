@@ -1,6 +1,6 @@
 # 6 Nimmt! — Strategy Interface Specification
 
-> Part of the [Technical Specification](spec.md). See also: [Engine](engine.md) · [Simulator](simulator.md) · [CLI](cli.md)
+> Part of the [Technical Specification](spec.md). See also: [Engine](engine.md) · [Simulator](simulator.md) · [CLI](cli.md) · [MCP Server](mcp.md)
 
 ---
 
@@ -121,7 +121,9 @@ Strategies that don't implement `onGameStart` (and thus have no `rng`) must be f
 
 ## 7. Live Play Mode (Recommend)
 
-When invoked via `6nimmt recommend` (see [CLI](cli.md)), the strategy operates in **stateless mode** — no instance persists between calls. The strategy must reconstruct any needed internal state from the `CardChoiceState` or `RowChoiceState` provided.
+When invoked via `6nimmt recommend` (see [CLI](cli.md)) or the MCP `recommend` tool (see [MCP Server](mcp.md)), the strategy operates in **stateless mode** — no instance persists between calls. The strategy must reconstruct any needed internal state from the `CardChoiceState` or `RowChoiceState` provided.
+
+> **Preferred path:** For live play, the [MCP server](mcp.md) `session_recommend` tool provides **stateful sessions** where the strategy instance persists across turns with full lifecycle hook support. The stateless reconstruction described here is used by CLI `recommend`, MCP `recommend` (stateless), and as a fallback when session mode is unavailable (e.g., after `resync_session`).
 
 ### 7.1 Reconstruction Contract
 

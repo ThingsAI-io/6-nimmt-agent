@@ -1,0 +1,624 @@
+# 6 Nimmt! — MCP Server Specification
+
+> Part of the [Technical Specification](spec.md). See also: [Engine](engine.md) · [Strategies](strategies.md) · [CLI](cli.md) · [Simulator](simulator.md)
+
+---
+
+## 1. Overview
+
+The MCP (Model Context Protocol) server exposes the game engine as a set of structured tools for AI agent consumption. It is the **preferred interface for live play** — the agent communicates with the engine via native MCP tool calls instead of constructing CLI arguments and parsing stdout.
+
+The MCP server runs as a subcommand of the CLI:
+
+```
+6nimmt serve
+```
+
+This starts an MCP server on **stdio** (stdin/stdout). The agent spawns the process and communicates over the standard MCP protocol.
+
+### Design Goals
+
+- **Same engine, different transport.** The MCP server uses the same engine, strategy registry, and validation logic as the CLI. No separate code paths.
+- **Stateful sessions for live play.** The server maintains strategy instances per game session, enabling full lifecycle hook support (`onGameStart`, `onTurnResolved`, `onRoundEnd`) without reconstruction hacks.
+- **Drift-resilient.** The agent provides visible snapshots with every recommendation request; the server validates against accumulated state and reports mismatches.
+- **Idempotent and ordered.** Every mutating tool carries round/turn identifiers and a session version to prevent duplicate or out-of-order events.
+
+---
+
+## 2. Transport
+
+- **stdio only.** The agent spawns `6nimmt serve` and communicates over stdin/stdout using the MCP protocol.
+- No HTTP/SSE transport in MVP.
+- The server is a long-running process for the duration of a game session.
+
+---
+
+## 3. Tools
+
+### 3.1 `server_info` — Server capabilities and version
+
+Returns server metadata for compatibility checking.
+
+**Parameters:** None.
+
+**Result:**
+```json
+{
+  "name": "6nimmt",
+  "version": "1.0.0",
+  "tools": ["server_info", "list_strategies", "validate_state", "recommend",
+            "start_session", "round_started", "turn_resolved", "round_ended",
+            "session_recommend", "resync_session", "end_session"],
+  "sessionSupport": true,
+  "maxConcurrentSessions": 4
+}
+```
+
+---
+
+### 3.2 `list_strategies` — Available strategies
+
+Returns registered strategies with descriptions.
+
+**Parameters:** None.
+
+**Result:**
+```json
+{
+  "strategies": [
+    { "name": "random", "description": "Picks a card uniformly at random. Baseline strategy." },
+    { "name": "bayesian", "description": "Maintains probability distributions over opponent hands." }
+  ],
+  "playerCountRange": { "min": 2, "max": 10 }
+}
+```
+
+---
+
+### 3.3 `validate_state` — Validate a game state
+
+Validates a `CardChoiceState` or `RowChoiceState` JSON object.
+
+**Parameters:**
+
+| Parameter  | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `state`   | object | yes      | CardChoiceState or RowChoiceState JSON |
+| `decision`| string | no       | `"card"` or `"row"`. Auto-detected from state shape if omitted. |
+
+**Result:**
+```json
+{
+  "valid": true,
+  "decision": "card",
+  "warnings": [],
+  "errors": []
+}
+```
+
+**Error result (domain):**
+```json
+{
+  "valid": false,
+  "decision": "card",
+  "warnings": ["Hand size 8 unusual for turn 3 (expected 8, got 8)"],
+  "errors": ["Card 105 is out of range (1-104)", "Board has 3 rows (expected 4)"]
+}
+```
+
+Uses the same `validateCardChoiceState()` / `validateRowChoiceState()` functions as the CLI `recommend` command (see [Engine §4](engine.md)).
+
+---
+
+### 3.4 `recommend` — Stateless single-turn recommendation
+
+Stateless recommendation for a single decision point. Equivalent to `6nimmt recommend` CLI command. No session required — useful for one-off queries, testing, or when session mode is unavailable.
+
+**Parameters:**
+
+| Parameter   | Type   | Required | Description |
+|------------|--------|----------|-------------|
+| `state`    | object | yes      | CardChoiceState or RowChoiceState JSON |
+| `strategy` | string | yes      | Strategy name from registry |
+| `decision` | string | no       | `"card"` or `"row"`. Auto-detected if omitted. |
+| `timeout`  | number | no       | Max computation time in ms. Default: 10000. |
+
+**Result:**
+```json
+{
+  "decision": "card",
+  "strategy": "bayesian",
+  "recommendation": {
+    "card": 42,
+    "confidence": 0.85,
+    "alternatives": [
+      { "card": 38, "confidence": 0.10 },
+      { "card": 91, "confidence": 0.05 }
+    ]
+  },
+  "timedOut": false,
+  "stateValid": true,
+  "stateWarnings": []
+}
+```
+
+Internally, follows the same reconstruction contract as CLI `recommend` (see [Strategies §7](strategies.md)).
+
+---
+
+### 3.5 `start_session` — Begin a live game session
+
+Creates a stateful game session. One session = one live game. The server instantiates the chosen strategy and calls `onGameStart()`.
+
+**Parameters:**
+
+| Parameter     | Type   | Required | Description |
+|--------------|--------|----------|-------------|
+| `strategy`   | string | yes      | Strategy name from registry |
+| `playerCount`| number | yes      | Number of players (2–10) |
+| `playerId`   | string | yes      | This player's identifier (e.g., BGA username) |
+| `seatIndex`  | number | no       | 0-based table position. Informational; `playerId` is the primary identity. |
+
+**Result:**
+```json
+{
+  "sessionId": "s-a1b2c3d4",
+  "sessionVersion": 0,
+  "phase": "awaiting-round",
+  "strategy": "bayesian",
+  "playerCount": 5,
+  "playerId": "player-1"
+}
+```
+
+**Session state machine:**
+```
+awaiting-round → in-round → awaiting-round → ... → ended
+```
+
+- `awaiting-round`: Waiting for `round_started`.
+- `in-round`: Accepting `turn_resolved`, `session_recommend`. Waiting for `round_ended`.
+- `ended`: Session terminated via `end_session`. No further tools accepted.
+
+---
+
+### 3.6 `round_started` — New round began
+
+Tells the server that a new round started on BGA. Provides the initial board state and the agent's dealt hand.
+
+**Parameters:**
+
+| Parameter         | Type     | Required | Description |
+|------------------|----------|----------|-------------|
+| `sessionId`      | string   | yes      | Session identifier |
+| `expectedVersion`| number   | yes      | Expected session version (optimistic concurrency) |
+| `round`          | number   | yes      | Round number (1-based) |
+| `board`          | number[][]| yes     | Initial board state — 4 rows, each an array of card numbers |
+| `hand`           | number[] | yes      | Cards dealt to this player |
+
+**Result:**
+```json
+{
+  "sessionVersion": 1,
+  "phase": "in-round",
+  "round": 1,
+  "accepted": true
+}
+```
+
+**Errors:**
+- `VERSION_MISMATCH` — `expectedVersion` doesn't match server state. Indicates missed events.
+- `INVALID_PHASE` — Session not in `awaiting-round` phase.
+- `INVALID_ROUND` — Round number not sequential.
+- `INVALID_BOARD` — Board doesn't have exactly 4 rows, or cards out of range.
+- `INVALID_HAND` — Hand size wrong or cards out of range/duplicated.
+
+---
+
+### 3.7 `turn_resolved` — Turn results observed
+
+Tells the server how a turn resolved. The server calls `strategy.onTurnResolved()` with the provided data.
+
+**Parameters:**
+
+| Parameter         | Type     | Required | Description |
+|------------------|----------|----------|-------------|
+| `sessionId`      | string   | yes      | Session identifier |
+| `expectedVersion`| number   | yes      | Expected session version |
+| `round`          | number   | yes      | Current round number |
+| `turn`           | number   | yes      | Turn number (1–10) |
+| `plays`          | array    | yes      | All players' revealed cards: `[{ playerId, card }]` |
+| `placements`     | array    | yes      | Resolution results: `[{ card, rowIndex, overflow, collectedCards? }]` |
+| `boardAfter`     | number[][]| yes     | Board state after all placements resolved |
+
+**Result:**
+```json
+{
+  "sessionVersion": 2,
+  "phase": "in-round",
+  "round": 1,
+  "turn": 1,
+  "accepted": true
+}
+```
+
+**Errors:**
+- `VERSION_MISMATCH` — Out of sync.
+- `INVALID_PHASE` — Session not in `in-round` phase.
+- `INVALID_TURN` — Turn number not sequential within round.
+- `DUPLICATE_EVENT` — This round/turn combination already processed (idempotency guard).
+
+---
+
+### 3.8 `round_ended` — Round finished with scores
+
+Tells the server a round ended. The server calls `strategy.onRoundEnd()`.
+
+**Parameters:**
+
+| Parameter         | Type     | Required | Description |
+|------------------|----------|----------|-------------|
+| `sessionId`      | string   | yes      | Session identifier |
+| `expectedVersion`| number   | yes      | Expected session version |
+| `round`          | number   | yes      | Round that just ended |
+| `scores`         | array    | yes      | All player scores: `[{ playerId, score }]` |
+
+**Result:**
+```json
+{
+  "sessionVersion": 3,
+  "phase": "awaiting-round",
+  "round": 1,
+  "accepted": true
+}
+```
+
+**Errors:**
+- `VERSION_MISMATCH`, `INVALID_PHASE`, `INVALID_ROUND`.
+
+---
+
+### 3.9 `session_recommend` — Session-aware recommendation
+
+Gets a recommendation using the strategy's full accumulated state from the session. The agent provides its current visible snapshot for drift validation.
+
+**Parameters:**
+
+| Parameter   | Type      | Required | Description |
+|------------|-----------|----------|-------------|
+| `sessionId`| string    | yes      | Session identifier |
+| `hand`     | number[]  | yes      | Agent's current hand (from BGA DOM) |
+| `board`    | number[][]| yes      | Current board state (from BGA DOM) |
+| `decision` | string    | no       | `"card"` or `"row"`. Auto-detected if omitted. |
+| `timeout`  | number    | no       | Max computation time in ms. Default: 10000. |
+| `triggeringCard` | number | no   | Required when `decision` is `"row"`. The card that triggered the row pick. |
+
+**Result (card decision):**
+```json
+{
+  "sessionId": "s-a1b2c3d4",
+  "sessionVersion": 2,
+  "decision": "card",
+  "strategy": "bayesian",
+  "recommendation": {
+    "card": 42,
+    "confidence": 0.85,
+    "alternatives": [
+      { "card": 38, "confidence": 0.10 },
+      { "card": 91, "confidence": 0.05 }
+    ]
+  },
+  "timedOut": false,
+  "stateConsistent": true,
+  "stateWarnings": []
+}
+```
+
+**Result (row decision):**
+```json
+{
+  "sessionId": "s-a1b2c3d4",
+  "sessionVersion": 2,
+  "decision": "row",
+  "strategy": "bayesian",
+  "recommendation": {
+    "rowIndex": 2,
+    "confidence": 0.92,
+    "alternatives": [
+      { "rowIndex": 0, "confidence": 0.05 },
+      { "rowIndex": 1, "confidence": 0.02 },
+      { "rowIndex": 3, "confidence": 0.01 }
+    ]
+  },
+  "timedOut": false,
+  "stateConsistent": true,
+  "stateWarnings": []
+}
+```
+
+**Drift detection:** The server compares the agent-provided `hand` and `board` against its accumulated session state:
+- **Consistent** (`stateConsistent: true`): Agent snapshot matches server state. Recommendation uses full session history.
+- **Minor drift** (`stateConsistent: false`, `stateWarnings` populated): Agent snapshot differs slightly (e.g., board state diverged after a missed event). Recommendation still produced using agent-provided snapshot as override, but server logs the discrepancy.
+- **Major drift** → returns `STATE_MISMATCH` error recommending `resync_session`.
+
+---
+
+### 3.10 `resync_session` — Recover from state drift
+
+Resets the session's accumulated state to match the agent's current view of the game. Used when drift is detected or after the agent reconnects to BGA.
+
+**Parameters:**
+
+| Parameter     | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `sessionId`  | string    | yes      | Session identifier |
+| `round`      | number    | yes      | Current round number |
+| `turn`       | number    | yes      | Current turn number |
+| `board`      | number[][]| yes      | Current board state from BGA |
+| `hand`       | number[]  | yes      | Current hand from BGA |
+| `scores`     | array     | yes      | Current scores: `[{ playerId, score }]` |
+| `resolvedCardsThisRound` | array | no | Known resolved cards this round: `[{ playerId, card, turn }]` |
+
+**Result:**
+```json
+{
+  "sessionVersion": 10,
+  "phase": "in-round",
+  "round": 2,
+  "turn": 4,
+  "resynced": true,
+  "strategyStateReset": true,
+  "message": "Session resynced. Strategy state rebuilt from provided snapshot."
+}
+```
+
+**Behaviour:**
+1. Resets session round/turn/phase to provided values.
+2. Calls `onGameStart()` on the strategy instance (fresh start).
+3. If `resolvedCardsThisRound` is provided, replays them as synthetic `onTurnResolved()` calls (same reconstruction contract as CLI `recommend` — see [Strategies §7](strategies.md)).
+4. Cross-round strategy memory is lost. This is an acceptable trade-off for recovery.
+
+---
+
+### 3.11 `end_session` — Terminate a game session
+
+Cleans up the session and releases resources.
+
+**Parameters:**
+
+| Parameter    | Type   | Required | Description |
+|-------------|--------|----------|-------------|
+| `sessionId` | string | yes      | Session identifier |
+
+**Result:**
+```json
+{
+  "sessionId": "s-a1b2c3d4",
+  "ended": true,
+  "totalRounds": 3,
+  "finalPhase": "ended"
+}
+```
+
+After `end_session`, the `sessionId` is invalid. Any further tool calls with this session return `UNKNOWN_SESSION`.
+
+---
+
+## 4. Error Model
+
+### 4.1 MCP Protocol Errors
+
+Used for protocol-level failures. These use MCP's built-in error mechanism.
+
+| Error | When |
+|-------|------|
+| `InvalidParams` | Malformed tool arguments, missing required fields, wrong types |
+| `MethodNotFound` | Unknown tool name |
+| `InternalError` | Unexpected server crash |
+
+### 4.2 Structured Domain Errors
+
+Used for recoverable game/domain failures. Returned as **tool results** (not MCP errors) so the agent can inspect and recover.
+
+```typescript
+interface DomainError {
+  ok: false;
+  code: string;
+  recoverable: boolean;
+  message: string;
+  details?: Record<string, unknown>;
+}
+```
+
+| Code | Recoverable | Description |
+|------|-------------|-------------|
+| `UNKNOWN_SESSION` | no | Session ID not found or already ended |
+| `INVALID_PHASE` | yes | Tool called in wrong session phase (e.g., `turn_resolved` before `round_started`) |
+| `VERSION_MISMATCH` | yes | `expectedVersion` doesn't match. Response includes `currentVersion`. |
+| `DUPLICATE_EVENT` | yes | This round/turn event already processed. Safe to ignore. |
+| `INVALID_ROUND` | yes | Round number not sequential |
+| `INVALID_TURN` | yes | Turn number not sequential within round |
+| `INVALID_BOARD` | yes | Board structure invalid (wrong row count, cards out of range) |
+| `INVALID_HAND` | yes | Hand invalid (wrong size, cards out of range, duplicates) |
+| `INVALID_STRATEGY` | no | Strategy name not found in registry |
+| `INVALID_PLAYER_COUNT` | no | Player count outside 2–10 |
+| `STATE_MISMATCH` | yes | Agent snapshot vs server state diverged significantly. Use `resync_session`. |
+| `STRATEGY_ERROR` | yes | Strategy threw or returned invalid output. Fallback recommendation used. |
+| `TIMEOUT` | yes | Computation exceeded timeout. Best-so-far recommendation returned. |
+
+**Design principle:** Errors include enough context for an AI agent to self-correct. `VERSION_MISMATCH` includes `currentVersion`. `INVALID_STRATEGY` includes `validStrategies`. `STATE_MISMATCH` includes a summary of the drift.
+
+---
+
+## 5. Session Lifecycle
+
+### 5.1 State Machine
+
+```
+                    start_session
+                         │
+                         ▼
+              ┌─── awaiting-round ◄──┐
+              │          │           │
+              │    round_started     │
+              │          │           │
+              │          ▼           │
+              │      in-round ───────┘
+              │     ┌────┴────┐     round_ended
+              │     │         │
+              │  turn_resolved  session_recommend
+              │     │         │
+              │     └────┬────┘
+              │          │
+              │    (repeat 1-10 turns)
+              │
+              │    end_session (from any phase)
+              │          │
+              │          ▼
+              └──────► ended
+```
+
+### 5.2 Session Versioning
+
+Every session has a monotonically increasing `sessionVersion` (starting at 0). It increments on every mutating tool call (`round_started`, `turn_resolved`, `round_ended`, `resync_session`).
+
+Every mutating tool requires `expectedVersion` — if it doesn't match, the server returns `VERSION_MISMATCH` with `currentVersion`. This prevents:
+- Duplicate events from retries
+- Out-of-order event delivery
+- Race conditions in concurrent tool calls
+
+Read-only tools (`session_recommend`, `end_session`) do not require `expectedVersion`.
+
+### 5.3 Restart and Recovery
+
+Sessions are **ephemeral** — they exist only in the server process's memory. If the MCP server process dies:
+- All sessions are lost.
+- The agent must call `start_session` again and use `resync_session` to rebuild state from the current BGA DOM.
+
+This is acceptable because:
+- The MCP server is spawned by the agent and runs for the duration of the game.
+- If the process crashes, the agent detects it (stdin/stdout closes) and restarts.
+- `resync_session` with `resolvedCardsThisRound` can rebuild most strategy state.
+
+Session persistence is a **post-MVP enhancement**.
+
+### 5.4 Concurrent Sessions
+
+The server supports up to 4 concurrent sessions (`maxConcurrentSessions`). Each session is independent — different strategies, different games, different players.
+
+This enables:
+- Testing multiple strategies against the same live game state.
+- Running one active session and one "shadow" session for comparison.
+
+---
+
+## 6. Module Structure
+
+```
+src/mcp/
+  server.ts          — MCP server setup, tool registration, stdio transport
+  session.ts         — Session state machine, versioning, lifecycle
+  tools/
+    stateless.ts     — list_strategies, validate_state, recommend
+    session-mgmt.ts  — start_session, end_session, resync_session
+    events.ts        — round_started, turn_resolved, round_ended
+    recommend.ts     — session_recommend
+  drift.ts           — State comparison / drift detection logic
+  errors.ts          — Domain error constructors
+  index.ts           — Barrel export
+```
+
+---
+
+## 7. CLI Integration
+
+The `serve` command is registered alongside existing CLI commands:
+
+```
+6nimmt serve [options]
+```
+
+| Argument              | Alias | Type   | Default | Description |
+|----------------------|-------|--------|---------|-------------|
+| `--log-level`        | `-l`  | string | `warn`  | Log verbosity: `debug`, `info`, `warn`, `error` |
+| `--max-sessions`     |       | number | `4`     | Maximum concurrent sessions |
+
+**No output format flag** — MCP defines its own serialization. Logs go to stderr (not stdout, which is reserved for MCP protocol).
+
+The `serve` command shares the same engine and strategy registry as `simulate`, `recommend`, `play`, and `strategies`. No separate code path.
+
+---
+
+## 8. Relationship to CLI `recommend`
+
+Both the MCP `recommend` tool and the CLI `recommend` command coexist:
+
+| Aspect | CLI `recommend` | MCP `recommend` / `session_recommend` |
+|--------|----------------|--------------------------------------|
+| Transport | Shell exec + JSON stdout | MCP stdio |
+| State | Stateless (reconstruction) | Stateless (`recommend`) or stateful (`session_recommend`) |
+| Use case | Scripting, testing, fallback | Live agent play (preferred) |
+| Drift detection | None | Built-in (`stateConsistent` + `resync_session`) |
+| Strategy memory | Current round only (via reconstruction) | Full game (via session lifecycle) |
+
+**The MCP server is the preferred path for live play.** CLI `recommend` remains valuable for testing, scripting, and as a fallback when MCP is unavailable.
+
+The spec §7 "Live Play Mode" in [Strategies](strategies.md) describes the reconstruction contract used by both CLI `recommend` and MCP `recommend` (stateless). MCP `session_recommend` bypasses reconstruction entirely because the strategy instance persists.
+
+---
+
+## 9. Typical Live Play Flow
+
+```
+Agent                              MCP Server (6nimmt serve)
+  │                                         │
+  ├── server_info ─────────────────────────►│
+  │◄── {version, tools, ...} ──────────────┤
+  │                                         │
+  ├── list_strategies ─────────────────────►│
+  │◄── {strategies: [...]} ────────────────┤
+  │                                         │
+  ├── start_session ───────────────────────►│  strategy:"bayesian", playerCount:5
+  │◄── {sessionId:"s-abc", version:0} ─────┤
+  │                                         │
+  │  [BGA: new round, cards dealt]          │
+  │                                         │
+  ├── round_started ───────────────────────►│  board, hand, round:1, expectedVersion:0
+  │◄── {version:1, phase:"in-round"} ──────┤
+  │                                         │
+  ├── session_recommend ───────────────────►│  hand, board
+  │◄── {card:42, confidence:0.85} ─────────┤
+  │                                         │
+  │  [Agent plays card 42 on BGA]           │
+  │  [BGA: turn resolves]                   │
+  │                                         │
+  ├── turn_resolved ───────────────────────►│  plays, placements, boardAfter,
+  │                                         │  round:1, turn:1, expectedVersion:1
+  │◄── {version:2, phase:"in-round"} ──────┤
+  │                                         │
+  │  ... repeat turns 2-10 ...              │
+  │                                         │
+  ├── round_ended ─────────────────────────►│  scores, round:1, expectedVersion:11
+  │◄── {version:12, phase:"awaiting-round"}┤
+  │                                         │
+  │  ... repeat rounds ...                  │
+  │                                         │
+  ├── end_session ─────────────────────────►│
+  │◄── {ended:true} ───────────────────────┤
+```
+
+### Recovery Flow (after drift detected)
+
+```
+  ├── session_recommend ───────────────────►│
+  │◄── {ok:false, code:"STATE_MISMATCH"} ──┤
+  │                                         │
+  │  [Agent reads full state from BGA DOM]  │
+  │                                         │
+  ├── resync_session ──────────────────────►│  round, turn, board, hand, scores,
+  │                                         │  resolvedCardsThisRound
+  │◄── {resynced:true, version:15} ────────┤
+  │                                         │
+  ├── session_recommend ───────────────────►│  hand, board
+  │◄── {card:38, confidence:0.72} ─────────┤
+```
