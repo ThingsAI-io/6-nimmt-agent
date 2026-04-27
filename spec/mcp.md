@@ -393,7 +393,7 @@ Resets the session's accumulated state to match the agent's current view of the 
 | `board`      | number[][]| yes      | Current board state from BGA |
 | `hand`       | number[]  | yes      | Current hand from BGA |
 | `scores`     | `{ playerId: string, score: number }[]` | yes | Current scores from BGA |
-| `resolvedCardsThisRound` | `{ playerId: string, card: number, turn: number }[]` | no | Known resolved cards this round |
+| `turnHistory` | `{ turn: number, plays: { playerId: string, card: number }[], rowPicks: { playerId: string, rowIndex: number, collectedCards: number[] }[], boardAfter: number[][] }[]` | no | Known turn resolution history this round. Enables full strategy reconstruction. |
 
 **Result:**
 ```json
@@ -411,7 +411,7 @@ Resets the session's accumulated state to match the agent's current view of the 
 **Behaviour:**
 1. Resets session round/turn/phase to provided values.
 2. Calls `onGameStart()` on the strategy instance (fresh start).
-3. If `resolvedCardsThisRound` is provided, replays them as synthetic `onTurnResolved()` calls (same reconstruction contract as CLI `recommend` — see [Strategies §7](strategies.md)).
+3. If `turnHistory` is provided, replays each entry as a synthetic `onTurnResolved()` call (same reconstruction contract as CLI `recommend_once` — see [Strategies §7](strategies.md)).
 4. Cross-round strategy memory is lost. This is an acceptable trade-off for recovery.
 
 ---
@@ -543,7 +543,7 @@ Sessions are **ephemeral** — they exist only in the server process's memory. I
 This is acceptable because:
 - The MCP server is spawned by the agent and runs for the duration of the game.
 - If the process crashes, the agent detects it (stdin/stdout closes) and restarts.
-- `resync_session` with `resolvedCardsThisRound` can rebuild most strategy state.
+- `resync_session` with `turnHistory` can rebuild most strategy state.
 
 Session persistence is a **post-MVP enhancement**.
 
@@ -710,7 +710,7 @@ Agent                              MCP Server (6nimmt serve)
   │  [Agent reads full state from BGA DOM]  │
   │                                         │
   ├── resync_session ──────────────────────►│  round, turn, board, hand, scores,
-  │                                         │  resolvedCardsThisRound
+  │                                         │  turnHistory
   │◄── {resynced:true, version:15} ────────┤
   │                                         │
   ├── session_recommend ───────────────────►│  hand, board

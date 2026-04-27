@@ -35,7 +35,7 @@ interface Strategy {
    *
    *  **Live play note:** In `recommend` mode, `onTurnResolved()` is called
    *  synthetically with resolutions reconstructed from
-   *  `resolvedCardsThisRound`. See [§7 Live Play Mode](#7-live-play-mode-recommend). */
+   *  `turnHistory`. See [§7 Live Play Mode](#7-live-play-mode-recommend). */
   onTurnResolved?(resolution: TurnResolution): void;
 
   /** Called after each round is scored. */
@@ -127,22 +127,23 @@ When invoked via `6nimmt recommend` (see [CLI](cli.md)) or the MCP `recommend` t
 
 ### 7.1 Reconstruction Contract
 
-The `recommend` command:
+The CLI `recommend` command, MCP `recommend_once` tool, and MCP `resync_session`:
 1. Instantiates a fresh strategy via the registry factory
-2. Calls `onGameStart({ playerId, playerCount, rng })` using a deterministic RNG derived from a fixed seed (so recommendations are reproducible given the same state)
-3. Replays `resolvedCardsThisRound` as synthetic `onTurnResolved()` calls, one per turn boundary (using the `turn` field on each resolved card to group them)
+2. Calls `onGameStart({ playerId, playerCount, rng })` using a deterministic RNG
+3. Replays `turnHistory` entries as synthetic `onTurnResolved()` calls — each entry directly maps to a `TurnResolution`
 4. Calls `chooseCard(state)` or `chooseRow(state)` as appropriate
 5. Returns the result
 
 This means:
 - **Stateless strategies** (e.g., random) work unchanged — they don't use lifecycle hooks.
-- **Stateful strategies** (e.g., Bayesian) receive synthetic turn resolutions reconstructed from `resolvedCardsThisRound`, which provides enough information to rebuild opponent models for the current round.
-- **Cross-round state is lost.** A Bayesian strategy in live play cannot track patterns across rounds. This is an acceptable limitation — cross-round memory requires a persistent session (future enhancement).
+- **Stateful strategies** (e.g., Bayesian) receive full `TurnResolution` data (plays, row picks, board state) for each previous turn.
+- **Cross-round state is lost.** This is an acceptable limitation — cross-round memory requires a persistent session.
+- **The reconstruction is now complete** — no data is missing from the history.
 
 ### 7.2 Strategy Requirements for Live Play
 
 Strategies that want to work well in live play SHOULD:
-- Derive maximum insight from `resolvedCardsThisRound` (which now includes turn boundaries per F4)
+- Derive maximum insight from `turnHistory` (which provides full per-turn resolution including row picks and board states)
 - Not depend on `onRoundEnd()` for current-round decisions
 - Be tolerant of incomplete state (warnings from state validation should not crash the strategy)
 
@@ -160,9 +161,9 @@ interface Strategy {
 
 interface RoundSummary {
   readonly round: number;
-  readonly turns: readonly TurnResolution[];
+  readonly turns: readonly TurnHistoryEntry[];  // was TurnResolution[]
   readonly scores: readonly { id: string; score: number }[];
 }
 ```
 
-This is a **post-MVP enhancement**. For MVP, the synthetic `onTurnResolved()` replay from `resolvedCardsThisRound` is sufficient.
+This is a **post-MVP enhancement**. For MVP, the synthetic `onTurnResolved()` replay from `turnHistory` is sufficient.
