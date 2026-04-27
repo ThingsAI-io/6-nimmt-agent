@@ -31,7 +31,11 @@ interface Strategy {
   }): void;
 
   /** Called after each turn resolves with full public resolution details.
-   *  Use to update opponent models, card tracking, etc. */
+   *  Use to update opponent models, card tracking, etc.
+   *
+   *  **Live play note:** In `recommend` mode, `onTurnResolved()` is called
+   *  synthetically with resolutions reconstructed from
+   *  `resolvedCardsThisRound`. See [§7 Live Play Mode](#7-live-play-mode-recommend). */
   onTurnResolved?(resolution: TurnResolution): void;
 
   /** Called after each round is scored. */
@@ -112,3 +116,51 @@ Strategies requiring randomness (e.g. the random baseline) **must** use the `rng
 The `rng()` function returns a float in [0, 1) and advances the PRNG state on each call. Each strategy instance receives its own independent PRNG stream derived from the game seed and player ID.
 
 Strategies that don't implement `onGameStart` (and thus have no `rng`) must be fully deterministic.
+
+---
+
+## 7. Live Play Mode (Recommend)
+
+When invoked via `6nimmt recommend` (see [CLI](cli.md)), the strategy operates in **stateless mode** — no instance persists between calls. The strategy must reconstruct any needed internal state from the `CardChoiceState` or `RowChoiceState` provided.
+
+### 7.1 Reconstruction Contract
+
+The `recommend` command:
+1. Instantiates a fresh strategy via the registry factory
+2. Calls `onGameStart({ playerId, playerCount, rng })` using a deterministic RNG derived from a fixed seed (so recommendations are reproducible given the same state)
+3. Replays `resolvedCardsThisRound` as synthetic `onTurnResolved()` calls, one per turn boundary (using the `turn` field on each resolved card to group them)
+4. Calls `chooseCard(state)` or `chooseRow(state)` as appropriate
+5. Returns the result
+
+This means:
+- **Stateless strategies** (e.g., random) work unchanged — they don't use lifecycle hooks.
+- **Stateful strategies** (e.g., Bayesian) receive synthetic turn resolutions reconstructed from `resolvedCardsThisRound`, which provides enough information to rebuild opponent models for the current round.
+- **Cross-round state is lost.** A Bayesian strategy in live play cannot track patterns across rounds. This is an acceptable limitation — cross-round memory requires a persistent session (future enhancement).
+
+### 7.2 Strategy Requirements for Live Play
+
+Strategies that want to work well in live play SHOULD:
+- Derive maximum insight from `resolvedCardsThisRound` (which now includes turn boundaries per F4)
+- Not depend on `onRoundEnd()` for current-round decisions
+- Be tolerant of incomplete state (warnings from state validation should not crash the strategy)
+
+Strategies MAY implement an optional method for richer reconstruction:
+
+```typescript
+interface Strategy {
+  // ... existing methods ...
+
+  /** Optional: Reconstruct internal state from visible history.
+   *  Called by recommend before chooseCard/chooseRow.
+   *  Default: no-op (stateless strategies ignore this). */
+  reconstructFromHistory?(rounds: readonly RoundSummary[]): void;
+}
+
+interface RoundSummary {
+  readonly round: number;
+  readonly turns: readonly TurnResolution[];
+  readonly scores: readonly { id: string; score: number }[];
+}
+```
+
+This is a **post-MVP enhancement**. For MVP, the synthetic `onTurnResolved()` replay from `resolvedCardsThisRound` is sufficient.
