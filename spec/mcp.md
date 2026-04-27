@@ -46,7 +46,7 @@ Returns server metadata for compatibility checking.
 {
   "name": "6nimmt",
   "version": "1.0.0",
-  "tools": ["server_info", "list_strategies", "validate_state", "recommend",
+  "tools": ["server_info", "list_strategies", "validate_state", "recommend_once",
             "start_session", "round_started", "turn_resolved", "round_ended",
             "session_recommend", "resync_session", "end_session"],
   "sessionSupport": true,
@@ -110,9 +110,9 @@ Uses the same `validateCardChoiceState()` / `validateRowChoiceState()` functions
 
 ---
 
-### 3.4 `recommend` — Stateless single-turn recommendation
+### 3.4 `recommend_once` — Stateless single-turn recommendation
 
-Stateless recommendation for a single decision point. Equivalent to `6nimmt recommend` CLI command. No session required — useful for one-off queries, testing, or when session mode is unavailable.
+Stateless, one-shot recommendation. No session required. Equivalent to `6nimmt recommend` CLI command — useful for one-off queries, testing, or when session mode is unavailable.
 
 **Parameters:**
 
@@ -158,6 +158,7 @@ Creates a stateful game session. One session = one live game. The server instant
 | `playerCount`| number | yes      | Number of players (2–10) |
 | `playerId`   | string | yes      | This player's identifier (e.g., BGA username) |
 | `seatIndex`  | number | no       | 0-based table position. Informational; `playerId` is the primary identity. |
+| `seed`       | string | no       | Optional seed for strategy RNG derivation. If omitted, a random seed is generated. Providing a seed enables reproducible recommendations for the same game state. |
 
 **Result:**
 ```json
@@ -173,11 +174,13 @@ Creates a stateful game session. One session = one live game. The server instant
 
 **Session state machine:**
 ```
-awaiting-round → in-round → awaiting-round → ... → ended
+awaiting-round → in-round → [awaiting-row-pick →] in-round → awaiting-round / game-over → ... → ended
 ```
 
 - `awaiting-round`: Waiting for `round_started`.
 - `in-round`: Accepting `turn_resolved`, `session_recommend`. Waiting for `round_ended`.
+- `awaiting-row-pick`: Mid-turn phase when the agent's card triggers Rule 4 (card lower than all row tails). The agent calls `session_recommend(decision:"row")` to enter this phase and receive a row recommendation, then calls `turn_resolved` with the full resolution to return to `in-round`.
+- `game-over`: Game has ended (any player ≥ 66 cattle heads). Only `end_session` is valid.
 - `ended`: Session terminated via `end_session`. No further tools accepted.
 
 ---
@@ -217,7 +220,7 @@ Tells the server that a new round started on BGA. Provides the initial board sta
 
 ### 3.7 `turn_resolved` — Turn results observed
 
-Tells the server how a turn resolved. The server calls `strategy.onTurnResolved()` with the provided data.
+Tells the server how a turn resolved. The server calls `strategy.onTurnResolved()` with the provided data. The shape aligns with `TurnResolution` from the engine (see [Engine §3](engine.md)).
 
 **Parameters:**
 
@@ -228,8 +231,9 @@ Tells the server how a turn resolved. The server calls `strategy.onTurnResolved(
 | `round`          | number   | yes      | Current round number |
 | `turn`           | number   | yes      | Turn number (1–10) |
 | `plays`          | array    | yes      | All players' revealed cards: `[{ playerId, card }]` |
-| `placements`     | array    | yes      | Resolution results: `[{ card, rowIndex, overflow, collectedCards? }]` |
-| `boardAfter`     | number[][]| yes     | Board state after all placements resolved |
+| `resolutions`    | array    | yes      | Per-card resolution results, ordered lowest card first: `[{ playerId, card, rowIndex, causedOverflow, collectedCards? }]` |
+| `rowPicks`       | array    | no       | Rule 4 forced row picks: `[{ playerId, rowIndex, collectedCards }]`. Only present when a player's card was lower than all row tails and they had to pick a row. |
+| `boardAfter`     | object   | yes      | Board state after all resolutions: `{ rows: number[][] }` (4 rows) |
 
 **Result:**
 ```json
@@ -244,8 +248,9 @@ Tells the server how a turn resolved. The server calls `strategy.onTurnResolved(
 
 **Errors:**
 - `VERSION_MISMATCH` — Out of sync.
-- `INVALID_PHASE` — Session not in `in-round` phase.
+- `INVALID_PHASE` — Session not in `in-round` or `awaiting-row-pick` phase.
 - `INVALID_TURN` — Turn number not sequential within round.
+- `INVALID_RESOLUTIONS` — Resolutions array is invalid (wrong order, missing fields, card mismatch with `plays`).
 - `DUPLICATE_EVENT` — This round/turn combination already processed (idempotency guard).
 
 ---
@@ -269,9 +274,32 @@ Tells the server a round ended. The server calls `strategy.onRoundEnd()`.
   "sessionVersion": 3,
   "phase": "awaiting-round",
   "round": 1,
-  "accepted": true
+  "accepted": true,
+  "gameOver": false,
+  "finalScores": null
 }
 ```
+
+**Game-over result (when any player reaches ≥ 66 cattle heads):**
+```json
+{
+  "sessionVersion": 3,
+  "phase": "game-over",
+  "round": 5,
+  "accepted": true,
+  "gameOver": true,
+  "finalScores": [
+    { "playerId": "player-1", "score": 42, "rank": 1 },
+    { "playerId": "player-2", "score": 70, "rank": 2 }
+  ]
+}
+```
+
+When `gameOver` is `true`:
+- `phase` becomes `"game-over"`.
+- `finalScores` is populated with all players ranked by ascending score (lower is better).
+- Further `round_started` calls return `INVALID_PHASE`.
+- Only `end_session` is valid after game-over.
 
 **Errors:**
 - `VERSION_MISMATCH`, `INVALID_PHASE`, `INVALID_ROUND`.
@@ -292,6 +320,8 @@ Gets a recommendation using the strategy's full accumulated state from the sessi
 | `decision` | string    | no       | `"card"` or `"row"`. Auto-detected if omitted. |
 | `timeout`  | number    | no       | Max computation time in ms. Default: 10000. |
 | `triggeringCard` | number | no   | Required when `decision` is `"row"`. The card that triggered the row pick. |
+| `revealedThisTurn` | array | no | Required when `decision` is `"row"`. Cards revealed so far this turn: `[{ playerId, card }]`. |
+| `resolutionIndex` | number | no | Required when `decision` is `"row"`. 0-based index into the turn's resolution order indicating how many cards have resolved before this row pick. |
 
 **Result (card decision):**
 ```json
@@ -435,11 +465,12 @@ interface DomainError {
 | `UNKNOWN_SESSION` | no | Session ID not found or already ended |
 | `INVALID_PHASE` | yes | Tool called in wrong session phase (e.g., `turn_resolved` before `round_started`) |
 | `VERSION_MISMATCH` | yes | `expectedVersion` doesn't match. Response includes `currentVersion`. |
-| `DUPLICATE_EVENT` | yes | This round/turn event already processed. Safe to ignore. |
+| `DUPLICATE_EVENT` | yes | Exact same round/turn AND same payload already processed. Safe to ignore — no state change. |
 | `INVALID_ROUND` | yes | Round number not sequential |
 | `INVALID_TURN` | yes | Turn number not sequential within round |
 | `INVALID_BOARD` | yes | Board structure invalid (wrong row count, cards out of range) |
 | `INVALID_HAND` | yes | Hand invalid (wrong size, cards out of range, duplicates) |
+| `INVALID_RESOLUTIONS` | yes | Resolutions array invalid (wrong order, missing fields, card mismatch with plays) |
 | `INVALID_STRATEGY` | no | Strategy name not found in registry |
 | `INVALID_PLAYER_COUNT` | no | Player count outside 2–10 |
 | `STATE_MISMATCH` | yes | Agent snapshot vs server state diverged significantly. Use `resync_session`. |
@@ -465,17 +496,23 @@ interface DomainError {
               │          ▼           │
               │      in-round ───────┘
               │     ┌────┴────┐     round_ended
-              │     │         │
+              │     │         │       │
               │  turn_resolved  session_recommend
+              │     │         │       │
+              │     │    awaiting-row-pick (Rule 4)
+              │     │         │
+              │     │    turn_resolved
               │     │         │
               │     └────┬────┘
               │          │
               │    (repeat 1-10 turns)
-              │
-              │    end_session (from any phase)
               │          │
-              │          ▼
-              └──────► ended
+              │    round_ended ──► game-over ─┐
+              │                               │
+              │    end_session (from any phase)│
+              │          │                    │
+              │          ▼                    │
+              └──────► ended ◄────────────────┘
 ```
 
 ### 5.2 Session Versioning
@@ -488,6 +525,8 @@ Every mutating tool requires `expectedVersion` — if it doesn't match, the serv
 - Race conditions in concurrent tool calls
 
 Read-only tools (`session_recommend`, `end_session`) do not require `expectedVersion`.
+
+> **Note:** `resync_session` is **exempt** from version checking despite being a mutating tool. Rationale: resync is a recovery mechanism invoked when the agent has lost track of the current version (e.g., after a `STATE_MISMATCH` error). Requiring `expectedVersion` would create a catch-22. The resync result provides the new `sessionVersion` for all subsequent calls.
 
 ### 5.3 Restart and Recovery
 
@@ -519,7 +558,7 @@ src/mcp/
   server.ts          — MCP server setup, tool registration, stdio transport
   session.ts         — Session state machine, versioning, lifecycle
   tools/
-    stateless.ts     — list_strategies, validate_state, recommend
+    stateless.ts     — list_strategies, validate_state, recommend_once
     session-mgmt.ts  — start_session, end_session, resync_session
     events.ts        — round_started, turn_resolved, round_ended
     recommend.ts     — session_recommend
@@ -551,19 +590,19 @@ The `serve` command shares the same engine and strategy registry as `simulate`, 
 
 ## 8. Relationship to CLI `recommend`
 
-Both the MCP `recommend` tool and the CLI `recommend` command coexist:
+Both the MCP `recommend_once` tool and the CLI `recommend` command coexist:
 
-| Aspect | CLI `recommend` | MCP `recommend` / `session_recommend` |
+| Aspect | CLI `recommend` | MCP `recommend_once` / `session_recommend` |
 |--------|----------------|--------------------------------------|
 | Transport | Shell exec + JSON stdout | MCP stdio |
-| State | Stateless (reconstruction) | Stateless (`recommend`) or stateful (`session_recommend`) |
+| State | Stateless (reconstruction) | Stateless (`recommend_once`) or stateful (`session_recommend`) |
 | Use case | Scripting, testing, fallback | Live agent play (preferred) |
 | Drift detection | None | Built-in (`stateConsistent` + `resync_session`) |
 | Strategy memory | Current round only (via reconstruction) | Full game (via session lifecycle) |
 
 **The MCP server is the preferred path for live play.** CLI `recommend` remains valuable for testing, scripting, and as a fallback when MCP is unavailable.
 
-The spec §7 "Live Play Mode" in [Strategies](strategies.md) describes the reconstruction contract used by both CLI `recommend` and MCP `recommend` (stateless). MCP `session_recommend` bypasses reconstruction entirely because the strategy instance persists.
+The spec §7 "Live Play Mode" in [Strategies](strategies.md) describes the reconstruction contract used by both CLI `recommend` and MCP `recommend_once` (stateless). MCP `session_recommend` bypasses reconstruction entirely because the strategy instance persists.
 
 ---
 
@@ -592,8 +631,9 @@ Agent                              MCP Server (6nimmt serve)
   │  [Agent plays card 42 on BGA]           │
   │  [BGA: turn resolves]                   │
   │                                         │
-  ├── turn_resolved ───────────────────────►│  plays, placements, boardAfter,
-  │                                         │  round:1, turn:1, expectedVersion:1
+  ├── turn_resolved ───────────────────────►│  plays, resolutions, rowPicks,
+  │                                         │  boardAfter, round:1, turn:1,
+  │                                         │  expectedVersion:1
   │◄── {version:2, phase:"in-round"} ──────┤
   │                                         │
   │  ... repeat turns 2-10 ...              │
@@ -602,6 +642,38 @@ Agent                              MCP Server (6nimmt serve)
   │◄── {version:12, phase:"awaiting-round"}┤
   │                                         │
   │  ... repeat rounds ...                  │
+  │                                         │
+  ├── end_session ─────────────────────────►│
+  │◄── {ended:true} ───────────────────────┤
+```
+
+### Row-Pick Flow (Rule 4 — agent's card triggers row pick)
+
+```
+  │  [BGA: turn cards revealed, agent's card is lowest of all row tails]
+  │                                         │
+  ├── session_recommend ───────────────────►│  decision:"row", triggeringCard:3,
+  │                                         │  revealedThisTurn:[{playerId,card},...],
+  │                                         │  resolutionIndex:0, hand, board
+  │◄── {rowIndex:2, confidence:0.92} ──────┤  server enters awaiting-row-pick phase
+  │                                         │
+  │  [Agent picks row 2 on BGA]             │
+  │  [BGA: turn fully resolves]             │
+  │                                         │
+  ├── turn_resolved ───────────────────────►│  plays, resolutions (incl. agent's row pick),
+  │                                         │  rowPicks, boardAfter, round, turn,
+  │                                         │  expectedVersion
+  │◄── {version:N, phase:"in-round"} ──────┤  server returns to in-round phase
+```
+
+### Game-Over Flow
+
+```
+  ├── round_ended ─────────────────────────►│  scores, round:5, expectedVersion:N
+  │◄── {version:N+1, phase:"game-over",    ┤
+  │     gameOver:true, finalScores:[...]}   │
+  │                                         │
+  │  [Only end_session is valid now]        │
   │                                         │
   ├── end_session ─────────────────────────►│
   │◄── {ended:true} ───────────────────────┤
