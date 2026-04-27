@@ -67,7 +67,7 @@ A pure TypeScript library that:
 
 - Models the deck, hands, rows, scores, and full game state.
 - Enforces the deterministic placement and pickup rules (see [rules](spec/rules/6-nimmt.md)).
-- Exposes a `recommend(state, hand, strategy): Move` function.
+- Provides visible-state projections (`CardChoiceState`, `RowChoiceState`) for strategy decision-making.
 - Supports pluggable **strategies** behind a common interface:
   - **Random** — picks a card uniformly at random. The baseline.
   - **Heuristic / Greedy** — minimises expected penalty using simple rules (e.g. avoid rows near 5, prefer cards close to row ends).
@@ -92,8 +92,9 @@ A general-purpose browser automation skill that:
 A BGA-specific skill that:
 
 - Handles BGA login, lobby navigation, and game join/creation.
-- Reads the 6 Nimmt! game state from the BGA DOM (rows, own hand, scores, turn status).
-- Translates DOM state → engine `GameState`.
+- Reads visible game state from the BGA DOM (board rows, own hand, scores, turn status).
+- Translates DOM state → `CardChoiceState` or `RowChoiceState` for strategy input.
+- Feeds game events to MCP session (`round_started`, `turn_resolved`, `round_ended`).
 - Executes moves by clicking the recommended card (and row, if needed).
 - Understands BGA-specific DOM structure, CSS selectors, and page flow.
 
@@ -143,7 +144,7 @@ A Chrome extension overlay that:
 
 A CLI tool that:
 
-- Runs N complete games with configurable player compositions (e.g. `--players bayesian,random,random,random,random`).
+- Runs N complete games with configurable player compositions (e.g. `--strategies bayesian,random,random,random,random`).
 - Outputs per-strategy statistics: win rate, average score, score distribution.
 - Enables rapid iteration on strategies without needing a live BGA session.
 
