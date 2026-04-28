@@ -77,5 +77,6 @@ export function runBatch(
     gamesPlayed: games,
     config,
     perStrategy,
+    gameResults: results,
   };
 }

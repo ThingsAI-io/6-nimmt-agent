@@ -41,8 +41,13 @@ function padLeft(str: string, len: number): string {
 }
 
 function formatSimulateTable(data: SimulateResult): string {
-  const headers = ['Strategy', 'Wins', 'Win Rate', 'Avg Score', 'Median', 'Min', 'Max', 'StdDev'];
-  const rows = data.results.map((r) => [
+  const lines: string[] = [];
+
+  // Per-seat breakdown (always shown)
+  const seatHeaders = ['Seat', 'Player', 'Strategy', 'Wins', 'Win Rate', 'Avg Score', 'Median', 'Min', 'Max', 'StdDev'];
+  const seatRows = data.perSeat.map((r) => [
+    String(r.seatIndex),
+    r.playerId,
     r.strategy,
     String(r.wins),
     (r.winRate * 100).toFixed(1) + '%',
@@ -52,8 +57,29 @@ function formatSimulateTable(data: SimulateResult): string {
     String(r.maxScore),
     r.scoreStdDev.toFixed(1),
   ]);
+  lines.push(renderTable(seatHeaders, seatRows));
 
-  return renderTable(headers, rows);
+  // Pooled summary (only if there are fewer unique strategies than seats)
+  const uniqueStrategies = new Set(data.perSeat.map((r) => r.strategy));
+  if (uniqueStrategies.size < data.perSeat.length) {
+    lines.push('');
+    lines.push('--- Pooled by Strategy ---');
+    const headers = ['Strategy', 'Players', 'Wins', 'Win Rate', 'Avg Score', 'Median', 'Min', 'Max', 'StdDev'];
+    const rows = data.results.map((r) => [
+      r.strategy,
+      String(r.playerCount),
+      String(r.wins),
+      (r.winRate * 100).toFixed(1) + '%',
+      r.avgScore.toFixed(1),
+      String(r.medianScore),
+      String(r.minScore),
+      String(r.maxScore),
+      r.scoreStdDev.toFixed(1),
+    ]);
+    lines.push(renderTable(headers, rows));
+  }
+
+  return lines.join('\n');
 }
 
 function formatStrategiesTable(data: StrategiesResult): string {

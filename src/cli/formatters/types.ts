@@ -12,6 +12,20 @@ export interface SimulateResult extends MetaEnvelope {
   strategies: string[];
   seed: string;
   results: StrategyResultRow[];
+  perSeat: SeatResultRow[];
+}
+
+export interface SeatResultRow {
+  seatIndex: number;
+  playerId: string;
+  strategy: string;
+  wins: number;
+  winRate: number;
+  avgScore: number;
+  medianScore: number;
+  minScore: number;
+  maxScore: number;
+  scoreStdDev: number;
 }
 
 export interface StrategyResultRow {
