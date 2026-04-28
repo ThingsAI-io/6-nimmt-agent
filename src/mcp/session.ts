@@ -80,6 +80,36 @@ function coerceBoard(input: unknown): number[][] | undefined {
   return undefined;
 }
 
+/**
+ * Coerces various scores representations into { playerId, score }[].
+ * Accepts:
+ *   - { playerId: string, score: number }[] (passthrough)
+ *   - { [playerId]: number } (object map)
+ * Returns undefined if the input cannot be coerced.
+ */
+function coerceScores(input: unknown): { playerId: string; score: number }[] | undefined {
+  if (Array.isArray(input)) {
+    // Already an array — validate shape
+    if (input.length === 0) return [];
+    if (input[0] && typeof input[0] === 'object' && 'playerId' in input[0]) {
+      return input as { playerId: string; score: number }[];
+    }
+    return undefined;
+  }
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    // Object map: { "player1": 7, "player2": 12 }
+    const entries = Object.entries(input as Record<string, unknown>);
+    if (entries.length === 0) return [];
+    const scores: { playerId: string; score: number }[] = [];
+    for (const [key, val] of entries) {
+      if (typeof val !== 'number') return undefined;
+      scores.push({ playerId: key, score: val });
+    }
+    return scores;
+  }
+  return undefined;
+}
+
 
 
 // ── SessionManager ──────────────────────────────────────────────────
@@ -352,9 +382,16 @@ export class SessionManager {
     sessionId: string;
     expectedVersion: number;
     round: number;
-    scores: { playerId: string; score: number }[];
+    scores: unknown;
   }): object | DomainError {
-    const { sessionId, expectedVersion, round, scores } = params;
+    const { sessionId, expectedVersion, round } = params;
+    const scores = coerceScores(params.scores);
+    if (!scores) {
+      return errors.domainError('INVALID_SCORES', 'Scores must be an array of {playerId, score} or an object map {playerId: score}.', {
+        recoverable: false, suggestedAction: 'none',
+        details: { received: typeof params.scores },
+      });
+    }
 
     const session = this.sessions.get(sessionId);
     if (!session) return errors.unknownSession(sessionId);
@@ -539,10 +576,10 @@ export class SessionManager {
     turn: number;
     board: unknown;
     hand: number[];
-    scores: { playerId: string; score: number }[];
+    scores: unknown;
     turnHistory?: TurnResolution[];
   }): object | DomainError {
-    const { sessionId, round, turn, hand, scores, turnHistory } = params;
+    const { sessionId, round, turn, hand, turnHistory } = params;
     const board = coerceBoard(params.board);
     if (!board) {
       return errors.domainError('INVALID_BOARD', 'Board must be an array of 4 rows, an object with keys 0-3, or { rows: [...] }.', {
@@ -554,6 +591,13 @@ export class SessionManager {
       return errors.domainError('INVALID_BOARD', 'Board must have exactly 4 rows.', {
         recoverable: false, suggestedAction: 'none',
         details: { rowCount: board.length },
+      });
+    }
+    const scores = coerceScores(params.scores);
+    if (!scores) {
+      return errors.domainError('INVALID_SCORES', 'Scores must be an array of {playerId, score} or an object map {playerId: score}.', {
+        recoverable: false, suggestedAction: 'none',
+        details: { received: typeof params.scores },
       });
     }
 
