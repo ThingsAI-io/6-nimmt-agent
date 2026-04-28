@@ -1,0 +1,74 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Fixture tests
+        run: npx vitest run test/fixtures/
+
+      - name: Reference model tests
+        run: npx vitest run test/reference/
+
+      - name: Strategy tests
+        run: npx vitest run test/strategies/
+
+      - name: Invariant tests
+        run: npx vitest run test/invariant/
+
+      - name: Simulator tests
+        run: npx vitest run test/sim/
+
+      - name: CLI tests
+        run: npx vitest run test/cli/
+
+      - name: MCP tests
+        run: npx vitest run test/mcp/
+
+      - name: E2E tests
+        run: npx vitest run test/e2e/
+
+      # TODO: Add holdout fixture tests generated from SHA256(CI_RUN_ID + '/holdout/' + index)
+
+  harness-protection:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check protected paths
+        run: |
+          # Check if protected files were modified
+          BASE_REF="origin/${{ github.base_ref }}"
+          PROTECTED_FILES=$(git diff --name-only "$BASE_REF"...HEAD | grep -E '^(spec/fixtures/|test/reference/|eslint\.config)' || true)
+          if [ -n "$PROTECTED_FILES" ]; then
+            # Allow initial harness landing when protected paths don't exist on base
+            BASE_HAS_PROTECTED=false
+            if git ls-tree -r --name-only "$BASE_REF" | grep -Eq '^(spec/fixtures/|test/reference/|eslint\.config)'; then
+              BASE_HAS_PROTECTED=true
+            fi
+
+            if [ "$BASE_HAS_PROTECTED" = true ] && ! git log "$BASE_REF"...HEAD --format=%B | grep -q "harness-amendment"; then
+              echo "::error::Protected harness files modified without 'harness-amendment' trailer:"
+              echo "$PROTECTED_FILES"
+              exit 1
+            fi
+          fi

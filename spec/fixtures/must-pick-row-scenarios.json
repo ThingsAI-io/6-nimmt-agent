@@ -1,0 +1,104 @@
+[
+  {
+    "id": "must-pick-1-card-row",
+    "description": "Card 2 < all tails, player picks row with 1 card (collects 1 card)",
+    "board": [[10, 20], [30, 40, 50], [60], [70, 80, 90, 95]],
+    "plays": [{ "playerId": "p0", "card": 2 }],
+    "rowPicks": [{ "playerId": "p0", "rowIndex": 2 }],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 2, "rowIndex": 2, "causedOverflow": false, "collectedCards": [60] }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 2 }],
+      "collected": { "p0": [60] },
+      "boardAfter": [[10, 20], [30, 40, 50], [2], [70, 80, 90, 95]]
+    }
+  },
+  {
+    "id": "must-pick-5-card-row",
+    "description": "Card 1 < all tails, player picks full 5-card row (collects 5 cards)",
+    "board": [[11, 22, 33, 44, 55], [60], [70], [80]],
+    "plays": [{ "playerId": "p0", "card": 1 }],
+    "rowPicks": [{ "playerId": "p0", "rowIndex": 0 }],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 1, "rowIndex": 0, "causedOverflow": false, "collectedCards": [11, 22, 33, 44, 55] }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 0 }],
+      "collected": { "p0": [11, 22, 33, 44, 55] },
+      "boardAfter": [[1], [60], [70], [80]]
+    }
+  },
+  {
+    "id": "must-pick-fewest-cattle-heads",
+    "description": "Card 3 < all tails, player strategically picks row with fewest cattle heads (row 1 has 1 card vs row 0 with 3 cards)",
+    "board": [[15, 25, 35], [50], [65, 75], [85, 95]],
+    "plays": [{ "playerId": "p0", "card": 3 }],
+    "rowPicks": [{ "playerId": "p0", "rowIndex": 1 }],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 3, "rowIndex": 1, "causedOverflow": false, "collectedCards": [50] }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 1 }],
+      "collected": { "p0": [50] },
+      "boardAfter": [[15, 25, 35], [3], [65, 75], [85, 95]]
+    }
+  },
+  {
+    "id": "board-changes-after-row-pick",
+    "description": "Card 1 triggers rule 4, picks row 2. Card 8 then places normally on the modified board (row 2 now has tail=1, so 8 goes there as closest higher tail)",
+    "board": [[10, 20], [30, 40], [50], [60, 70]],
+    "plays": [
+      { "playerId": "p0", "card": 1 },
+      { "playerId": "p1", "card": 8 }
+    ],
+    "rowPicks": [{ "playerId": "p0", "rowIndex": 2 }],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 1, "rowIndex": 2, "causedOverflow": false, "collectedCards": [50] },
+        { "playerId": "p1", "card": 8, "rowIndex": 2, "causedOverflow": false, "collectedCards": [] }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 2 }],
+      "collected": { "p0": [50], "p1": [] },
+      "boardAfter": [[10, 20], [30, 40], [1, 8], [60, 70]]
+    }
+  },
+  {
+    "id": "rule4-only-lowest-card",
+    "description": "Cards 5 and 8 both lower than all original tails [10,20,30,40]. Card 5 (lowest) triggers rule 4 and picks row 0. Card 8 then sees tails [5,20,30,40] and places normally on row 0 (closest higher tail is 20 in row 1, but 5 in row 0 is the closest lower — 8 goes to row 0 since 5<8<20)",
+    "board": [[10], [20], [30], [40]],
+    "plays": [
+      { "playerId": "p0", "card": 5 },
+      { "playerId": "p1", "card": 8 }
+    ],
+    "rowPicks": [{ "playerId": "p0", "rowIndex": 0 }],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 5, "rowIndex": 0, "causedOverflow": false, "collectedCards": [10] },
+        { "playerId": "p1", "card": 8, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 0 }],
+      "collected": { "p0": [10], "p1": [] },
+      "boardAfter": [[5, 8], [20], [30], [40]]
+    }
+  },
+  {
+    "id": "rule4-pick-then-normal-placement-different-row",
+    "description": "Card 3 triggers rule 4, picks row 3. Card 15 places normally on row 0 (tail=10, closest lower). Board after: row 3 cleared and replaced, row 0 extended",
+    "board": [[10], [20, 25], [30, 35, 38], [40, 45, 48, 49]],
+    "plays": [
+      { "playerId": "p0", "card": 3 },
+      { "playerId": "p1", "card": 15 }
+    ],
+    "rowPicks": [{ "playerId": "p0", "rowIndex": 3 }],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 3, "rowIndex": 3, "causedOverflow": false, "collectedCards": [40, 45, 48, 49] },
+        { "playerId": "p1", "card": 15, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 3 }],
+      "collected": { "p0": [40, 45, 48, 49], "p1": [] },
+      "boardAfter": [[10, 15], [20, 25], [30, 35, 38], [3]]
+    }
+  }
+]

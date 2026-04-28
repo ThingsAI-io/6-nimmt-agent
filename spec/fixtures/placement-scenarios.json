@@ -1,0 +1,360 @@
+[
+  {
+    "id": "placement-basic-closest-tail-4-eligible",
+    "description": "Card 33 with all 4 tails below it; goes to row with tail 30 (closest lower)",
+    "board": [[25, 29], [10, 17, 30], [5, 12], [3, 8]],
+    "card": 33,
+    "expected": { "kind": "place", "rowIndex": 1, "causedOverflow": false }
+  },
+  {
+    "id": "placement-all-rows-eligible-pick-closest",
+    "description": "Card 90 with tails 10,20,50,85; goes to row with tail 85",
+    "board": [[10], [20], [50], [85]],
+    "card": 90,
+    "expected": { "kind": "place", "rowIndex": 3, "causedOverflow": false }
+  },
+  {
+    "id": "placement-all-rows-eligible-small-gaps",
+    "description": "Card 50 with tails 47,48,49,10; goes to row with tail 49",
+    "board": [[47], [48], [49], [10]],
+    "card": 50,
+    "expected": { "kind": "place", "rowIndex": 2, "causedOverflow": false }
+  },
+  {
+    "id": "placement-only-1-row-eligible",
+    "description": "Card 15 with tails 10,20,30,40; only row 0 (tail 10) is below 15",
+    "board": [[10], [20], [30], [40]],
+    "card": 15,
+    "expected": { "kind": "place", "rowIndex": 0, "causedOverflow": false }
+  },
+  {
+    "id": "placement-only-1-row-eligible-high-card",
+    "description": "Card 55 with tails 60,70,80,50; only row 3 (tail 50) is below 55",
+    "board": [[60], [70], [80], [50]],
+    "card": 55,
+    "expected": { "kind": "place", "rowIndex": 3, "causedOverflow": false }
+  },
+  {
+    "id": "placement-only-1-row-eligible-barely",
+    "description": "Card 41 with tails 40,50,60,70; only row 0 (tail 40) qualifies",
+    "board": [[40], [50], [60], [70]],
+    "card": 41,
+    "expected": { "kind": "place", "rowIndex": 0, "causedOverflow": false }
+  },
+  {
+    "id": "placement-2-rows-different-gaps",
+    "description": "Card 35 with tails 20,30,50,60; goes to row with tail 30 (gap 5) not tail 20 (gap 15)",
+    "board": [[20], [30], [50], [60]],
+    "card": 35,
+    "expected": { "kind": "place", "rowIndex": 1, "causedOverflow": false }
+  },
+  {
+    "id": "placement-2-rows-different-gaps-b",
+    "description": "Card 44 with tails 40,42,60,80; goes to row with tail 42 (gap 2) not tail 40 (gap 4)",
+    "board": [[40], [42], [60], [80]],
+    "card": 44,
+    "expected": { "kind": "place", "rowIndex": 1, "causedOverflow": false }
+  },
+  {
+    "id": "placement-2-rows-different-gaps-c",
+    "description": "Card 70 with tails 50,65,80,90; goes to row with tail 65 (gap 5) not tail 50 (gap 20)",
+    "board": [[50], [65], [80], [90]],
+    "card": 70,
+    "expected": { "kind": "place", "rowIndex": 1, "causedOverflow": false }
+  },
+  {
+    "id": "placement-min-gap-tail-plus-1",
+    "description": "Card 31 goes to row with tail 30 (gap exactly 1)",
+    "board": [[10], [20], [30], [40]],
+    "card": 31,
+    "expected": { "kind": "place", "rowIndex": 2, "causedOverflow": false }
+  },
+  {
+    "id": "placement-min-gap-tail-plus-1-b",
+    "description": "Card 11 goes to row with tail 10 (gap exactly 1)",
+    "board": [[10], [50], [70], [90]],
+    "card": 11,
+    "expected": { "kind": "place", "rowIndex": 0, "causedOverflow": false }
+  },
+  {
+    "id": "placement-min-gap-tail-plus-1-c",
+    "description": "Card 91 goes to row with tail 90 (gap exactly 1)",
+    "board": [[10], [30], [60], [90]],
+    "card": 91,
+    "expected": { "kind": "place", "rowIndex": 3, "causedOverflow": false }
+  },
+  {
+    "id": "placement-much-larger-than-all-tails",
+    "description": "Card 104 with low tails; goes to row with tail 4 (closest lower)",
+    "board": [[1], [2], [3], [4]],
+    "card": 104,
+    "expected": { "kind": "place", "rowIndex": 3, "causedOverflow": false }
+  },
+  {
+    "id": "placement-much-larger-than-all-tails-b",
+    "description": "Card 100 with tails 5,10,15,20; goes to row with tail 20",
+    "board": [[5], [10], [15], [20]],
+    "card": 100,
+    "expected": { "kind": "place", "rowIndex": 3, "causedOverflow": false }
+  },
+  {
+    "id": "placement-much-larger-than-all-tails-c",
+    "description": "Card 99 with tails 1,2,3,50; goes to row with tail 50",
+    "board": [[1], [2], [3], [50]],
+    "card": 99,
+    "expected": { "kind": "place", "rowIndex": 3, "causedOverflow": false }
+  },
+  {
+    "id": "overflow-6th-card-triggers-collection",
+    "description": "Row has 5 cards; 6th card triggers overflow, player collects 5 existing cards",
+    "board": [[3, 5, 10, 22, 33], [50], [70], [90]],
+    "card": 40,
+    "expected": { "kind": "place", "rowIndex": 0, "causedOverflow": true }
+  },
+  {
+    "id": "overflow-6th-card-exact-successor",
+    "description": "Row has 5 cards; 6th card is tail+1, triggers overflow",
+    "board": [[10], [20, 25, 30, 35, 40], [60], [80]],
+    "card": 41,
+    "expected": { "kind": "place", "rowIndex": 1, "causedOverflow": true }
+  },
+  {
+    "id": "must-pick-row-card-lower-than-all-tails",
+    "description": "Card 5 is lower than all tails (10,20,30,40); must pick a row",
+    "board": [[10], [20], [30], [40]],
+    "card": 5,
+    "expected": { "kind": "must-pick-row" }
+  },
+  {
+    "id": "must-pick-row-card-1",
+    "description": "Card 1 is always lower than any tail; must pick a row",
+    "board": [[2], [15], [30], [60]],
+    "card": 1,
+    "expected": { "kind": "must-pick-row" }
+  },
+  {
+    "id": "card-104-always-eligible",
+    "description": "Card 104 always has an eligible row; goes to row with tail 103",
+    "board": [[50], [80], [100], [103]],
+    "card": 104,
+    "expected": { "kind": "place", "rowIndex": 3, "causedOverflow": false }
+  },
+  {
+    "id": "edge-varying-row-lengths",
+    "description": "Rows of lengths 1,2,4,5; card 37 goes to row with tail 36 (closest lower)",
+    "board": [[5], [10, 12], [30, 32, 34, 36], [40, 42, 44, 46, 48]],
+    "card": 37,
+    "expected": { "kind": "place", "rowIndex": 2, "causedOverflow": false }
+  },
+  {
+    "id": "edge-card-1-always-must-pick",
+    "description": "Card 1 is lower than any possible tail; always triggers must-pick-row",
+    "board": [[2], [10], [50], [99]],
+    "card": 1,
+    "expected": { "kind": "must-pick-row" }
+  },
+  {
+    "id": "turn-2p-no-interaction",
+    "description": "Two cards placed on different rows, no interaction",
+    "board": [[10], [20], [30], [40]],
+    "plays": [
+      { "playerId": "p0", "card": 15 },
+      { "playerId": "p1", "card": 35 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 15, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p1", "card": 35, "rowIndex": 2, "causedOverflow": false }
+      ],
+      "rowPicks": [],
+      "collected": {},
+      "boardAfter": [[10, 15], [20], [30, 35], [40]]
+    }
+  },
+  {
+    "id": "turn-2p-same-row-lower-first",
+    "description": "Two cards target same row; lower card placed first, then higher",
+    "board": [[10], [20], [30], [40]],
+    "plays": [
+      { "playerId": "p0", "card": 22 },
+      { "playerId": "p1", "card": 25 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 22, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p1", "card": 25, "rowIndex": 1, "causedOverflow": false }
+      ],
+      "rowPicks": [],
+      "collected": {},
+      "boardAfter": [[10], [20, 22, 25], [30], [40]]
+    }
+  },
+  {
+    "id": "turn-2p-overflow-changes-target",
+    "description": "First card overflows row 0, starting it fresh; second card now targets row 0",
+    "board": [[2, 4, 6, 8, 10], [20], [30], [40]],
+    "plays": [
+      { "playerId": "p0", "card": 12 },
+      { "playerId": "p1", "card": 15 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 12, "rowIndex": 0, "causedOverflow": true },
+        { "playerId": "p1", "card": 15, "rowIndex": 0, "causedOverflow": false }
+      ],
+      "rowPicks": [],
+      "collected": { "p0": [2, 4, 6, 8, 10] },
+      "boardAfter": [[12, 15], [20], [30], [40]]
+    }
+  },
+  {
+    "id": "turn-5p-mixed-rules",
+    "description": "5 players: p0 must-pick (picks row 1), p1 overflows row 0, rest place normally",
+    "board": [[11, 15, 18, 22, 25], [30], [50], [70]],
+    "plays": [
+      { "playerId": "p0", "card": 5 },
+      { "playerId": "p1", "card": 28 },
+      { "playerId": "p2", "card": 35 },
+      { "playerId": "p3", "card": 55 },
+      { "playerId": "p4", "card": 75 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 5, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p1", "card": 28, "rowIndex": 0, "causedOverflow": true },
+        { "playerId": "p2", "card": 35, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p3", "card": 55, "rowIndex": 2, "causedOverflow": false },
+        { "playerId": "p4", "card": 75, "rowIndex": 3, "causedOverflow": false }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 1 }],
+      "collected": { "p0": [30], "p1": [11, 15, 18, 22, 25] },
+      "boardAfter": [[28, 35], [5], [50, 55], [70, 75]]
+    }
+  },
+  {
+    "id": "turn-5p-all-same-row-cascading-overflows",
+    "description": "All 5 players target row 3; 5th card is 6th in row, triggers overflow",
+    "board": [[10], [20], [30], [40]],
+    "plays": [
+      { "playerId": "p0", "card": 41 },
+      { "playerId": "p1", "card": 42 },
+      { "playerId": "p2", "card": 43 },
+      { "playerId": "p3", "card": 44 },
+      { "playerId": "p4", "card": 45 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 41, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p1", "card": 42, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p2", "card": 43, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p3", "card": 44, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p4", "card": 45, "rowIndex": 3, "causedOverflow": true }
+      ],
+      "rowPicks": [],
+      "collected": { "p4": [40, 41, 42, 43, 44] },
+      "boardAfter": [[10], [20], [30], [45]]
+    }
+  },
+  {
+    "id": "turn-10p-complex",
+    "description": "Full 10-player turn: p0 must-pick row 2, p1 overflows row 0, rest spread across rows",
+    "board": [[5, 8, 12, 15, 20], [35], [55], [75]],
+    "plays": [
+      { "playerId": "p0", "card": 3 },
+      { "playerId": "p1", "card": 22 },
+      { "playerId": "p2", "card": 38 },
+      { "playerId": "p3", "card": 42 },
+      { "playerId": "p4", "card": 58 },
+      { "playerId": "p5", "card": 62 },
+      { "playerId": "p6", "card": 78 },
+      { "playerId": "p7", "card": 82 },
+      { "playerId": "p8", "card": 90 },
+      { "playerId": "p9", "card": 95 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 3, "rowIndex": 2, "causedOverflow": false },
+        { "playerId": "p1", "card": 22, "rowIndex": 0, "causedOverflow": true },
+        { "playerId": "p2", "card": 38, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p3", "card": 42, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p4", "card": 58, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p5", "card": 62, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p6", "card": 78, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p7", "card": 82, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p8", "card": 90, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p9", "card": 95, "rowIndex": 3, "causedOverflow": false }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 2 }],
+      "collected": { "p0": [55], "p1": [5, 8, 12, 15, 20] },
+      "boardAfter": [[22], [35, 38, 42, 58, 62], [3], [75, 78, 82, 90, 95]]
+    }
+  },
+  {
+    "id": "turn-10p-early-placements-affect-later",
+    "description": "10 players: early cards fill row 0 to 5; later cards spread to other rows",
+    "board": [[10], [20], [30], [40]],
+    "plays": [
+      { "playerId": "p0", "card": 11 },
+      { "playerId": "p1", "card": 12 },
+      { "playerId": "p2", "card": 13 },
+      { "playerId": "p3", "card": 14 },
+      { "playerId": "p4", "card": 21 },
+      { "playerId": "p5", "card": 22 },
+      { "playerId": "p6", "card": 31 },
+      { "playerId": "p7", "card": 32 },
+      { "playerId": "p8", "card": 41 },
+      { "playerId": "p9", "card": 42 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 11, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p1", "card": 12, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p2", "card": 13, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p3", "card": 14, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p4", "card": 21, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p5", "card": 22, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p6", "card": 31, "rowIndex": 2, "causedOverflow": false },
+        { "playerId": "p7", "card": 32, "rowIndex": 2, "causedOverflow": false },
+        { "playerId": "p8", "card": 41, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p9", "card": 42, "rowIndex": 3, "causedOverflow": false }
+      ],
+      "rowPicks": [],
+      "collected": {},
+      "boardAfter": [[10, 11, 12, 13, 14], [20, 21, 22], [30, 31, 32], [40, 41, 42]]
+    }
+  },
+  {
+    "id": "turn-10p-overflow-and-must-pick",
+    "description": "10 players: p0 must-pick (picks row 1), p1 overflows row 0, late cards redirected to row 0",
+    "board": [[15, 18, 20, 23, 25], [35], [55], [75]],
+    "plays": [
+      { "playerId": "p0", "card": 10 },
+      { "playerId": "p1", "card": 27 },
+      { "playerId": "p2", "card": 37 },
+      { "playerId": "p3", "card": 38 },
+      { "playerId": "p4", "card": 39 },
+      { "playerId": "p5", "card": 56 },
+      { "playerId": "p6", "card": 57 },
+      { "playerId": "p7", "card": 76 },
+      { "playerId": "p8", "card": 90 },
+      { "playerId": "p9", "card": 100 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 10, "rowIndex": 1, "causedOverflow": false },
+        { "playerId": "p1", "card": 27, "rowIndex": 0, "causedOverflow": true },
+        { "playerId": "p2", "card": 37, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p3", "card": 38, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p4", "card": 39, "rowIndex": 0, "causedOverflow": false },
+        { "playerId": "p5", "card": 56, "rowIndex": 2, "causedOverflow": false },
+        { "playerId": "p6", "card": 57, "rowIndex": 2, "causedOverflow": false },
+        { "playerId": "p7", "card": 76, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p8", "card": 90, "rowIndex": 3, "causedOverflow": false },
+        { "playerId": "p9", "card": 100, "rowIndex": 3, "causedOverflow": false }
+      ],
+      "rowPicks": [{ "playerId": "p0", "rowIndex": 1 }],
+      "collected": { "p0": [35], "p1": [15, 18, 20, 23, 25] },
+      "boardAfter": [[27, 37, 38, 39], [10], [55, 56, 57], [75, 76, 90, 100]]
+    }
+  }
+]
