@@ -30,6 +30,7 @@ function buildResultRows(
       wins: stats.wins,
       winRate: stats.winRate,
       avgScore: stats.avgScore,
+      avgWinningScore: stats.avgWinningScore,
       medianScore: stats.medianScore,
       minScore: stats.minScore,
       maxScore: stats.maxScore,
@@ -49,16 +50,19 @@ function buildSeatRows(
   for (let seat = 0; seat < numPlayers; seat++) {
     const player = config.players[seat];
     const scores: number[] = [];
+    const winningScores: number[] = [];
     let wins = 0;
 
     for (const game of result.gameResults) {
-      // playerResults is sorted by score, find this player by id
       const pr = game.playerResults.find((p) => p.id === player.id)!;
       scores.push(pr.finalScore);
-      if (pr.rank === 1) wins++;
+      if (pr.rank === 1) {
+        wins++;
+        winningScores.push(pr.finalScore);
+      }
     }
 
-    const stats = computeStats(scores, wins, result.gamesPlayed);
+    const stats = computeStats(scores, wins, result.gamesPlayed, winningScores);
     rows.push({
       seatIndex: seat,
       playerId: player.id,
@@ -66,6 +70,7 @@ function buildSeatRows(
       wins: stats.wins,
       winRate: stats.winRate,
       avgScore: stats.avgScore,
+      avgWinningScore: stats.avgWinningScore,
       medianScore: stats.medianScore,
       minScore: stats.minScore,
       maxScore: stats.maxScore,

@@ -33,6 +33,7 @@ export interface StrategyStats {
   readonly wins: number;
   readonly winRate: number;
   readonly avgScore: number;
+  readonly avgWinningScore: number | null;
   readonly medianScore: number;
   readonly minScore: number;
   readonly maxScore: number;

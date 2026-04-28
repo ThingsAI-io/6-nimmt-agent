@@ -8,6 +8,7 @@ export function computeStats(
   scores: number[],
   wins: number,
   totalPlayerGames: number,
+  winningScores: number[] = [],
 ): StrategyStats {
   const n = scores.length;
   if (n === 0) {
@@ -15,6 +16,7 @@ export function computeStats(
       wins: 0,
       winRate: 0,
       avgScore: 0,
+      avgWinningScore: null,
       medianScore: 0,
       minScore: 0,
       maxScore: 0,
@@ -33,10 +35,16 @@ export function computeStats(
 
   const variance = scores.reduce((acc, v) => acc + (v - avg) ** 2, 0) / n;
 
+  const avgWinningScore =
+    winningScores.length > 0
+      ? winningScores.reduce((acc, v) => acc + v, 0) / winningScores.length
+      : null;
+
   return {
     wins,
     winRate: totalPlayerGames > 0 ? wins / totalPlayerGames : 0,
     avgScore: avg,
+    avgWinningScore,
     medianScore,
     minScore: sorted[0],
     maxScore: sorted[n - 1],

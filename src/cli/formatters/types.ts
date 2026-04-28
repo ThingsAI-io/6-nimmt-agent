@@ -22,6 +22,7 @@ export interface SeatResultRow {
   wins: number;
   winRate: number;
   avgScore: number;
+  avgWinningScore: number | null;
   medianScore: number;
   minScore: number;
   maxScore: number;
@@ -36,6 +37,7 @@ export interface StrategyResultRow {
   wins: number;
   winRate: number;
   avgScore: number;
+  avgWinningScore: number | null;
   medianScore: number;
   minScore: number;
   maxScore: number;
