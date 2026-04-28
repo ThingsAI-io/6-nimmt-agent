@@ -131,3 +131,25 @@ When state is `smallestCard` (forced take) or `multipleChoice` (choose placement
 - Do NOT use BGA tutorials for testing — they are view-only replays
 - The agent should report its moves and game progress to the user
 - If unsure about state, take a screenshot and ask the user
+
+## Variant Check (Critical)
+
+**Our engine only supports the regular variant.** On game start, immediately check:
+
+```javascript
+() => {
+  const gd = gameui.gamedatas;
+  return { card_variant: gd.card_variant, professional: gd.professional };
+}
+```
+
+- `card_variant` must be `"1"` (Disabled = regular, all 104 cards)
+- `professional` must be `"0"` (Professional variant OFF)
+
+If either condition fails, **stop and warn the user**: "This game uses a variant (Tactics/Logic/Professional) not supported by our engine. Please play manually or leave the table."
+
+**Variant values:**
+- `card_variant`: `"1"` = Disabled (regular) ✓, `"2"` = Tactics ✗, `"3"` = Logic ✗
+- `professional`: `"0"` = off ✓, `"1"` = on ✗
+
+When joining tables, prefer ones showing "Card set variant: Disabled" and "Professional variant" unchecked in the table options.

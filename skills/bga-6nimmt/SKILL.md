@@ -253,6 +253,38 @@ Use `browser_evaluate` to run these helper functions:
 
 ---
 
+## Game Variants
+
+BGA 6 Nimmt has several variants. **Our engine only supports the regular variant (Disabled).**
+
+**Variant fields in `gameui.gamedatas`:**
+
+| Field | Values | Meaning |
+|-------|--------|---------|
+| `card_variant` | `"1"` = Disabled (regular), `"2"` = Tactics, `"3"` = Logic | Card set variant |
+| `professional` | `"0"` = off, `"1"` = on | Professional variant (draft cards) |
+| `game_length_type` | `"0"` = Starting score, `"1"` = Fixed rounds | How game length is determined |
+| `current_round` | number string | Current round number |
+| `maximum_round` | number | Max rounds (0 = play until score threshold) |
+
+**Variant descriptions:**
+- **Disabled (regular):** All 104 cards used, dealt randomly. ← **Only supported variant**
+- **Tactics variant:** Reduced card set based on player count (removes highest cards)
+- **Logic variant:** Players draft/pick cards at the start of each round (uses `pickCard` game state)
+- **Professional variant:** Additional drafting mechanic on top of the card set
+
+**Agent behavior:**
+- On game start, read `gameui.gamedatas.card_variant` and `gameui.gamedatas.professional`
+- If `card_variant !== "1"` OR `professional !== "0"`, warn the user: "This table uses a variant not supported by our engine. Play manually or leave."
+- Only auto-play when `card_variant === "1"` and `professional === "0"`
+
+**When joining tables:**
+- On the game panel, the table config shows "Card set variant: Disabled" and "Professional variant" checkbox
+- Prefer joining/creating tables with "Disabled" + Professional OFF
+- The dropdown options are visible under the "Default options" section of each table
+
+---
+
 ## Key BGA Quirks
 
 1. **Card IDs = card numbers.** `player_hand_item_43` holds card 43. `card_43` on the board is card 43.
