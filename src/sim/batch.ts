@@ -30,10 +30,12 @@ function aggregateResults(
   // Collect scores and wins per strategy across all games
   const scoresMap = new Map<string, number[]>();
   const winsMap = new Map<string, number>();
+  const winScoresMap = new Map<string, number[]>();
 
   for (const strat of playersPerStrategy.keys()) {
     scoresMap.set(strat, []);
     winsMap.set(strat, 0);
+    winScoresMap.set(strat, []);
   }
 
   for (const game of results) {
@@ -41,6 +43,7 @@ function aggregateResults(
       scoresMap.get(pr.strategy)!.push(pr.finalScore);
       if (pr.rank === 1) {
         winsMap.set(pr.strategy, winsMap.get(pr.strategy)! + 1);
+        winScoresMap.get(pr.strategy)!.push(pr.finalScore);
       }
     }
   }
@@ -51,7 +54,7 @@ function aggregateResults(
     const wins = winsMap.get(strategy)!;
     const totalPlayerGames =
       results.length * playersPerStrategy.get(strategy)!;
-    perStrategy.set(strategy, computeStats(scores, wins, totalPlayerGames));
+    perStrategy.set(strategy, computeStats(scores, wins, totalPlayerGames, winScoresMap.get(strategy)!));
   }
 
   return perStrategy;
