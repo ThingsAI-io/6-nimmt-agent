@@ -17,13 +17,13 @@ Capture full game logs from live multiplayer sessions (e.g., BGA) to build a dat
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `gameId` | string | Unique identifier (BGA game ID or UUID) |
+| `gameId` | string | UUID (generated locally, not from BGA) |
 | `source` | string | Platform (e.g., `"bga"`, `"local"`) |
-| `timestamp` | ISO 8601 | When the game started |
+| `timestamp` | ISO 8601 | Date only (no time — reduces traceability) |
 | `playerCount` | number | 2–10 |
-| `players` | Player[] | Player info (id, name, isUs, strategy used) |
-| `finalScores` | Record<id, number> | End-of-game scores |
-| `winner` | string | Player ID of winner |
+| `players` | Player[] | Seat info (seatIndex, isUs, strategy used if us) |
+| `finalScores` | Record<seat, number> | End-of-game scores by seat index |
+| `winner` | string | Seat label of winner (e.g., `"us"` or `"seat-2"`) |
 | `totalRounds` | number | Rounds played |
 
 ### Per-Round Data
@@ -34,7 +34,7 @@ Capture full game logs from live multiplayer sessions (e.g., BGA) to build a dat
 | `initialBoard` | number[][] | The 4 starter cards |
 | `dealtHand` | number[] | Our hand for this round |
 | `turns` | Turn[] | All 10 turns |
-| `roundScores` | Record<id, number> | Points collected this round per player |
+| `roundScores` | Record<seat, number> | Points collected this round per seat |
 
 ### Per-Turn Data
 
@@ -43,7 +43,7 @@ Capture full game logs from live multiplayer sessions (e.g., BGA) to build a dat
 | `turn` | number | Turn number (1–10) |
 | `ourCard` | number | The card we played |
 | `ourRecommendation` | number \| null | What the strategy recommended (null if no strategy active) |
-| `plays` | { playerId, card }[] | All revealed cards |
+| `plays` | { seat, card }[] | All revealed cards (by seat index) |
 | `resolutions` | Resolution[] | Placement results (row, overflow, collected) |
 | `rowPicks` | RowPick[] | Any forced row picks |
 | `boardBefore` | number[][] | Board state before resolution |
@@ -97,9 +97,8 @@ interface GameIndex {
     file: string;
     gameId: string;
     source: string;
-    timestamp: string;
+    date: string;
     playerCount: number;
-    winner: string;
     ourStrategy: string | null;
     ourFinalScore: number;
     ourRank: number;
@@ -178,10 +177,12 @@ npx tsx src/cli/index.ts data bulk-replay --strategy bayesian-simple --format ta
 
 ## Privacy & Data Handling
 
-- **No storage of other players' real names** — use anonymized IDs (e.g., `opponent-1`, `opponent-2`)
-- **Local storage only** — game data stays in `data/` directory, not committed to git
-- **`.gitignore`** — `data/games/` is git-ignored; only `data/.gitkeep` is tracked
-- **Optional anonymization** — strip BGA-specific IDs before sharing datasets
+- **No player identity data stored** — opponents are referenced only as `seat-0`, `seat-1`, etc. based on position. No usernames, BGA IDs, profile links, or any traceable identifiers are captured.
+- **Our own identity** is stored as `"us"` — no account name.
+- **No cross-game player tracking** — each game's seat labels are independent. There is no way to correlate `seat-2` in game A with `seat-2` in game B (they may be different people).
+- **Local storage only** — game data stays in `data/` directory, not committed to git.
+- **`.gitignore`** — `data/games/` is git-ignored; only `data/.gitkeep` is tracked.
+- **No BGA-specific metadata** — no table IDs, room names, or timestamps that could identify a specific BGA session.
 
 ---
 
@@ -211,6 +212,6 @@ npx tsx src/cli/index.ts data bulk-replay --strategy bayesian-simple --format ta
 
 2. **BGA data extraction:** Can we reliably extract opponent plays from BGA's DOM/API, or do we need to infer from board state diffs? This depends on the Playwright integration.
 
-3. **Dataset size requirements:** How many games do we need before opponent modelling becomes meaningful? Likely 50-100+ games against the same player pool.
+3. **Dataset size requirements:** How many games do we need before opponent modelling becomes meaningful? Likely 50-100+ games. Since we don't track player identity across games, modelling is against "generic human" play patterns rather than specific individuals.
 
 4. **Versioning:** If we change the game engine (e.g., variant rules), old logs may become incompatible. The `version: 1` field handles this, but migration tooling may be needed.
