@@ -89,6 +89,7 @@ export interface TurnResolutionResult {
   readonly rowPicks: ReadonlyArray<{
     readonly playerId: string;
     readonly rowIndex: number;
+    readonly collectedCards: readonly CardNumber[];
   }>;
   readonly collected: Readonly<Record<string, CardNumber[]>>;
   readonly boardAfter: Board;
