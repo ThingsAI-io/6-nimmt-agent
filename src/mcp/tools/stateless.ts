@@ -77,11 +77,22 @@ export function validateState(params: ValidateStateParams): ValidateStateResult 
   }
 
   // Validate board structure (4 rows)
-  const board = state.board as { rows?: unknown } | undefined;
-  if (board && typeof board === 'object') {
-    const rows = board.rows;
-    if (!Array.isArray(rows)) {
-      errors.push('Board must have a "rows" array.');
+  // Accepts { rows: [...] } or { "0": [...], "1": [...], "2": [...], "3": [...] }
+  const boardRaw = state.board as Record<string, unknown> | undefined;
+  let rows: unknown[] | undefined;
+  if (boardRaw && typeof boardRaw === 'object') {
+    if (Array.isArray(boardRaw.rows)) {
+      rows = boardRaw.rows;
+    } else if ('0' in boardRaw && '1' in boardRaw && '2' in boardRaw && '3' in boardRaw) {
+      const r = [boardRaw['0'], boardRaw['1'], boardRaw['2'], boardRaw['3']];
+      if (r.every(x => Array.isArray(x))) {
+        rows = r;
+        // Normalize state.board to { rows } for downstream use
+        (state as Record<string, unknown>).board = { rows };
+      }
+    }
+    if (!rows) {
+      errors.push('Board must have a "rows" array or keys "0","1","2","3".');
     } else {
       if (rows.length !== 4) {
         errors.push(`Board must have exactly 4 rows, got ${rows.length}.`);
@@ -113,14 +124,11 @@ export function validateState(params: ValidateStateParams): ValidateStateResult 
   }
 
   // Duplicate detection: hand vs board
-  if (hand && Array.isArray(hand) && board && typeof board === 'object') {
-    const rows = (board as { rows?: unknown[] }).rows;
-    if (Array.isArray(rows)) {
-      const boardCards = new Set(rows.flat());
-      for (const c of hand) {
-        if (boardCards.has(c)) {
-          warnings.push(`Card ${c} appears in both hand and board.`);
-        }
+  if (hand && Array.isArray(hand) && rows && Array.isArray(rows)) {
+    const boardCards = new Set((rows as unknown[][]).flat());
+    for (const c of hand) {
+      if (boardCards.has(c)) {
+        warnings.push(`Card ${c} appears in both hand and board.`);
       }
     }
   }
