@@ -6,7 +6,6 @@ import {
   toRowChoiceState,
 } from '../../../src/engine';
 import type {
-  CardNumber,
   GameState,
   PendingRowPick,
 } from '../../../src/engine';

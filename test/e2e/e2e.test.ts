@@ -2,11 +2,13 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { SessionManager } from '../../src/mcp/session.js';
 import { listStrategies, recommendOnce } from '../../src/mcp/tools/stateless.js';
 
 // ── CLI Helper ──────────────────────────────────────────────────────
 
+const __dirname = resolve(fileURLToPath(import.meta.url), '..');
 const CLI = resolve(__dirname, '../../src/cli/index.ts');
 const NODE = process.execPath;
 const TSX_ARGS = ['--import', 'tsx/esm'];

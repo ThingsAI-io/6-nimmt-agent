@@ -10,7 +10,6 @@ import {
   isGameOver,
   createDeck,
   createPrng,
-  type GameState,
   type CardNumber,
   type PlayCardMove,
 } from '../../src/engine';

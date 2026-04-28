@@ -1,8 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { runCli } from './_helpers.js';
 
+const __dirname = resolve(fileURLToPath(import.meta.url), '..');
 const TEMP_DIR = resolve(__dirname, '../../');
 
 const cardState = {
