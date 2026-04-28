@@ -1,3 +1,7 @@
+---
+name: 6nimmt-advisor
+description: "6 Nimmt! (Take 6!) game advisor skill for recommending moves based on game state and strategy."
+---
 # 6 Nimmt! Game Advisor — Skill Reference
 
 ## Game Overview
@@ -146,10 +150,16 @@ Cleans up the session when the game is over.
 
 ## Key Data Structures
 
-### Board
-An object with keys `"0"` through `"3"`, each mapping to an array of card numbers (ordered):
+### Board (session tools)
+An object with keys `"0"` through `"3"`, each mapping to an array of card numbers. Alternatively, `{ "rows": [[...], [...], [...], [...]] }` also works — the server accepts both formats.
 ```json
 { "0": [3, 15, 28], "1": [44], "2": [67, 72, 80, 91, 99], "3": [12] }
+```
+
+### Board (stateless tools — `validate_state` / `recommend_once`)
+Must be nested inside the `state` object as `state.board` with a `rows` key:
+```json
+{ "rows": [[3, 15, 28], [44], [67, 72, 80, 91, 99], [12]] }
 ```
 
 ### Hand
@@ -169,3 +179,19 @@ Object mapping player IDs to cumulative penalty points:
 ```json
 { "p1": 12, "p2": 7, "p3": 24 }
 ```
+
+### State Object (for `validate_state` / `recommend_once`)
+Required fields for a **card decision**:
+- `hand`: number[] (cards 1–104)
+- `board`: `{ rows: number[][] }` (4 rows)
+- `playerScores`: `{ [playerId]: number }`
+- `playerCount`: number (2–10)
+- `round`: number
+- `turn`: number
+- `turnHistory`: array of past turn resolutions
+- `initialBoardCards`: `{ rows: number[][] }` (the 4 starter cards for this round)
+
+Additional fields for a **row decision**:
+- `triggeringCard`: number — the card that was too low for all rows
+- `revealedThisTurn`: `{ playerId: string, card: number }[]` — cards revealed so far
+- `resolutionIndex`: number — index into the resolution order

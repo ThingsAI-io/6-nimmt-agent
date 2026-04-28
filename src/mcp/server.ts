@@ -81,7 +81,7 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'round_started',
-    description: 'Notifies the session that a new round has started with the given board and hand.',
+    description: 'Notifies the session that a new round has started with the given board and hand. Board accepts { "0": [...], "1": [...], "2": [...], "3": [...] } or { "rows": [[...], ...] }.',
     inputSchema: {
       type: 'object' as const,
       properties: {
