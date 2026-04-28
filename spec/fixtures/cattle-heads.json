@@ -1,0 +1,453 @@
+{
+  "description": "All 104 cards with correct cattle head values",
+  "source": "spec/rules/6-nimmt.md",
+  "cards": [
+    {
+      "number": 1,
+      "cattleHeads": 1
+    },
+    {
+      "number": 2,
+      "cattleHeads": 1
+    },
+    {
+      "number": 3,
+      "cattleHeads": 1
+    },
+    {
+      "number": 4,
+      "cattleHeads": 1
+    },
+    {
+      "number": 5,
+      "cattleHeads": 2
+    },
+    {
+      "number": 6,
+      "cattleHeads": 1
+    },
+    {
+      "number": 7,
+      "cattleHeads": 1
+    },
+    {
+      "number": 8,
+      "cattleHeads": 1
+    },
+    {
+      "number": 9,
+      "cattleHeads": 1
+    },
+    {
+      "number": 10,
+      "cattleHeads": 3
+    },
+    {
+      "number": 11,
+      "cattleHeads": 5
+    },
+    {
+      "number": 12,
+      "cattleHeads": 1
+    },
+    {
+      "number": 13,
+      "cattleHeads": 1
+    },
+    {
+      "number": 14,
+      "cattleHeads": 1
+    },
+    {
+      "number": 15,
+      "cattleHeads": 2
+    },
+    {
+      "number": 16,
+      "cattleHeads": 1
+    },
+    {
+      "number": 17,
+      "cattleHeads": 1
+    },
+    {
+      "number": 18,
+      "cattleHeads": 1
+    },
+    {
+      "number": 19,
+      "cattleHeads": 1
+    },
+    {
+      "number": 20,
+      "cattleHeads": 3
+    },
+    {
+      "number": 21,
+      "cattleHeads": 1
+    },
+    {
+      "number": 22,
+      "cattleHeads": 5
+    },
+    {
+      "number": 23,
+      "cattleHeads": 1
+    },
+    {
+      "number": 24,
+      "cattleHeads": 1
+    },
+    {
+      "number": 25,
+      "cattleHeads": 2
+    },
+    {
+      "number": 26,
+      "cattleHeads": 1
+    },
+    {
+      "number": 27,
+      "cattleHeads": 1
+    },
+    {
+      "number": 28,
+      "cattleHeads": 1
+    },
+    {
+      "number": 29,
+      "cattleHeads": 1
+    },
+    {
+      "number": 30,
+      "cattleHeads": 3
+    },
+    {
+      "number": 31,
+      "cattleHeads": 1
+    },
+    {
+      "number": 32,
+      "cattleHeads": 1
+    },
+    {
+      "number": 33,
+      "cattleHeads": 5
+    },
+    {
+      "number": 34,
+      "cattleHeads": 1
+    },
+    {
+      "number": 35,
+      "cattleHeads": 2
+    },
+    {
+      "number": 36,
+      "cattleHeads": 1
+    },
+    {
+      "number": 37,
+      "cattleHeads": 1
+    },
+    {
+      "number": 38,
+      "cattleHeads": 1
+    },
+    {
+      "number": 39,
+      "cattleHeads": 1
+    },
+    {
+      "number": 40,
+      "cattleHeads": 3
+    },
+    {
+      "number": 41,
+      "cattleHeads": 1
+    },
+    {
+      "number": 42,
+      "cattleHeads": 1
+    },
+    {
+      "number": 43,
+      "cattleHeads": 1
+    },
+    {
+      "number": 44,
+      "cattleHeads": 5
+    },
+    {
+      "number": 45,
+      "cattleHeads": 2
+    },
+    {
+      "number": 46,
+      "cattleHeads": 1
+    },
+    {
+      "number": 47,
+      "cattleHeads": 1
+    },
+    {
+      "number": 48,
+      "cattleHeads": 1
+    },
+    {
+      "number": 49,
+      "cattleHeads": 1
+    },
+    {
+      "number": 50,
+      "cattleHeads": 3
+    },
+    {
+      "number": 51,
+      "cattleHeads": 1
+    },
+    {
+      "number": 52,
+      "cattleHeads": 1
+    },
+    {
+      "number": 53,
+      "cattleHeads": 1
+    },
+    {
+      "number": 54,
+      "cattleHeads": 1
+    },
+    {
+      "number": 55,
+      "cattleHeads": 7
+    },
+    {
+      "number": 56,
+      "cattleHeads": 1
+    },
+    {
+      "number": 57,
+      "cattleHeads": 1
+    },
+    {
+      "number": 58,
+      "cattleHeads": 1
+    },
+    {
+      "number": 59,
+      "cattleHeads": 1
+    },
+    {
+      "number": 60,
+      "cattleHeads": 3
+    },
+    {
+      "number": 61,
+      "cattleHeads": 1
+    },
+    {
+      "number": 62,
+      "cattleHeads": 1
+    },
+    {
+      "number": 63,
+      "cattleHeads": 1
+    },
+    {
+      "number": 64,
+      "cattleHeads": 1
+    },
+    {
+      "number": 65,
+      "cattleHeads": 2
+    },
+    {
+      "number": 66,
+      "cattleHeads": 5
+    },
+    {
+      "number": 67,
+      "cattleHeads": 1
+    },
+    {
+      "number": 68,
+      "cattleHeads": 1
+    },
+    {
+      "number": 69,
+      "cattleHeads": 1
+    },
+    {
+      "number": 70,
+      "cattleHeads": 3
+    },
+    {
+      "number": 71,
+      "cattleHeads": 1
+    },
+    {
+      "number": 72,
+      "cattleHeads": 1
+    },
+    {
+      "number": 73,
+      "cattleHeads": 1
+    },
+    {
+      "number": 74,
+      "cattleHeads": 1
+    },
+    {
+      "number": 75,
+      "cattleHeads": 2
+    },
+    {
+      "number": 76,
+      "cattleHeads": 1
+    },
+    {
+      "number": 77,
+      "cattleHeads": 5
+    },
+    {
+      "number": 78,
+      "cattleHeads": 1
+    },
+    {
+      "number": 79,
+      "cattleHeads": 1
+    },
+    {
+      "number": 80,
+      "cattleHeads": 3
+    },
+    {
+      "number": 81,
+      "cattleHeads": 1
+    },
+    {
+      "number": 82,
+      "cattleHeads": 1
+    },
+    {
+      "number": 83,
+      "cattleHeads": 1
+    },
+    {
+      "number": 84,
+      "cattleHeads": 1
+    },
+    {
+      "number": 85,
+      "cattleHeads": 2
+    },
+    {
+      "number": 86,
+      "cattleHeads": 1
+    },
+    {
+      "number": 87,
+      "cattleHeads": 1
+    },
+    {
+      "number": 88,
+      "cattleHeads": 5
+    },
+    {
+      "number": 89,
+      "cattleHeads": 1
+    },
+    {
+      "number": 90,
+      "cattleHeads": 3
+    },
+    {
+      "number": 91,
+      "cattleHeads": 1
+    },
+    {
+      "number": 92,
+      "cattleHeads": 1
+    },
+    {
+      "number": 93,
+      "cattleHeads": 1
+    },
+    {
+      "number": 94,
+      "cattleHeads": 1
+    },
+    {
+      "number": 95,
+      "cattleHeads": 2
+    },
+    {
+      "number": 96,
+      "cattleHeads": 1
+    },
+    {
+      "number": 97,
+      "cattleHeads": 1
+    },
+    {
+      "number": 98,
+      "cattleHeads": 1
+    },
+    {
+      "number": 99,
+      "cattleHeads": 5
+    },
+    {
+      "number": 100,
+      "cattleHeads": 3
+    },
+    {
+      "number": 101,
+      "cattleHeads": 1
+    },
+    {
+      "number": 102,
+      "cattleHeads": 1
+    },
+    {
+      "number": 103,
+      "cattleHeads": 1
+    },
+    {
+      "number": 104,
+      "cattleHeads": 1
+    }
+  ],
+  "sentinels": [
+    {
+      "number": 55,
+      "cattleHeads": 7,
+      "reason": "Special card"
+    },
+    {
+      "number": 50,
+      "cattleHeads": 3,
+      "reason": "Multiple of 10, not 11"
+    },
+    {
+      "number": 100,
+      "cattleHeads": 3,
+      "reason": "Multiple of 10"
+    },
+    {
+      "number": 5,
+      "cattleHeads": 2,
+      "reason": "Multiple of 5, not 10"
+    },
+    {
+      "number": 11,
+      "cattleHeads": 5,
+      "reason": "Multiple of 11"
+    }
+  ],
+  "checksum": {
+    "totalCattleHeads": 171,
+    "totalCards": 104
+  }
+}

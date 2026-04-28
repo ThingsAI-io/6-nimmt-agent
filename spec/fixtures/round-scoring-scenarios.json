@@ -1,0 +1,103 @@
+[
+  {
+    "id": "exact-66-triggers-game-over",
+    "description": "Player reaches exactly 66 cattle heads → game ends. p0 collects [5,10,1]: cattleHeads(5)=2(%5) + cattleHeads(10)=3(%10) + cattleHeads(1)=1(other) = 6 penalty → 60+6=66. p1 collects [1,2]: 1+1=2 → 20+2=22.",
+    "players": [
+      { "id": "p0", "scoreBefore": 60, "collectedThisRound": [5, 10, 1] },
+      { "id": "p1", "scoreBefore": 20, "collectedThisRound": [1, 2] }
+    ],
+    "expected": {
+      "penalties": { "p0": 6, "p1": 2 },
+      "scoresAfter": { "p0": 66, "p1": 22 },
+      "gameOver": true,
+      "winners": ["p1"]
+    }
+  },
+  {
+    "id": "over-66-triggers-game-over",
+    "description": "Player exceeds 66 cattle heads → game ends. p0 collects [55]: cattleHeads(55)=7(special) → 60+7=67. p1 collects [3]: cattleHeads(3)=1(other) → 30+1=31.",
+    "players": [
+      { "id": "p0", "scoreBefore": 60, "collectedThisRound": [55] },
+      { "id": "p1", "scoreBefore": 30, "collectedThisRound": [3] }
+    ],
+    "expected": {
+      "penalties": { "p0": 7, "p1": 1 },
+      "scoresAfter": { "p0": 67, "p1": 31 },
+      "gameOver": true,
+      "winners": ["p1"]
+    }
+  },
+  {
+    "id": "multiple-players-reach-66-same-round",
+    "description": "Two players hit ≥66 in same round → game ends, lowest wins. p0 collects [11,2]: cattleHeads(11)=5(%11) + cattleHeads(2)=1(other) = 6 → 60+6=66. p1 collects [10]: cattleHeads(10)=3(%10) → 63+3=66. p2 collects [4]: cattleHeads(4)=1(other) → 10+1=11.",
+    "players": [
+      { "id": "p0", "scoreBefore": 60, "collectedThisRound": [11, 2] },
+      { "id": "p1", "scoreBefore": 63, "collectedThisRound": [10] },
+      { "id": "p2", "scoreBefore": 10, "collectedThisRound": [4] }
+    ],
+    "expected": {
+      "penalties": { "p0": 6, "p1": 3, "p2": 1 },
+      "scoresAfter": { "p0": 66, "p1": 66, "p2": 11 },
+      "gameOver": true,
+      "winners": ["p2"]
+    }
+  },
+  {
+    "id": "all-players-over-66",
+    "description": "Every player ≥66 → game ends, lowest still wins. p0 collects [20,7]: cattleHeads(20)=3(%10) + cattleHeads(7)=1(other) = 4 → 62+4=66. p1 collects [3]: cattleHeads(3)=1(other) → 70+1=71. p2 collects [22]: cattleHeads(22)=5(%11) → 65+5=70.",
+    "players": [
+      { "id": "p0", "scoreBefore": 62, "collectedThisRound": [20, 7] },
+      { "id": "p1", "scoreBefore": 70, "collectedThisRound": [3] },
+      { "id": "p2", "scoreBefore": 65, "collectedThisRound": [22] }
+    ],
+    "expected": {
+      "penalties": { "p0": 4, "p1": 1, "p2": 5 },
+      "scoresAfter": { "p0": 66, "p1": 71, "p2": 70 },
+      "gameOver": true,
+      "winners": ["p0"]
+    }
+  },
+  {
+    "id": "no-player-reaches-66-game-continues",
+    "description": "No player ≥66 → game continues. p0 collects [10,5]: cattleHeads(10)=3(%10) + cattleHeads(5)=2(%5) = 5 → 50+5=55. p1 collects [1,2,3]: 1+1+1=3(all other) → 40+3=43.",
+    "players": [
+      { "id": "p0", "scoreBefore": 50, "collectedThisRound": [10, 5] },
+      { "id": "p1", "scoreBefore": 40, "collectedThisRound": [1, 2, 3] }
+    ],
+    "expected": {
+      "penalties": { "p0": 5, "p1": 3 },
+      "scoresAfter": { "p0": 55, "p1": 43 },
+      "gameOver": false,
+      "winners": []
+    }
+  },
+  {
+    "id": "tie-for-lowest-score",
+    "description": "Two players share lowest score → both win. p0 collects [11,2]: cattleHeads(11)=5(%11) + cattleHeads(2)=1(other) = 6 → 60+6=66. p1 collects [4]: cattleHeads(4)=1(other) → 30+1=31. p2 collects [6]: cattleHeads(6)=1(other) → 30+1=31.",
+    "players": [
+      { "id": "p0", "scoreBefore": 60, "collectedThisRound": [11, 2] },
+      { "id": "p1", "scoreBefore": 30, "collectedThisRound": [4] },
+      { "id": "p2", "scoreBefore": 30, "collectedThisRound": [6] }
+    ],
+    "expected": {
+      "penalties": { "p0": 6, "p1": 1, "p2": 1 },
+      "scoresAfter": { "p0": 66, "p1": 31, "p2": 31 },
+      "gameOver": true,
+      "winners": ["p1", "p2"]
+    }
+  },
+  {
+    "id": "score-is-cattle-heads-not-card-numbers",
+    "description": "Verifies score = sum of cattleHeads, NOT card face values. p0 collects [55,11,22]: cattleHeads(55)=7(special) + cattleHeads(11)=5(%11) + cattleHeads(22)=5(%11) = 17 (card sum=88, but penalty=17). p1 collects [99,98,97,96]: cattleHeads(99)=5(%11, 99=11×9) + cattleHeads(98)=1(other) + cattleHeads(97)=1(other) + cattleHeads(96)=1(other) = 8 (card sum=390, but penalty=8).",
+    "players": [
+      { "id": "p0", "scoreBefore": 0, "collectedThisRound": [55, 11, 22] },
+      { "id": "p1", "scoreBefore": 0, "collectedThisRound": [99, 98, 97, 96] }
+    ],
+    "expected": {
+      "penalties": { "p0": 17, "p1": 8 },
+      "scoresAfter": { "p0": 17, "p1": 8 },
+      "gameOver": false,
+      "winners": []
+    }
+  }
+]

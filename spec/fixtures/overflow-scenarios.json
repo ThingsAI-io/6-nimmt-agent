@@ -1,0 +1,154 @@
+[
+  {
+    "id": "overflow-basic",
+    "description": "6th card on row 0 triggers collection of 5 cards",
+    "board": [[3, 12, 24, 55, 78], [40], [60], [90]],
+    "plays": [{ "playerId": "p0", "card": 80 }],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 80, "rowIndex": 0, "causedOverflow": true, "collectedCards": [3, 12, 24, 55, 78] }
+      ],
+      "rowPicks": [],
+      "collected": { "p0": [3, 12, 24, 55, 78] },
+      "boardAfter": [[80], [40], [60], [90]]
+    }
+  },
+  {
+    "id": "overflow-multiple-rows",
+    "description": "Two different players overflow two different rows in the same turn",
+    "board": [[2, 10, 15, 20, 25], [30, 35, 40, 45, 50], [60], [90]],
+    "plays": [
+      { "playerId": "p0", "card": 27 },
+      { "playerId": "p1", "card": 55 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 27, "rowIndex": 0, "causedOverflow": true, "collectedCards": [2, 10, 15, 20, 25] },
+        { "playerId": "p1", "card": 55, "rowIndex": 1, "causedOverflow": true, "collectedCards": [30, 35, 40, 45, 50] }
+      ],
+      "rowPicks": [],
+      "collected": { "p0": [2, 10, 15, 20, 25], "p1": [30, 35, 40, 45, 50] },
+      "boardAfter": [[27], [55], [60], [90]]
+    }
+  },
+  {
+    "id": "overflow-after-rule4-pick",
+    "description": "First card triggers rule 4 (lower than all tails, player picks a row), subsequent card overflows a different row",
+    "board": [[10, 20, 30, 40, 50], [55], [70], [80]],
+    "plays": [
+      { "playerId": "p0", "card": 5 },
+      { "playerId": "p1", "card": 52 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 5, "rowIndex": 1, "causedOverflow": false, "collectedCards": [55] },
+        { "playerId": "p1", "card": 52, "rowIndex": 0, "causedOverflow": true, "collectedCards": [10, 20, 30, 40, 50] }
+      ],
+      "rowPicks": [
+        { "playerId": "p0", "card": 5, "pickedRowIndex": 1 }
+      ],
+      "collected": { "p0": [55], "p1": [10, 20, 30, 40, 50] },
+      "boardAfter": [[52], [5], [70], [80]]
+    }
+  },
+  {
+    "id": "overflow-changes-target",
+    "description": "Player A overflows row 0 (clears it with low card). Player B's card now targets row 0 instead of row 1 because row 0's new tail is closer.",
+    "board": [[4, 8, 16, 32, 64], [70], [80], [90]],
+    "plays": [
+      { "playerId": "p0", "card": 65 },
+      { "playerId": "p1", "card": 68 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 65, "rowIndex": 0, "causedOverflow": true, "collectedCards": [4, 8, 16, 32, 64] },
+        { "playerId": "p1", "card": 68, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] }
+      ],
+      "rowPicks": [],
+      "collected": { "p0": [4, 8, 16, 32, 64] },
+      "boardAfter": [[65, 68], [70], [80], [90]]
+    }
+  },
+  {
+    "id": "overflow-10-player-cascade",
+    "description": "10 plays where 3 overflows occur in sequence, later placements affected by earlier overflow results",
+    "board": [[5, 10, 15, 20, 25], [30, 35, 40, 45, 50], [60], [80]],
+    "plays": [
+      { "playerId": "p0", "card": 26 },
+      { "playerId": "p1", "card": 31 },
+      { "playerId": "p2", "card": 51 },
+      { "playerId": "p3", "card": 52 },
+      { "playerId": "p4", "card": 53 },
+      { "playerId": "p5", "card": 54 },
+      { "playerId": "p6", "card": 55 },
+      { "playerId": "p7", "card": 61 },
+      { "playerId": "p8", "card": 81 },
+      { "playerId": "p9", "card": 85 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 26, "rowIndex": 0, "causedOverflow": true, "collectedCards": [5, 10, 15, 20, 25] },
+        { "playerId": "p1", "card": 31, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p2", "card": 51, "rowIndex": 1, "causedOverflow": true, "collectedCards": [30, 35, 40, 45, 50] },
+        { "playerId": "p3", "card": 52, "rowIndex": 1, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p4", "card": 53, "rowIndex": 1, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p5", "card": 54, "rowIndex": 1, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p6", "card": 55, "rowIndex": 1, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p7", "card": 61, "rowIndex": 2, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p8", "card": 81, "rowIndex": 3, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p9", "card": 85, "rowIndex": 3, "causedOverflow": false, "collectedCards": [] }
+      ],
+      "rowPicks": [],
+      "collected": { "p0": [5, 10, 15, 20, 25], "p2": [30, 35, 40, 45, 50] },
+      "boardAfter": [[26, 31], [51, 52, 53, 54, 55], [60, 61], [80, 81, 85]]
+    }
+  },
+  {
+    "id": "overflow-max-penalty",
+    "description": "Row has 5 high-cattle-head cards (multiples of 11) causing maximum penalty on overflow",
+    "board": [[11, 22, 33, 44, 55], [60], [70], [80]],
+    "plays": [{ "playerId": "p0", "card": 56 }],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 56, "rowIndex": 0, "causedOverflow": true, "collectedCards": [11, 22, 33, 44, 55] }
+      ],
+      "rowPicks": [],
+      "collected": { "p0": [11, 22, 33, 44, 55] },
+      "boardAfter": [[56], [60], [70], [80]]
+    }
+  },
+  {
+    "id": "overflow-same-row-twice",
+    "description": "Same row overflows twice in one 10-player turn: first overflow clears it, cards pile up, second overflow clears again",
+    "board": [[1, 2, 3, 4, 5], [50], [70], [90]],
+    "plays": [
+      { "playerId": "p0", "card": 6 },
+      { "playerId": "p1", "card": 7 },
+      { "playerId": "p2", "card": 8 },
+      { "playerId": "p3", "card": 9 },
+      { "playerId": "p4", "card": 10 },
+      { "playerId": "p5", "card": 11 },
+      { "playerId": "p6", "card": 12 },
+      { "playerId": "p7", "card": 13 },
+      { "playerId": "p8", "card": 14 },
+      { "playerId": "p9", "card": 15 }
+    ],
+    "expected": {
+      "resolutions": [
+        { "playerId": "p0", "card": 6, "rowIndex": 0, "causedOverflow": true, "collectedCards": [1, 2, 3, 4, 5] },
+        { "playerId": "p1", "card": 7, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p2", "card": 8, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p3", "card": 9, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p4", "card": 10, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p5", "card": 11, "rowIndex": 0, "causedOverflow": true, "collectedCards": [6, 7, 8, 9, 10] },
+        { "playerId": "p6", "card": 12, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p7", "card": 13, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p8", "card": 14, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] },
+        { "playerId": "p9", "card": 15, "rowIndex": 0, "causedOverflow": false, "collectedCards": [] }
+      ],
+      "rowPicks": [],
+      "collected": { "p0": [1, 2, 3, 4, 5], "p5": [6, 7, 8, 9, 10] },
+      "boardAfter": [[11, 12, 13, 14, 15], [50], [70], [90]]
+    }
+  }
+]

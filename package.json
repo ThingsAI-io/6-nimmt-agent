@@ -1,0 +1,39 @@
+{
+  "name": "6nimmt",
+  "version": "1.0.0",
+  "description": "6 nimmt! game engine and CLI with anti-cheat strategies",
+  "type": "module",
+  "main": "dist/engine/index.js",
+  "bin": {
+    "6nimmt": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:fixtures": "vitest run test/fixtures/",
+    "test:smoke": "vitest run test/smoke/",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "6nimmt",
+    "card-game",
+    "game-engine",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.18.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
