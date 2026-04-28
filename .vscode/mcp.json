@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "6nimmt": {
+      "command": "npx",
+      "args": ["tsx", "src/cli/index.ts", "serve"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest", "--browser", "msedge"]
+    }
+  }
+}
