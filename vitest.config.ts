@@ -54,6 +54,18 @@ export default defineConfig({
         test: {
           include: ['test/mcp/**/*.test.ts']
         }
+      },
+      {
+        name: 'sim',
+        test: {
+          include: ['test/sim/**/*.test.ts']
+        }
+      },
+      {
+        name: 'strategies',
+        test: {
+          include: ['test/strategies/**/*.test.ts']
+        }
       }
     ]
   }

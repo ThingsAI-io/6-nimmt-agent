@@ -57,10 +57,16 @@ jobs:
       - name: Check protected paths
         run: |
           # Check if protected files were modified
-          PROTECTED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^(spec/fixtures/|test/reference/|eslint\.config)' || true)
+          BASE_REF="origin/${{ github.base_ref }}"
+          PROTECTED_FILES=$(git diff --name-only "$BASE_REF"...HEAD | grep -E '^(spec/fixtures/|test/reference/|eslint\.config)' || true)
           if [ -n "$PROTECTED_FILES" ]; then
-            # Check for harness-amendment trailer or label
-            if ! git log origin/${{ github.base_ref }}...HEAD --format=%B | grep -q "harness-amendment"; then
+            # Allow initial harness landing when protected paths don't exist on base
+            BASE_HAS_PROTECTED=false
+            if git ls-tree -r --name-only "$BASE_REF" | grep -Eq '^(spec/fixtures/|test/reference/|eslint\.config)'; then
+              BASE_HAS_PROTECTED=true
+            fi
+
+            if [ "$BASE_HAS_PROTECTED" = true ] && ! git log "$BASE_REF"...HEAD --format=%B | grep -q "harness-amendment"; then
               echo "::error::Protected harness files modified without 'harness-amendment' trailer:"
               echo "$PROTECTED_FILES"
               exit 1
