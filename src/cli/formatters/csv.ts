@@ -20,9 +20,11 @@ function escapeCsvField(value: string): string {
 }
 
 function formatSimulateCsv(data: SimulateResult): string {
-  const header = 'strategy,wins,winRate,avgScore,medianScore,minScore,maxScore,scoreStdDev';
-  const rows = data.results.map((r) =>
+  const header = 'seat,playerId,strategy,wins,winRate,avgScore,medianScore,minScore,maxScore,scoreStdDev';
+  const rows = data.perSeat.map((r) =>
     [
+      r.seatIndex,
+      escapeCsvField(r.playerId),
       escapeCsvField(r.strategy),
       r.wins,
       r.winRate,

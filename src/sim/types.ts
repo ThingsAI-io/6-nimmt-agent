@@ -26,6 +26,7 @@ export interface BatchResult {
   readonly gamesPlayed: number;
   readonly config: SimConfig;
   readonly perStrategy: ReadonlyMap<string, StrategyStats>;
+  readonly gameResults: readonly GameResult[];
 }
 
 export interface StrategyStats {

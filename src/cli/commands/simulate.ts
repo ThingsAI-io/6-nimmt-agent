@@ -3,8 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { runBatch } from '../../sim/index.js';
 import { strategies } from '../../engine/index.js';
 import { format } from '../formatters/index.js';
-import type { SimulateResult, StrategyResultRow, OutputFormat } from '../formatters/types.js';
+import type { SimulateResult, StrategyResultRow, SeatResultRow, OutputFormat } from '../formatters/types.js';
 import { didYouMean, outputError, createMeta, parseStrategies } from '../helpers.js';
+import { computeStats } from '../../sim/stats.js';
+import type { GameResult } from '../../sim/types.js';
 
 function buildResultRows(
   result: import('../../sim/types.js').BatchResult,
@@ -34,6 +36,43 @@ function buildResultRows(
       scoreStdDev: stats.scoreStdDev,
     });
   }
+  return rows;
+}
+
+function buildSeatRows(
+  result: import('../../sim/types.js').BatchResult,
+  config: import('../../sim/types.js').SimConfig,
+): SeatResultRow[] {
+  const rows: SeatResultRow[] = [];
+  const numPlayers = config.players.length;
+
+  for (let seat = 0; seat < numPlayers; seat++) {
+    const player = config.players[seat];
+    const scores: number[] = [];
+    let wins = 0;
+
+    for (const game of result.gameResults) {
+      // playerResults is sorted by score, find this player by id
+      const pr = game.playerResults.find((p) => p.id === player.id)!;
+      scores.push(pr.finalScore);
+      if (pr.rank === 1) wins++;
+    }
+
+    const stats = computeStats(scores, wins, result.gamesPlayed);
+    rows.push({
+      seatIndex: seat,
+      playerId: player.id,
+      strategy: player.strategy,
+      wins: stats.wins,
+      winRate: stats.winRate,
+      avgScore: stats.avgScore,
+      medianScore: stats.medianScore,
+      minScore: stats.minScore,
+      maxScore: stats.maxScore,
+      scoreStdDev: stats.scoreStdDev,
+    });
+  }
+
   return rows;
 }
 
@@ -113,6 +152,7 @@ export const simulateCommand = new Command('simulate')
         strategies: strategyNames,
         seed,
         results: buildResultRows(result, config),
+        perSeat: buildSeatRows(result, config),
       };
 
       console.log(format(output, fmt));
