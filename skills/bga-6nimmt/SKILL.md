@@ -1,3 +1,8 @@
+---
+name: bga-6nimmt
+description: "Playwright automation skill for playing 6 Nimmt! on Board Game Arena — DOM selectors, game state reading, card playing, and row picking."
+---
+
 # BGA 6 Nimmt! Playwright Skill
 
 ## Purpose
