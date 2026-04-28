@@ -56,10 +56,7 @@ function buildTurnResolution(state: GameState): TurnResolution {
     rowPicks: entry.rowPicks.map((rp) => ({
       playerId: rp.playerId,
       rowIndex: rp.rowIndex,
-      collectedCards:
-        'collectedCards' in rp && Array.isArray((rp as Record<string, unknown>).collectedCards)
-          ? (rp as Record<string, unknown>).collectedCards as readonly CardNumber[]
-          : [],
+      collectedCards: [...rp.collectedCards],
     })),
     boardAfter: entry.boardAfter.rows.map((row) => [...row]),
   };
@@ -200,16 +197,11 @@ export const playCommand = new Command('play')
             overflow: r.causedOverflow,
             ...(r.collectedCards ? { collectedCards: [...r.collectedCards] as number[] } : {}),
           }));
-          const rowPicks = lastEntry.rowPicks.map((rp) => {
-            const res = lastEntry.resolutions.find(
-              (r) => r.playerId === rp.playerId && r.collectedCards,
-            );
-            return {
-              playerId: rp.playerId,
-              rowIndex: rp.rowIndex,
-              collectedCards: res?.collectedCards ? ([...res.collectedCards] as number[]) : [],
-            };
-          });
+          const rowPicks = lastEntry.rowPicks.map((rp) => ({
+            playerId: rp.playerId,
+            rowIndex: rp.rowIndex,
+            collectedCards: [...rp.collectedCards] as number[],
+          }));
 
           turns.push({
             turn: lastEntry.turn,

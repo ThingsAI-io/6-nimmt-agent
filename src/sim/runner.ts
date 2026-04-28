@@ -58,10 +58,7 @@ function buildTurnResolution(state: GameState): TurnResolution {
     rowPicks: entry.rowPicks.map((rp) => ({
       playerId: rp.playerId,
       rowIndex: rp.rowIndex,
-      collectedCards:
-        'collectedCards' in rp && Array.isArray((rp as any).collectedCards)
-          ? (rp as any).collectedCards
-          : [],
+      collectedCards: [...rp.collectedCards],
     })),
     boardAfter: entry.boardAfter.rows.map((row) => [...row]),
   };
