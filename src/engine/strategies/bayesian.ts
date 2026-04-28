@@ -1,0 +1,165 @@
+import type { Strategy, TurnResolution } from './types';
+import type { CardNumber, Board } from '../types';
+import { cattleHeads } from '../card';
+
+const K = 200; // Monte Carlo samples per decision
+
+function fewestHeadsRowIndex(rows: readonly (readonly CardNumber[])[]): 0 | 1 | 2 | 3 {
+  let best = 0;
+  let bestP = Infinity;
+  for (let i = 0; i < rows.length; i++) {
+    const p = rows[i].reduce((s, c) => s + cattleHeads(c), 0);
+    if (p < bestP) {
+      bestP = p;
+      best = i;
+    }
+  }
+  return best as 0 | 1 | 2 | 3;
+}
+
+/** Simulate placing all plays onto the board, return penalty for targetCard's owner. */
+function simulateTurn(
+  plays: { card: CardNumber; isMe: boolean }[],
+  board: CardNumber[][],
+): number {
+  const sorted = [...plays].sort((a, b) => a.card - b.card);
+  let penalty = 0;
+
+  for (const play of sorted) {
+    // Find best row: tail < card and largest such tail
+    let bestRow = -1;
+    let bestTail = -1;
+    for (let i = 0; i < board.length; i++) {
+      const tail = board[i][board[i].length - 1];
+      if (tail < play.card && tail > bestTail) {
+        bestTail = tail;
+        bestRow = i;
+      }
+    }
+
+    if (bestRow === -1) {
+      // Card lower than all tails — forced row pick (fewest heads)
+      const rowIdx = fewestHeadsRowIndex(board);
+      if (play.isMe) {
+        penalty += board[rowIdx].reduce((s, c) => s + cattleHeads(c), 0);
+      }
+      board[rowIdx] = [play.card];
+    } else if (board[bestRow].length >= 5) {
+      // Overflow: 6th card
+      if (play.isMe) {
+        penalty += board[bestRow].reduce((s, c) => s + cattleHeads(c), 0);
+      }
+      board[bestRow] = [play.card];
+    } else {
+      board[bestRow].push(play.card);
+    }
+  }
+
+  return penalty;
+}
+
+/** Deep-copy board rows into mutable arrays. */
+function cloneBoard(board: Board): CardNumber[][] {
+  return board.rows.map((row) => [...row]);
+}
+
+/** Fisher-Yates shuffle (in-place) using provided rng. */
+function fisherYates<T>(arr: T[], rng: () => number): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
+export function createBayesianSimpleStrategy(): Strategy {
+  let rng: () => number = Math.random;
+  let playerCount = 2;
+  let seenCards = new Set<number>();
+
+  return {
+    name: 'bayesian-simple',
+
+    onGameStart(config) {
+      rng = config.rng;
+      playerCount = config.playerCount;
+      seenCards = new Set();
+    },
+
+    onTurnResolved(resolution: TurnResolution) {
+      for (const play of resolution.plays) {
+        seenCards.add(play.card);
+      }
+    },
+
+    chooseCard(state) {
+      const { hand, board, turn } = state;
+      const opponentCount = playerCount - 1;
+      const cardsPerPlayer = 10 - turn + 1; // cards remaining in each hand
+
+      // Build unknown pool
+      const known = new Set<number>();
+      for (const c of hand) known.add(c);
+      for (const row of board.rows) {
+        for (const c of row) known.add(c);
+      }
+      for (const c of seenCards) known.add(c);
+      // Also include initial board cards and turnHistory plays
+      for (const entry of state.turnHistory) {
+        for (const play of entry.plays) known.add(play.card);
+      }
+      for (const row of state.initialBoardCards.rows) {
+        for (const c of row) known.add(c);
+      }
+
+      const unknownPool: CardNumber[] = [];
+      for (let i = 1; i <= 104; i++) {
+        if (!known.has(i)) unknownPool.push(i as CardNumber);
+      }
+
+      let bestCard = hand[0];
+      let bestPenalty = Infinity;
+
+      for (const myCard of hand) {
+        let totalPenalty = 0;
+
+        for (let sample = 0; sample < K; sample++) {
+          // Shuffle unknown pool and deal to opponents
+          fisherYates(unknownPool, rng);
+
+          const plays: { card: CardNumber; isMe: boolean }[] = [
+            { card: myCard, isMe: true },
+          ];
+
+          let offset = 0;
+          for (let opp = 0; opp < opponentCount; opp++) {
+            const handSize = Math.min(cardsPerPlayer, unknownPool.length - offset);
+            if (handSize > 0) {
+              // Pick a random card from this opponent's dealt hand
+              const oppCardIdx = offset + Math.floor(rng() * handSize);
+              plays.push({ card: unknownPool[oppCardIdx], isMe: false });
+              offset += handSize;
+            }
+          }
+
+          const boardCopy = cloneBoard(board);
+          totalPenalty += simulateTurn(plays, boardCopy);
+        }
+
+        const avgPenalty = totalPenalty / K;
+        if (avgPenalty < bestPenalty) {
+          bestPenalty = avgPenalty;
+          bestCard = myCard;
+        }
+      }
+
+      return bestCard;
+    },
+
+    chooseRow(state) {
+      return fewestHeadsRowIndex(state.board.rows);
+    },
+  };
+}
