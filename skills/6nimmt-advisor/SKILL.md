@@ -157,9 +157,13 @@ An object with keys `"0"` through `"3"`, each mapping to an array of card number
 ```
 
 ### Board (stateless tools — `validate_state` / `recommend_once`)
-Must be nested inside the `state` object as `state.board` with a `rows` key:
+Nested inside `state.board`. Both formats accepted:
 ```json
 { "rows": [[3, 15, 28], [44], [67, 72, 80, 91, 99], [12]] }
+```
+or:
+```json
+{ "0": [3, 15, 28], "1": [44], "2": [67, 72, 80, 91, 99], "3": [12] }
 ```
 
 ### Hand
@@ -175,9 +179,13 @@ Array of objects showing who played what:
 ```
 
 ### Scores
-Object mapping player IDs to cumulative penalty points:
+Both formats accepted — object map or array:
 ```json
 { "p1": 12, "p2": 7, "p3": 24 }
+```
+or:
+```json
+[{ "playerId": "p1", "score": 12 }, { "playerId": "p2", "score": 7 }]
 ```
 
 ### State Object (for `validate_state` / `recommend_once`)
