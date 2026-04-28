@@ -262,28 +262,36 @@ export function createServer(config: ServerConfig = {}) {
       }
 
       case 'start_session':
-        return resultOrError(sessionManager.startSession(args as Record<string, unknown>));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return resultOrError(sessionManager.startSession(args as any));
 
       case 'round_started':
-        return resultOrError(sessionManager.roundStarted(args as Record<string, unknown>));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return resultOrError(sessionManager.roundStarted(args as any));
 
       case 'turn_resolved':
-        return resultOrError(sessionManager.turnResolved(args as Record<string, unknown>));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return resultOrError(sessionManager.turnResolved(args as any));
 
       case 'round_ended':
-        return resultOrError(sessionManager.roundEnded(args as Record<string, unknown>));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return resultOrError(sessionManager.roundEnded(args as any));
 
       case 'session_recommend':
-        return resultOrError(sessionManager.sessionRecommend(args as Record<string, unknown>));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return resultOrError(sessionManager.sessionRecommend(args as any));
 
       case 'resync_session':
-        return resultOrError(sessionManager.resyncSession(args as Record<string, unknown>));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return resultOrError(sessionManager.resyncSession(args as any));
 
       case 'session_status':
-        return resultOrError(sessionManager.sessionStatus(args as Record<string, unknown>));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return resultOrError(sessionManager.sessionStatus(args as any));
 
       case 'end_session':
-        return resultOrError(sessionManager.endSession(args as Record<string, unknown>));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return resultOrError(sessionManager.endSession(args as any));
 
       default:
         return toolError(notImplemented(name));
