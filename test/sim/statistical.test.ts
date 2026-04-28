@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createHash } from 'node:crypto';
-import { runBatch, runGame } from '../../src/sim';
-import type { SimConfig } from '../../src/sim';
+import { runBatch } from '../../src/sim';
+import type { SimConfig, GameResult } from '../../src/sim';
 
 function makeConfig(playerCount: number, seed?: string): SimConfig {
   return {
@@ -17,24 +16,13 @@ describe.each([2, 5, 10])('Statistical smoke (%i players)', (playerCount) => {
   const batchSeed = `stat-smoke-${playerCount}p`;
   const games = 1000;
 
-  // Run the batch once, share across tests in this describe block
   let batch: ReturnType<typeof runBatch>;
-  let allResults: ReturnType<typeof runGame>[];
+  let allResults: readonly GameResult[];
 
-  // Collect individual game results for per-game assertions
   function ensureResults() {
     if (batch) return;
     batch = runBatch(makeConfig(playerCount), games, batchSeed);
-    // Re-run individually to inspect per-game data (use same derived seeds)
-    // Actually, we can just run runBatch and check aggregate stats.
-    // For per-game checks, run a smaller sample.
-    allResults = [];
-    for (let i = 0; i < games; i++) {
-      const gameSeed = createHash('sha256')
-        .update(batchSeed + '/' + i)
-        .digest('hex');
-      allResults.push(runGame({ ...makeConfig(playerCount), seed: gameSeed }));
-    }
+    allResults = batch.gameResults;
   }
 
   it('all games terminate (no infinite loops)', () => {

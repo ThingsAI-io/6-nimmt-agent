@@ -229,6 +229,9 @@ export function recommendOnce(params: RecommendOnceParams): RecommendOnceResult 
     try {
       if (decision === 'card') {
         const hand = (state.hand as number[]) ?? [];
+        if (hand.length === 0) {
+          return invalidState('Cannot recommend a card: hand is empty.');
+        }
         const fallbackCard = Math.min(...hand);
         return {
           ok: true,

@@ -179,6 +179,11 @@ export function resolveTurn(
       // Rule 4: player must pick a row
       const tempState: GameState = { ...state, board };
       const pickedRow = rowPickFn(play.playerId, tempState);
+      if (!Number.isInteger(pickedRow) || pickedRow < 0 || pickedRow > 3) {
+        throw new Error(
+          `rowPickFn returned invalid row index for player ${play.playerId}: ${String(pickedRow)}. Expected an integer in [0, 3].`,
+        );
+      }
       const { newBoard, collected } = collectRow(board, pickedRow, play.card);
       board = newBoard;
 
@@ -190,7 +195,7 @@ export function resolveTurn(
         playerId: play.playerId,
         card: play.card,
         rowIndex: pickedRow,
-        causedOverflow: true,
+        causedOverflow: false,
         collectedCards: [...collected],
       });
       rowPicks.push({ playerId: play.playerId, rowIndex: pickedRow, collectedCards: [...collected] });
