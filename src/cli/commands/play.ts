@@ -176,7 +176,6 @@ export const playCommand = new Command('play')
             card: play.card as number,
           }));
 
-          const prevState = state;
           state = resolveTurn(state, plays, (playerId: string, tempState: GameState): number => {
             const strat = strategyMap.get(playerId)!;
             const play = sortedPlays.find((sp) => sp.playerId === playerId)!;

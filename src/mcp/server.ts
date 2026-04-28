@@ -262,28 +262,28 @@ export function createServer(config: ServerConfig = {}) {
       }
 
       case 'start_session':
-        return resultOrError(sessionManager.startSession(args as any));
+        return resultOrError(sessionManager.startSession(args as Record<string, unknown>));
 
       case 'round_started':
-        return resultOrError(sessionManager.roundStarted(args as any));
+        return resultOrError(sessionManager.roundStarted(args as Record<string, unknown>));
 
       case 'turn_resolved':
-        return resultOrError(sessionManager.turnResolved(args as any));
+        return resultOrError(sessionManager.turnResolved(args as Record<string, unknown>));
 
       case 'round_ended':
-        return resultOrError(sessionManager.roundEnded(args as any));
+        return resultOrError(sessionManager.roundEnded(args as Record<string, unknown>));
 
       case 'session_recommend':
-        return resultOrError(sessionManager.sessionRecommend(args as any));
+        return resultOrError(sessionManager.sessionRecommend(args as Record<string, unknown>));
 
       case 'resync_session':
-        return resultOrError(sessionManager.resyncSession(args as any));
+        return resultOrError(sessionManager.resyncSession(args as Record<string, unknown>));
 
       case 'session_status':
-        return resultOrError(sessionManager.sessionStatus(args as any));
+        return resultOrError(sessionManager.sessionStatus(args as Record<string, unknown>));
 
       case 'end_session':
-        return resultOrError(sessionManager.endSession(args as any));
+        return resultOrError(sessionManager.endSession(args as Record<string, unknown>));
 
       default:
         return toolError(notImplemented(name));

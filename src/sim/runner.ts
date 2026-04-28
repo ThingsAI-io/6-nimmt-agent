@@ -10,7 +10,6 @@ import {
   resolveTurn,
   scoreRound,
   isGameOver,
-  getWinners,
   toCardChoiceState,
   strategies,
   cattleHeads,

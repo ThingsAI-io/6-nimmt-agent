@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   createGame,
   dealRound,
@@ -9,7 +10,6 @@ import {
   isGameOver,
   getWinners,
 } from '../../../src/engine/game';
-import { cattleHeads } from '../../../src/engine/card';
 import type { CardNumber, GameState, PlayCardMove, Board } from '../../../src/engine/types';
 
 // ── Load fixtures ──────────────────────────────────────────────────────
@@ -59,6 +59,7 @@ interface GameTrace {
   winners: string[];
 }
 
+const __dirname = join(fileURLToPath(import.meta.url), '..');
 const fixturePath = join(__dirname, '../../../spec/fixtures/full-game-traces.json');
 const traces: GameTrace[] = JSON.parse(readFileSync(fixturePath, 'utf-8'));
 

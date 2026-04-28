@@ -8,7 +8,6 @@ import {
   getWinners,
 } from '../../../src/engine/game';
 import type { CardNumber, GameState, PlayCardMove } from '../../../src/engine/types';
-import { cattleHeads } from '../../../src/engine/card';
 
 // ── createGame ─────────────────────────────────────────────────────────
 

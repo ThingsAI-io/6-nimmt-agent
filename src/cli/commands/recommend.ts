@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { readFileSync } from 'node:fs';
-import type { CardNumber, CardChoiceState, RowChoiceState, Board } from '../../engine/types.js';
+import type { CardChoiceState, RowChoiceState } from '../../engine/types.js';
 import type { TurnResolution } from '../../engine/strategies/types.js';
 import { strategies, deriveSeedState, xoshiro256ss } from '../../engine/index.js';
 import { format } from '../formatters/index.js';

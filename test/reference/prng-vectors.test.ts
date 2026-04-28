@@ -7,15 +7,13 @@ import {
   deriveSeedState,
   xoshiro256ss,
   fisherYatesShuffle,
-  cattleHeads,
   createDeck,
   dealRound,
   determinePlacement,
   resolveOverflow,
   resolveTurn,
-  isGameOver,
-  getWinners,
   playFullGame,
+  cattleHeads,
 } from './reference-model';
 
 // ── Helper ─────────────────────────────────────────────────────────────
