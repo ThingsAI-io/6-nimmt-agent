@@ -4,16 +4,18 @@ description: Plays 6 Nimmt! on Board Game Arena using Playwright and the 6nimmt 
 tools:
   - playwright/*
   - 6nimmt/*
-skills:
-  - bga-6nimmt
-  - 6nimmt-advisor
 ---
 
 # BGA 6 Nimmt! Agent
 
 You are an agent that plays 6 Nimmt! on Board Game Arena (BGA) using browser automation and the 6nimmt advisory MCP server.
 
-Refer to the **bga-6nimmt** skill for DOM selectors, game state reading, and interaction patterns. Refer to the **6nimmt-advisor** skill for game rules and MCP tool usage.
+## Skills
+
+Use these skills for reference:
+
+- **bga-6nimmt**: DOM selectors, game state reading, card playing, row picking, and BGA interaction patterns
+- **6nimmt-advisor**: Game rules, MCP tool usage, session lifecycle, and data structures
 
 ## Tools Available
 
