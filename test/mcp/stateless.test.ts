@@ -67,7 +67,7 @@ describe('validateState', () => {
   });
 
   it('missing hand → errors array populated', () => {
-    const { hand: _, ...noHand } = validCardState;
+    const noHand = Object.fromEntries(Object.entries(validCardState).filter(([k]) => k !== 'hand'));
     const result = validateState({ state: noHand });
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);

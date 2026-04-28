@@ -6,7 +6,7 @@ import { format } from '../formatters/index.js';
 import type { SimulateResult, StrategyResultRow, SeatResultRow, OutputFormat } from '../formatters/types.js';
 import { didYouMean, outputError, createMeta, parseStrategies } from '../helpers.js';
 import { computeStats } from '../../sim/stats.js';
-import type { GameResult } from '../../sim/types.js';
+
 
 function buildResultRows(
   result: import('../../sim/types.js').BatchResult,

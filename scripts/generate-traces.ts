@@ -13,7 +13,6 @@ import {
   type Board,
   type CardNumber,
   type Play,
-  type Row,
 } from '../test/reference/reference-model.js';
 
 // ── Types for the trace schema ──────────────────────────────────────────

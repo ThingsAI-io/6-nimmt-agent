@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { createHash } from 'node:crypto';
 import { runBatch, runGame } from '../../src/sim';
 import type { SimConfig } from '../../src/sim';
 
@@ -29,7 +30,6 @@ describe.each([2, 5, 10])('Statistical smoke (%i players)', (playerCount) => {
     // For per-game checks, run a smaller sample.
     allResults = [];
     for (let i = 0; i < games; i++) {
-      const { createHash } = require('node:crypto');
       const gameSeed = createHash('sha256')
         .update(batchSeed + '/' + i)
         .digest('hex');
@@ -89,7 +89,7 @@ describe.each([2, 5, 10])('Statistical smoke (%i players)', (playerCount) => {
       }
     }
 
-    for (const [seat, wins] of winsPerSeat) {
+    for (const [, wins] of winsPerSeat) {
       const rate = wins / games;
       expect(rate).toBeGreaterThanOrEqual(
         expectedRate - tolerance,

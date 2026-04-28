@@ -1,3 +1,6 @@
+/**
+ * Lifecycle hook invocation order
+ */
 import { describe, it, expect } from 'vitest';
 import { runGame } from '../../src/sim';
 import type { SimConfig } from '../../src/sim';
@@ -12,20 +15,14 @@ type LifecycleEvent =
   | { type: 'onTurnResolved'; turn: number }
   | { type: 'onRoundEnd' };
 
-/**
- * Create a spy strategy factory that delegates to the real random strategy
- * but records lifecycle events.
- */
 function createSpyStrategyFactory(log: LifecycleEvent[]): () => Strategy {
   return () => {
     const realFactory = strategies.get('random')!;
     const real = realFactory();
-    let currentTurn = 0;
 
     return {
       name: 'spy',
       chooseCard(state: CardChoiceState) {
-        currentTurn = state.turn;
         log.push({ type: 'chooseCard', turn: state.turn });
         return real.chooseCard(state);
       },
@@ -55,8 +52,7 @@ function createSpyStrategyFactory(log: LifecycleEvent[]): () => Strategy {
 
 describe('Lifecycle hook invocation order', () => {
   // We monkey-patch the strategies registry temporarily
-  const originalGet = strategies.get.bind(strategies);
-  const originalHas = strategies.has.bind(strategies);
+  // strategies.get and .has are used via monkey-patching below
 
   function runWithSpy(
     log: LifecycleEvent[],

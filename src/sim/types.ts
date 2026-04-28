@@ -1,5 +1,3 @@
-import type { CardNumber } from '../engine/types';
-
 export interface SimConfig {
   readonly players: readonly {
     id: string;

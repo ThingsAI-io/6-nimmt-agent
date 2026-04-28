@@ -56,9 +56,7 @@ function isValidCard(c: number): boolean {
   return Number.isInteger(c) && c >= 1 && c <= 104;
 }
 
-function isDomainError(result: unknown): result is DomainError {
-  return typeof result === 'object' && result !== null && 'ok' in result && (result as DomainError).ok === false;
-}
+
 
 // ── SessionManager ──────────────────────────────────────────────────
 
@@ -577,7 +575,6 @@ export class SessionManager {
     if (!session) return errors.unknownSession(params.sessionId);
 
     const totalRounds = session.round;
-    const finalPhase = session.phase;
     this.sessions.delete(params.sessionId);
 
     return {
