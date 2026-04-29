@@ -63,5 +63,17 @@ export function parseStrategies(raw: string): string[] {
   if (raw.startsWith('[')) {
     return JSON.parse(raw) as string[];
   }
-  return raw.split(',').map((s) => s.trim());
+  // Smart split: commas inside colon-params (key=val,key=val) should not be treated
+  // as strategy separators. A segment is a param continuation if it contains '='.
+  const parts = raw.split(',').map((s) => s.trim());
+  const result: string[] = [];
+  for (const part of parts) {
+    if (result.length > 0 && part.includes('=') && !part.includes(':')) {
+      // This is a param continuation of the previous strategy spec
+      result[result.length - 1] += ',' + part;
+    } else {
+      result.push(part);
+    }
+  }
+  return result;
 }

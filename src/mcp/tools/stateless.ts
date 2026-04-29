@@ -146,6 +146,7 @@ export function validateState(params: ValidateStateParams): ValidateStateResult 
 export interface RecommendOnceParams {
   state: Record<string, unknown>;
   strategy: string;
+  strategyOptions?: Record<string, unknown>;
   decision?: 'card' | 'row';
   timeout?: number;
 }
@@ -186,7 +187,7 @@ export function recommendOnce(params: RecommendOnceParams): RecommendOnceResult 
   }
 
   // Instantiate strategy
-  const strat = strategies.get(strategyName)!();
+  const strat = strategies.get(strategyName)!(params.strategyOptions);
   const playerCount = (state.playerCount as number) ?? 2;
   const seedStr = 'recommend/' + ((state as Record<string, unknown>).playerId ?? 'recommend-player');
   const rngState = deriveSeedState(seedStr);

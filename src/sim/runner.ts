@@ -121,7 +121,7 @@ export function runGame(config: SimConfig): GameResult {
   const strategyMap = new Map<string, Strategy>();
   for (const p of players) {
     const factory = strategies.get(p.strategy)!;
-    strategyMap.set(p.id, factory());
+    strategyMap.set(p.id, factory(p.params));
   }
 
   // 5. onGameStart

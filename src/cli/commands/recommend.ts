@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { readFileSync } from 'node:fs';
 import type { CardChoiceState, RowChoiceState } from '../../engine/types.js';
 import type { TurnResolution } from '../../engine/strategies/types.js';
-import { strategies, deriveSeedState, xoshiro256ss } from '../../engine/index.js';
+import { strategies, parseStrategySpec, deriveSeedState, xoshiro256ss } from '../../engine/index.js';
 import { format } from '../formatters/index.js';
 import type { RecommendResult, OutputFormat } from '../formatters/types.js';
 import { didYouMean, outputError, createMeta } from '../helpers.js';
@@ -56,8 +56,9 @@ export const recommendCommand = new Command('recommend')
     const fmt = opts.format as OutputFormat;
     const startTime = Date.now();
 
-    // Validate strategy
-    const strategyName = opts.strategy as string;
+    // Validate strategy (supports name:key=val syntax)
+    const strategySpec = parseStrategySpec(opts.strategy as string);
+    const strategyName = strategySpec.name;
     if (!strategies.has(strategyName)) {
       const valid = [...strategies.keys()];
       const suggestion = didYouMean(strategyName, valid);
@@ -119,7 +120,7 @@ export const recommendCommand = new Command('recommend')
     const warnings = checkWarnings(state);
 
     // Instantiate strategy
-    const strat = strategies.get(strategyName)!();
+    const strat = strategies.get(strategyName)!(strategySpec.options);
     const playerCount = (state.playerCount as number) ?? 2;
     const seedStr = 'recommend-' + Date.now();
     const rngState = deriveSeedState(seedStr);
