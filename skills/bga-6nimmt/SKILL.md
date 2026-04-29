@@ -49,13 +49,18 @@ Once in a game (`/table?table=<id>` URL), use JavaScript evaluation to read stat
 // Execute via browser_evaluate
 () => {
   const gd = gameui.gamedatas;
+  const hand = Object.values(gd.hand).map(c => parseInt(c.type_arg));
+  
+  // gd.table is { "1": [cards...], "2": [cards...], "3": [cards...], "4": [cards...] }
+  const board = [[], [], [], []];
+  Object.entries(gd.table).forEach(([rowKey, cards]) => {
+    const rowIdx = parseInt(rowKey) - 1;
+    cards.forEach(c => board[rowIdx].push(parseInt(c.type_arg)));
+  });
+  
   return JSON.stringify({
-    hand: Object.values(gd.hand).map(c => parseInt(c.type_arg)),
-    table: Object.values(gd.table).map(c => ({
-      card: parseInt(c.type_arg),
-      row: parseInt(c.location_arg.charAt(0)),      // first digit = row (1-4)
-      position: parseInt(c.location_arg.charAt(1))  // second digit = position (1-6)
-    })),
+    hand,
+    board,
     gamestate: gd.gamestate.name,
     possibleactions: gd.gamestate.possibleactions,
     players: Object.entries(gd.players).map(([id, p]) => ({
@@ -68,9 +73,12 @@ Once in a game (`/table?table=<id>` URL), use JavaScript evaluation to read stat
 ```
 
 **Board state extraction from `gameui.gamedatas.table`:**
-- Each card has `location_arg` in format `"{row}{position}"` (e.g. `"41"` = row 4, position 1)
-- Rows are numbered 1–4
-- Positions are 1–6 (max 5 cards before overflow on 6th)
+- `gd.table` is an **object of arrays**: `{ "1": [{card}, {card}], "2": [...], "3": [...], "4": [...] }`
+- Keys are row numbers "1"–"4" 
+- Values are arrays of card objects in that row
+- Each card object has `type_arg` (card number as string)
+- Parse with: `Object.entries(gd.table).forEach(([rowKey, cards]) => { ... })`
+- Do NOT use `Object.values(gd.table).forEach(c => c.location_arg...)` — that iterates arrays, not cards!
 
 **Game state names (from `gameui.gamedatas.gamestate.name`):**
 | State Name | Meaning | Our Action |
@@ -199,12 +207,11 @@ Use `browser_evaluate` to run these helper functions:
   const gd = gameui.gamedatas;
   const hand = Object.values(gd.hand).map(c => parseInt(c.type_arg));
   
-  // Build board: 4 rows with card numbers
+  // gd.table is { "1": [cards...], "2": [cards...], "3": [cards...], "4": [cards...] }
   const board = [[], [], [], []];
-  Object.values(gd.table).forEach(c => {
-    const row = parseInt(c.location_arg.charAt(0)) - 1; // 0-indexed
-    const pos = parseInt(c.location_arg.charAt(1)) - 1;
-    board[row][pos] = parseInt(c.type_arg);
+  Object.entries(gd.table).forEach(([rowKey, cards]) => {
+    const rowIdx = parseInt(rowKey) - 1;
+    cards.forEach(c => board[rowIdx].push(parseInt(c.type_arg)));
   });
   
   const scores = {};
@@ -293,10 +300,13 @@ BGA 6 Nimmt has several variants. **Our engine only supports the regular variant
 ## Key BGA Quirks
 
 1. **Card IDs = card numbers.** `player_hand_item_43` holds card 43. `card_43` on the board is card 43.
-2. **Location arg encoding.** Table cards use `location_arg = "{row}{position}"` — first digit is row (1-4), second is position within row (1-6).
+2. **Location arg encoding.** Table cards use `location_arg = "{row}{position}"` — first digit is row (1-4), second is position within row (0-5, **0-indexed**).
 3. **Score is "starting score" minus penalties.** Default starting score is 66. Lower = worse.
 4. **Multi-active state.** `cardChoice` is a multi-player simultaneous state. All players choose at once.
 5. **No confirmation.** Clicking a hand card immediately submits the choice via AJAX.
 6. **Sprite-based cards.** Cards are `<div>` elements with `background-position` on a sprite sheet, not separate images. The card number is encoded in the element ID.
 7. **Tutorials are view-only.** BGA tutorials (`/tutorial?game=sechsnimmt`) run in `g_archive_mode` with `g_tutorialwritten.mode = "view"`. They block AJAX calls and cannot be played interactively. Only real games support actual play.
+8. **Hand doesn't update immediately.** `gameui.gamedatas.hand` retains played cards until the server-side round resolution is complete. Track played cards locally.
+9. **State name varies.** Live games use `cardSelect` (not `cardChoice` as documented in some places). Check for both.
+10. **Professional variant uses different hand mechanics.** When `professional === "1"`, the hand/card flow is different (drafting). Our engine does NOT support this.
 8. **Dojo popups.** BGA uses Dijit/Dojo popups that can intercept clicks. Dismiss with: `document.querySelector('.dijitPopup').style.display = 'none'`

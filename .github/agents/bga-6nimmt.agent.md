@@ -4,6 +4,10 @@ description: Plays 6 Nimmt! on Board Game Arena using Playwright and the 6nimmt 
 tools:
   - playwright/*
   - 6nimmt/*
+  - read/*
+  - execute/*
+  - todo/*
+model: Claude Haiku 4.5 (copilot)
 ---
 
 # BGA 6 Nimmt! Agent
@@ -43,8 +47,8 @@ Once in a game, run this loop:
 ```
 1. Read game state via browser_evaluate (see "Reading State" below)
 2. Based on gamestate.name:
-   - "cardChoice" + isActive → get recommendation, play card
-   - "smallestCard" + isActive → get recommendation, take row
+   - "cardSelect" or "cardChoice" + isActive → get recommendation, play card
+   - "smallestCard" or "takeRow" + isActive → get recommendation, take row
    - "multipleChoice" + isActive → get recommendation, choose row
    - anything else → wait 2s, poll again
 3. After playing, wait for state transition
@@ -63,11 +67,11 @@ When `gamestate.name === "gameEnd"`, report final scores to the user and call `e
 () => {
   const gd = gameui.gamedatas;
   const hand = Object.values(gd.hand).map(c => parseInt(c.type_arg));
+  // gd.table is { "1": [cards...], "2": [cards...], "3": [cards...], "4": [cards...] }
   const board = [[], [], [], []];
-  Object.values(gd.table).forEach(c => {
-    const row = parseInt(c.location_arg.charAt(0)) - 1;
-    const pos = parseInt(c.location_arg.charAt(1)) - 1;
-    board[row][pos] = parseInt(c.type_arg);
+  Object.entries(gd.table).forEach(([rowKey, cards]) => {
+    const rowIdx = parseInt(rowKey) - 1;
+    cards.forEach(c => board[rowIdx].push(parseInt(c.type_arg)));
   });
   const scores = {};
   Object.entries(gd.players).forEach(([id, p]) => { scores[id] = parseInt(p.score); });
@@ -82,9 +86,11 @@ When `gamestate.name === "gameEnd"`, report final scores to the user and call `e
 }
 ```
 
+**IMPORTANT:** `gameui.gamedatas.hand` does NOT remove played cards immediately — it lags until server-side round resolution. Track played cards locally to derive true hand.
+
 ## Playing a Card
 
-When state is `cardChoice` and `isActive === true`:
+When state is `cardSelect` (or `cardChoice`) and `isActive === true`:
 
 1. Call `session_recommend` with:
    - `hand`: array of card numbers
