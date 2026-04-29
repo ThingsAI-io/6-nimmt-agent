@@ -218,8 +218,14 @@ The `recommend_once` tool requires this state format:
 - BGA displays `66 - penalties` as score. To get penalties: `66 - displayedScore`
 - `turnHistory` — can be empty `[]` for stateless recommendations (bayesian still works)
 
-**Available strategies in MCP:** `bayesian-simple`, `random`, `dummy-min`, `dummy-max`
-(Note: `mcs` strategy exists in code but is not yet registered in the MCP server)
+**Available strategies in MCP:** `mcs` (recommended for best play), `bayesian-simple`, `random`, `dummy-min`, `dummy-max`
+
+**Strategy details:**
+- **`mcs`** — Monte Carlo Search simulating full rounds with random opponent plays (best overall performance)
+- **`bayesian-simple`** — Single-turn Monte Carlo with 200 samples (fast, good baseline)
+- **`random`** — Pick randomly (for testing)
+- **`dummy-min`** — Pick card with fewest cattle heads (naive heuristic)
+- **`dummy-max`** — Pick card with most cattle heads (opposite naive heuristic)
 
 ---
 

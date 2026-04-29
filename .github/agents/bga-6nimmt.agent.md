@@ -138,7 +138,8 @@ When page title says "You must take a row":
 - `playerScores` — penalties collected (66 - BGA displayed score)
 - `turnHistory` — can be `[]` for stateless recommendations
 - `initialBoardCards` — the 4 starting cards when round began
-- Available strategies: `bayesian-simple`, `random`, `dummy-min`, `dummy-max`
+- Available strategies: `mcs` (default, recommended), `bayesian-simple`, `random`, `dummy-min`, `dummy-max`
+- Use `strategy: "mcs"` for best play; it simulates full rounds with random opponent plays
 
 ## Key BGA Facts (ALL VERIFIED)
 
