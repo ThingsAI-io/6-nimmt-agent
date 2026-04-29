@@ -2,6 +2,7 @@ import type { Strategy } from './types';
 import { createRandomStrategy } from './random';
 import { createDummyMinStrategy, createDummyMaxStrategy } from './dummy';
 import { createBayesianSimpleStrategy } from './bayesian';
+import { createMcsStrategy } from './mcs';
 
 export type { Strategy, TurnResolution } from './types';
 
@@ -11,4 +12,5 @@ export const strategies: ReadonlyMap<string, () => Strategy> = new Map([
   ['dummy-min', createDummyMinStrategy],
   ['dummy-max', createDummyMaxStrategy],
   ['bayesian-simple', createBayesianSimpleStrategy],
+  ['mcs', createMcsStrategy],
 ]);

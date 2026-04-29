@@ -267,4 +267,17 @@ Based on the reference implementation's tournament results:
 | MCS (random playouts) | ~40% | 1745 |
 | Alpha0.5 (PUCT + neural) | ~42% | 1806 |
 
-Even the simplest MCS variant (Phase 1) should roughly **double** our win rate compared to random play. The 2% additional improvement from neural PUCT is marginal but measurable over many games.
+### Our Benchmark Results (200 games, 4 players, seed: bench3)
+
+| Strategy | Win Rate | Avg Score |
+|----------|----------|-----------|
+| **bayesian-simple** | **53.0%** | **35.4** |
+| mcs | 35.5% | 38.5 |
+| random (pooled ×2) | 6.0% | 61.8 |
+
+**Conclusion:** In our implementation, bayesian-simple outperforms MCS. The likely cause is simulation budget: MCS uses only ~10 simulations per card (capped at 100 total), producing noisy multi-turn estimates. Bayesian uses 200 samples for single-turn evaluation, yielding more reliable immediate decisions. The multi-turn lookahead advantage of MCS doesn't compensate for the higher variance from fewer samples.
+
+**Potential improvements:**
+- Increase simulation budget (500-1000) at the cost of latency
+- Hybrid: use bayesian scoring for simulated opponent moves (instead of random)
+- Use bayesian as first-turn evaluator, MCS for later turns when fewer cards remain
