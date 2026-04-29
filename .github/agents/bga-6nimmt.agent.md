@@ -34,18 +34,25 @@ Use these skills for reference:
 
 ```
 REPEAT until game ends:
-  1. Wait for page title "You must choose a card to play" (use browser_wait_for)
+  1. Poll page title until it says EITHER:
+     - "You must choose a card to play" → go to step 2 (play card)
+     - "You must take a row" → go to step 6 (pick row)
+     - Poll every 500ms for 30s max to detect state changes
+  
   2. Read state via browser_evaluate (hand + board + scores)
   3. Call recommend_once with state → get recommended card
   4. Click #myhand_item_{stockId} where stockId comes from hand item lookup
-  5. Wait for either:
-     a) "You must choose a card to play" → next turn, go to step 2
-     b) "You must take a row" → pick row, then go to step 1
-  6. If "You must take a row":
-     - Call recommend_once with decision: "row"
+  5. Card is immediately submitted (no confirmation). Go to step 1.
+  
+  6. PICKING A ROW (only when "You must take a row"):
+     - Read board state via browser_evaluate
+     - Call recommend_once with state + decision: "row"
+     - Get recommended row (0-3 from engine)
      - Click #row_slot_{row+1}_arrow (rows are 1-indexed in DOM)
-     - Wait 2-3 seconds, then go to step 1
+     - Go to step 1
 ```
+
+**Why the change?** After playing a card, the page title can transition to EITHER "You must choose a card to play" (normal next turn) OR "You must take a row" (card was below all row ends). The poll-based approach handles both gracefully instead of timing out on one.
 
 ## Reading State (CRITICAL — verified from live play)
 

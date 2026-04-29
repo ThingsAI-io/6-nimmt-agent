@@ -19,6 +19,20 @@ All selectors and patterns below are **verified from live gameplay** (April 2026
 
 ---
 
+## State Transitions (CRITICAL for game loop)
+
+After clicking a card to play, the page title will transition to **one of**:
+- **"You must choose a card to play"** → Normal next turn (your card fit on a row)
+- **"You must take a row"** → Forced row pick (your card was below all row ends)
+
+**Both are valid.** Your game loop must poll the page title until it matches one of these conditions, then branch accordingly:
+- If "You must choose" → read state and play next card
+- If "You must take a row" → read board, get row recommendation, pick row, then repeat
+
+Use a polling approach rather than `waitFor` with a single string, since either outcome is possible and timing is unpredictable.
+
+---
+
 ## Core Capabilities
 
 ### 1. Find and Join a Table
