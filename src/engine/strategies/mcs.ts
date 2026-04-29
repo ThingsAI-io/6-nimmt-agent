@@ -5,6 +5,13 @@ import { cattleHeads } from '../card';
 const DEFAULT_MC_MAX = 100;
 const DEFAULT_MC_PER_CARD = 10;
 
+export interface McsOptions {
+  /** Maximum total simulations across all cards (default: 100) */
+  mcMax?: number;
+  /** Simulations per candidate card (default: 10, capped by mcMax) */
+  mcPerCard?: number;
+}
+
 function fewestHeadsRowIndex(rows: readonly (readonly CardNumber[])[]): 0 | 1 | 2 | 3 {
   let best = 0;
   let bestP = Infinity;
@@ -143,7 +150,9 @@ function simulateRound(
  * The difference is likely due to low simulation budget (100 max) producing noisy
  * multi-turn estimates vs bayesian's focused single-turn evaluation (K=200 samples).
  */
-export function createMcsStrategy(): Strategy {
+export function createMcsStrategy(options: McsOptions = {}): Strategy {
+  const mcMax = options.mcMax ?? DEFAULT_MC_MAX;
+  const mcPerCard = options.mcPerCard ?? DEFAULT_MC_PER_CARD;
   let rng: () => number = Math.random;
   let playerCount = 2;
   let seenCards = new Set<number>();
@@ -188,7 +197,7 @@ export function createMcsStrategy(): Strategy {
       }
 
       // Number of simulations
-      const nSims = Math.min(DEFAULT_MC_MAX, DEFAULT_MC_PER_CARD * hand.length);
+      const nSims = Math.min(mcMax, mcPerCard * hand.length);
 
       // If only one card, just play it
       if (hand.length === 1) return hand[0];
@@ -265,7 +274,7 @@ export function createMcsStrategy(): Strategy {
         return fewestHeadsRowIndex(board.rows);
       }
 
-      const simsPerRow = 10;
+      const simsPerRow = mcPerCard;
       let bestRow: 0 | 1 | 2 | 3 = 0;
       let bestPenalty = Infinity;
 
