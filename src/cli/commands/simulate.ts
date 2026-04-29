@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { randomUUID } from 'node:crypto';
 import { runBatch } from '../../sim/index.js';
-import { strategies } from '../../engine/index.js';
+import { strategies, parseStrategySpec } from '../../engine/index.js';
 import { format } from '../formatters/index.js';
 import type { SimulateResult, StrategyResultRow, SeatResultRow, OutputFormat } from '../formatters/types.js';
 import { didYouMean, outputError, createMeta, parseStrategies } from '../helpers.js';
@@ -93,25 +93,26 @@ export const simulateCommand = new Command('simulate')
     const fmt = opts.format as OutputFormat;
     const startTime = Date.now();
 
-    // Parse strategies
-    let strategyNames: string[];
+    // Parse strategies (supports name:key=val,key=val syntax)
+    let strategySpecs: { name: string; options?: Record<string, unknown> }[];
     const raw = opts.strategies as string;
     try {
-      strategyNames = parseStrategies(raw);
+      const names = parseStrategies(raw);
+      strategySpecs = names.map(parseStrategySpec);
     } catch {
       outputError(fmt, 'INVALID_STRATEGY', `Failed to parse strategies: ${raw}`);
       process.exit(1);
     }
 
     // Validate strategies exist
-    for (const name of strategyNames) {
-      if (!strategies.has(name)) {
+    for (const spec of strategySpecs) {
+      if (!strategies.has(spec.name)) {
         const valid = [...strategies.keys()];
-        const suggestion = didYouMean(name, valid);
+        const suggestion = didYouMean(spec.name, valid);
         outputError(
           fmt,
           'INVALID_STRATEGY',
-          `Unknown strategy '${name}'.${suggestion ? ` Did you mean '${suggestion}'?` : ''}`,
+          `Unknown strategy '${spec.name}'.${suggestion ? ` Did you mean '${suggestion}'?` : ''}`,
           valid,
         );
         process.exit(1);
@@ -119,8 +120,8 @@ export const simulateCommand = new Command('simulate')
     }
 
     // Validate player count
-    if (strategyNames.length < 2 || strategyNames.length > 10) {
-      outputError(fmt, 'INVALID_PLAYER_COUNT', `Need 2–10 strategies, got ${strategyNames.length}.`, [
+    if (strategySpecs.length < 2 || strategySpecs.length > 10) {
+      outputError(fmt, 'INVALID_PLAYER_COUNT', `Need 2–10 strategies, got ${strategySpecs.length}.`, [
         'Provide 2 to 10 comma-separated strategy names',
       ]);
       process.exit(1);
@@ -137,13 +138,17 @@ export const simulateCommand = new Command('simulate')
 
     // Dry run
     if (opts.dryRun) {
-      console.log(JSON.stringify({ dryRun: true, strategies: strategyNames, games, seed, format: fmt }));
+      console.log(JSON.stringify({ dryRun: true, strategies: strategySpecs.map(s => s.name), games, seed, format: fmt }));
       return;
     }
 
     // Build SimConfig
     const config = {
-      players: strategyNames.map((s, i) => ({ id: `player-${i}`, strategy: s })),
+      players: strategySpecs.map((s, i) => ({
+        id: `player-${i}`,
+        strategy: s.name,
+        ...(s.options ? { strategyOptions: s.options } : {}),
+      })),
       seed,
     };
 
@@ -154,7 +159,7 @@ export const simulateCommand = new Command('simulate')
       const output: SimulateResult = {
         meta: createMeta('simulate', startTime),
         gamesPlayed: result.gamesPlayed,
-        strategies: strategyNames,
+        strategies: strategySpecs.map(s => s.name),
         seed,
         results: buildResultRows(result, config),
         perSeat: buildSeatRows(result, config),

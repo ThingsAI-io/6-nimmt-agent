@@ -18,6 +18,7 @@ interface Session {
   id: string;
   strategy: Strategy;
   strategyName: string;
+  strategyOptions?: Record<string, unknown>;
   playerId: string;
   playerCount: number;
   seed: string;
@@ -130,8 +131,9 @@ export class SessionManager {
     playerId: string;
     seatIndex?: number;
     seed?: string;
+    strategyOptions?: Record<string, unknown>;
   }): object | DomainError {
-    const { strategy: strategyName, playerCount, playerId, seed: providedSeed } = params;
+    const { strategy: strategyName, playerCount, playerId, seed: providedSeed, strategyOptions } = params;
 
     // Validate strategy
     if (!strategies.has(strategyName)) {
@@ -152,7 +154,7 @@ export class SessionManager {
     const seed = providedSeed ?? randomUUID();
 
     // Instantiate strategy
-    const strat = strategies.get(strategyName)!();
+    const strat = strategies.get(strategyName)!(strategyOptions);
     const rng = createPlayerRng(seed, playerId);
     strat.onGameStart?.({ playerId, playerCount, rng });
 
@@ -160,6 +162,7 @@ export class SessionManager {
       id: sessionId,
       strategy: strat,
       strategyName,
+      strategyOptions,
       playerId,
       playerCount,
       seed,
@@ -605,7 +608,7 @@ export class SessionManager {
     if (!session) return errors.unknownSession(sessionId);
 
     // Re-instantiate strategy with fresh RNG
-    const strat = strategies.get(session.strategyName)!();
+    const strat = strategies.get(session.strategyName)!(session.strategyOptions);
     const rng = createPlayerRng(session.seed, session.playerId);
     strat.onGameStart?.({ playerId: session.playerId, playerCount: session.playerCount, rng });
 

@@ -10,6 +10,7 @@ import {
   isGameOver,
   toCardChoiceState,
   strategies,
+  parseStrategySpec,
   cattleHeads,
   deriveSeedState,
   xoshiro256ss,
@@ -97,32 +98,33 @@ export const playCommand = new Command('play')
     const startTime = Date.now();
 
     // Parse strategies
-    let strategyNames: string[];
+    let strategySpecs: { name: string; options?: Record<string, unknown> }[];
     try {
-      strategyNames = parseStrategies(opts.strategies as string);
+      const names = parseStrategies(opts.strategies as string);
+      strategySpecs = names.map(parseStrategySpec);
     } catch {
       outputError(fmt, 'INVALID_STRATEGY', `Failed to parse strategies: ${opts.strategies}`);
       process.exit(1);
     }
 
     // Validate strategies exist
-    for (const name of strategyNames) {
-      if (!strategies.has(name)) {
+    for (const spec of strategySpecs) {
+      if (!strategies.has(spec.name)) {
         const valid = [...strategies.keys()];
-        const suggestion = didYouMean(name, valid);
+        const suggestion = didYouMean(spec.name, valid);
         outputError(fmt, 'INVALID_STRATEGY',
-          `Unknown strategy '${name}'.${suggestion ? ` Did you mean '${suggestion}'?` : ''}`, valid);
+          `Unknown strategy '${spec.name}'.${suggestion ? ` Did you mean '${suggestion}'?` : ''}`, valid);
         process.exit(1);
       }
     }
 
-    if (strategyNames.length < 2 || strategyNames.length > 10) {
-      outputError(fmt, 'INVALID_PLAYER_COUNT', `Need 2–10 strategies, got ${strategyNames.length}.`);
+    if (strategySpecs.length < 2 || strategySpecs.length > 10) {
+      outputError(fmt, 'INVALID_PLAYER_COUNT', `Need 2–10 strategies, got ${strategySpecs.length}.`);
       process.exit(1);
     }
 
     const seed = opts.seed ?? randomUUID();
-    const players = strategyNames.map((s, i) => ({ id: `player-${i}`, strategy: s }));
+    const players = strategySpecs.map((s, i) => ({ id: `player-${i}`, strategy: s.name, options: s.options }));
     const playerIds = players.map((p) => p.id);
 
     try {
@@ -131,7 +133,7 @@ export const playCommand = new Command('play')
       // Instantiate strategies
       const strategyMap = new Map<string, Strategy>();
       for (const p of players) {
-        strategyMap.set(p.id, strategies.get(p.strategy)!());
+        strategyMap.set(p.id, strategies.get(p.strategy)!(p.options));
       }
       for (const p of players) {
         strategyMap.get(p.id)!.onGameStart?.({
@@ -259,7 +261,7 @@ export const playCommand = new Command('play')
       const output: PlayResult = {
         meta: createMeta('play', startTime),
         seed,
-        strategies: strategyNames,
+        strategies: strategySpecs.map(s => s.name),
         rounds,
         finalResults,
       };

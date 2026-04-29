@@ -58,6 +58,7 @@ const TOOL_DEFINITIONS = [
       properties: {
         state: { type: 'object' as const, description: 'Game state for recommendation' },
         strategy: { type: 'string' as const, description: 'Strategy name to use' },
+        strategyOptions: { type: 'object' as const, description: 'Strategy-specific options (e.g. { mcMax: 500 } for mcs)' },
         decision: { type: 'string' as const, enum: ['card', 'row'], description: 'Decision type (auto-detected if omitted)' },
         timeout: { type: 'number' as const, description: 'Timeout in milliseconds' },
       },
@@ -75,6 +76,7 @@ const TOOL_DEFINITIONS = [
         playerId: { type: 'string' as const, description: 'Player ID for this session' },
         seatIndex: { type: 'number' as const, description: 'Seat index (optional)' },
         seed: { type: 'string' as const, description: 'RNG seed (optional)' },
+        strategyOptions: { type: 'object' as const, description: 'Strategy-specific options (e.g. { mcMax: 500, mcPerCard: 50 } for mcs)' },
       },
       required: ['strategy', 'playerCount', 'playerId'],
     },
@@ -252,6 +254,7 @@ export function createServer(config: ServerConfig = {}) {
         const result = recommendOnce({
           state: (args?.state as Record<string, unknown>) ?? {},
           strategy: (args?.strategy as string) ?? '',
+          strategyOptions: args?.strategyOptions as Record<string, unknown> | undefined,
           decision: args?.decision as 'card' | 'row' | undefined,
           timeout: args?.timeout as number | undefined,
         });
