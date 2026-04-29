@@ -44,19 +44,40 @@ This skill automates playing 6 Nimmt! on Board Game Arena (BGA) using Playwright
 
 Once in a game (`/table?table=<id>` URL), use JavaScript evaluation to read state:
 
-**Primary method — `gameui.gamedatas` object (most reliable):**
+**Primary method — combining `gameui.playerHand` (live hand) + DOM board reading (live board):**
+
+> ⚠️ **CRITICAL:** `gameui.gamedatas.hand` and `gameui.gamedatas.table` are STALE — they freeze at page load and are NEVER updated during gameplay. You MUST use the methods below for live data.
+
 ```javascript
-// Execute via browser_evaluate
+// Execute via browser_evaluate — CORRECT live state reading
 () => {
   const gd = gameui.gamedatas;
-  const hand = Object.values(gd.hand).map(c => parseInt(c.type_arg));
   
-  // gd.table is { "1": [cards...], "2": [cards...], "3": [cards...], "4": [cards...] }
+  // HAND: Use playerHand stock component (LIVE, updates correctly)
+  // item.type = card number, item.id = stock/DOM id
+  const hand = gameui.playerHand.getAllItems().map(i => parseInt(i.type)).sort((a,b) => a-b);
+  
+  // BOARD: Read from DOM (LIVE) — gd.table is STALE, never use it!
+  // Cards live in #row_card_zone_1 through #row_card_zone_4
+  // Card number is decoded from background-position on 10-column sprite sheet
   const board = [[], [], [], []];
-  Object.entries(gd.table).forEach(([rowKey, cards]) => {
-    const rowIdx = parseInt(rowKey) - 1;
-    cards.forEach(c => board[rowIdx].push(parseInt(c.type_arg)));
-  });
+  for (let row = 1; row <= 4; row++) {
+    const zone = document.getElementById(`row_card_zone_${row}`);
+    if (zone) {
+      zone.querySelectorAll('[id^="card_"]').forEach(card => {
+        const bgPos = card.style.backgroundPosition;
+        const match = bgPos.match(/([-\d.]+)%\s+([-\d.]+)%/);
+        if (match) {
+          const col = Math.round(Math.abs(parseFloat(match[1])) / 100);
+          const rowIdx = Math.round(Math.abs(parseFloat(match[2])) / 100);
+          board[row-1].push(rowIdx * 10 + col + 1);
+        }
+      });
+    }
+  }
+  
+  const scores = {};
+  Object.entries(gd.players).forEach(([id, p]) => { scores[id] = parseInt(p.score); });
   
   return JSON.stringify({
     hand,
@@ -72,63 +93,86 @@ Once in a game (`/table?table=<id>` URL), use JavaScript evaluation to read stat
 }
 ```
 
-**Board state extraction from `gameui.gamedatas.table`:**
-- `gd.table` is an **object of arrays**: `{ "1": [{card}, {card}], "2": [...], "3": [...], "4": [...] }`
-- Keys are row numbers "1"–"4" 
-- Values are arrays of card objects in that row
-- Each card object has `type_arg` (card number as string)
-- Parse with: `Object.entries(gd.table).forEach(([rowKey, cards]) => { ... })`
-- Do NOT use `Object.values(gd.table).forEach(c => c.location_arg...)` — that iterates arrays, not cards!
+**Board reading — DOM-based (the ONLY correct approach):**
+- Cards are in `#row_card_zone_1` through `#row_card_zone_4`
+- Each card element has `id="card_{dbId}"` and class `cardspace card row_card`
+- Card number is decoded from `background-position` on a 10-column sprite sheet:
+  - Parse `-X% -Y%` → `col = |X|/100`, `row = |Y|/100` → `cardNum = row * 10 + col + 1`
+- Do NOT use `gameui.gamedatas.table` — it is frozen at page load and never updates!
+
+**Hand reading — Stock component (the ONLY correct approach):**
+- `gameui.playerHand.getAllItems()` returns live hand items
+- Each item: `{ id: "stockId", type: "cardNumber" }`
+- `parseInt(item.type)` = the card number
+- Do NOT use `gameui.gamedatas.hand` — it is frozen at page load!
 
 **Game state names (from `gameui.gamedatas.gamestate.name`):**
 | State Name | Meaning | Our Action |
 |---|---|---|
-| `cardChoice` | All players must choose a card | Play a card |
-| `smallestCard` | Active player must take a row | Pick a row (take) |
-| `multipleChoice` | Active player must choose row to place card | Pick a row (choose) |
-| `cardPlace` | Cards being placed (server-side) | Wait |
-| `endTurn` | Turn resolving | Wait |
-| `roundStart` / `roundBegin` | New round starting | Read new hand |
+| `cardSelect` | All players must choose a card (multi-active) | Play a card |
+| `takeRow` | Active player must take a row (card lower than all) | Pick a row |
+| `cardProcess` | Server processing card choices | Wait |
+| `cardReveal` | Cards being revealed/animated | Wait |
 | `gameEnd` | Game over | End session |
 
-**Fallback DOM selectors:**
+> Note: Some docs reference `cardChoice` and `smallestCard` — these are WRONG for live BGA games. The actual state names are `cardSelect` and `takeRow`.
+
+**DOM selectors (VERIFIED from live game):**
 ```
-# Hand cards
-#player_hand .stockitem            → id="player_hand_item_{cardNumber}"
-[id^="player_hand_item_"]          → card number is the suffix
+# Hand cards (via BGA Stock component)
+Container: #myhand_wrap (class "whiteblock")
+Card elements: #myhand_item_{stockId}  ← stockId is NOT the card number!
+Card class: "stockitem cardspace card"
+Unselectable: adds class "stockitem_unselectable"
 
-# Board rows (4 rows, 6 slots each)
-#row_1, #row_2, #row_3, #row_4    → row containers
-#place_{row}{col}                  → e.g. #place_11, #place_12, ... #place_46
-Cards inside: [id^="card_"]        → id="card_{cardNumber}"
+To find a card's element:
+  const item = gameui.playerHand.getAllItems().find(i => parseInt(i.type) === cardNumber);
+  const element = document.getElementById(`myhand_item_${item.id}`);
 
-# Cards on table (initial deal / revealed)
-#cards_on_table .card_on_table     → id="card_{cardNumber}"
+# Board rows (4 rows, up to 5+1 cards each)
+Row wrapper: #row_wrap_1 ... #row_wrap_4 (class "card_row_wrap")
+Card zone: #row_card_zone_1 ... #row_card_zone_4 (class "row_card_zone")
+Card elements: #card_{dbId} (class "cardspace card row_card")
+Empty slots: #row_slot_{row}_{pos} (class "cardspace empty_slot")
 
-# Row pick buttons
-#chooserow_1 ... #chooserow_4      → click to choose row (class "chooserow_btn")
-#takerow_1 ... #takerow_4          → click to take row (class "takerow_btn")
+# Game board container
+#game_board
+
+# Row pick buttons (only exist during takeRow state)
+#takerow_1 ... #takerow_4    → click to take a row
 
 # Game status text
-#pagemaintitletext                 → "You must choose a card to play" etc.
+#pagemaintitletext            → "You must choose a card to play" etc.
 
 # Player scores
-#player_score_{playerId}           → current score text
+#player_score_{playerId}     → current score text
 
 # Player panels
-#player_boards                     → container for all player panels
-#overall_player_board_{playerId}   → individual player panel
+#player_boards               → container for all player panels
+#overall_player_board_{playerId} → individual player panel
 ```
 
 ### 3. Play a Card
 
 **Steps:**
-1. Detect `gamestate.name === "cardChoice"` and `isCurrentPlayerActive() === true`
-2. Read hand: `Object.values(gameui.gamedatas.hand).map(c => parseInt(c.type_arg))`
-3. Read board: parse `gameui.gamedatas.table` by `location_arg`
+1. Detect `gamestate.name === "cardSelect"` and `isCurrentPlayerActive() === true`
+2. Read hand: `gameui.playerHand.getAllItems().map(i => parseInt(i.type))`
+3. Read board: parse from DOM `#row_card_zone_X` elements (see above)
 4. Call `session_recommend` with hand + board → get recommended card number
-5. Click the card: `page.click('#player_hand_item_' + cardNumber)`
-6. The click triggers `onPlayerHandChangeSelection` which calls the AJAX endpoint automatically
+5. Click the card via JS (most reliable):
+```javascript
+// Click card number N
+() => {
+  const cardNumber = N;
+  const item = gameui.playerHand.getAllItems().find(i => parseInt(i.type) === cardNumber);
+  if (!item) return { error: `Card ${cardNumber} not in hand` };
+  const el = document.getElementById(`myhand_item_${item.id}`);
+  if (!el) return { error: `Element myhand_item_${item.id} not found` };
+  el.click();
+  return { clicked: cardNumber, elementId: `myhand_item_${item.id}` };
+}
+```
+6. The click triggers BGA's selection handler which auto-submits via AJAX
 
 **BGA AJAX endpoint (for reference):**
 ```
@@ -202,17 +246,29 @@ BGA pushes notifications to update the UI. Key notifications:
 Use `browser_evaluate` to run these helper functions:
 
 ```javascript
-// Get full game state for MCP
+// Get full game state for MCP (CORRECT — uses live sources)
 () => {
   const gd = gameui.gamedatas;
-  const hand = Object.values(gd.hand).map(c => parseInt(c.type_arg));
   
-  // gd.table is { "1": [cards...], "2": [cards...], "3": [cards...], "4": [cards...] }
+  // HAND from stock component (LIVE)
+  const hand = gameui.playerHand.getAllItems().map(i => parseInt(i.type)).sort((a,b) => a-b);
+  
+  // BOARD from DOM (LIVE) — decodes card numbers from sprite background-position
   const board = [[], [], [], []];
-  Object.entries(gd.table).forEach(([rowKey, cards]) => {
-    const rowIdx = parseInt(rowKey) - 1;
-    cards.forEach(c => board[rowIdx].push(parseInt(c.type_arg)));
-  });
+  for (let row = 1; row <= 4; row++) {
+    const zone = document.getElementById(`row_card_zone_${row}`);
+    if (zone) {
+      zone.querySelectorAll('[id^="card_"]').forEach(card => {
+        const bgPos = card.style.backgroundPosition;
+        const match = bgPos.match(/([-\d.]+)%\s+([-\d.]+)%/);
+        if (match) {
+          const col = Math.round(Math.abs(parseFloat(match[1])) / 100);
+          const rowIdx = Math.round(Math.abs(parseFloat(match[2])) / 100);
+          board[row-1].push(rowIdx * 10 + col + 1);
+        }
+      });
+    }
+  }
   
   const scores = {};
   Object.entries(gd.players).forEach(([id, p]) => {
@@ -220,6 +276,14 @@ Use `browser_evaluate` to run these helper functions:
   });
   
   return { hand, board, scores, state: gd.gamestate.name, myId: gameui.player_id };
+}
+
+// Click a card by number
+(cardNumber) => {
+  const item = gameui.playerHand.getAllItems().find(i => parseInt(i.type) === cardNumber);
+  if (!item) return { error: `Card ${cardNumber} not in hand` };
+  document.getElementById(`myhand_item_${item.id}`).click();
+  return { clicked: cardNumber };
 }
 
 // Check if it's our turn to act
@@ -299,14 +363,14 @@ BGA 6 Nimmt has several variants. **Our engine only supports the regular variant
 
 ## Key BGA Quirks
 
-1. **Card IDs = card numbers.** `player_hand_item_43` holds card 43. `card_43` on the board is card 43.
-2. **Location arg encoding.** Table cards use `location_arg = "{row}{position}"` — first digit is row (1-4), second is position within row (0-5, **0-indexed**).
-3. **Score is "starting score" minus penalties.** Default starting score is 66. Lower = worse.
-4. **Multi-active state.** `cardChoice` is a multi-player simultaneous state. All players choose at once.
-5. **No confirmation.** Clicking a hand card immediately submits the choice via AJAX.
-6. **Sprite-based cards.** Cards are `<div>` elements with `background-position` on a sprite sheet, not separate images. The card number is encoded in the element ID.
-7. **Tutorials are view-only.** BGA tutorials (`/tutorial?game=sechsnimmt`) run in `g_archive_mode` with `g_tutorialwritten.mode = "view"`. They block AJAX calls and cannot be played interactively. Only real games support actual play.
-8. **Hand doesn't update immediately.** `gameui.gamedatas.hand` retains played cards until the server-side round resolution is complete. Track played cards locally.
-9. **State name varies.** Live games use `cardSelect` (not `cardChoice` as documented in some places). Check for both.
-10. **Professional variant uses different hand mechanics.** When `professional === "1"`, the hand/card flow is different (drafting). Our engine does NOT support this.
-8. **Dojo popups.** BGA uses Dijit/Dojo popups that can intercept clicks. Dismiss with: `document.querySelector('.dijitPopup').style.display = 'none'`
+1. **Card IDs ≠ card numbers!** `#myhand_item_79` might hold card 95. The stock `item.id` is a DB/internal ID; `item.type` is the card number. Board cards use `#card_{dbId}` — decode card number from `background-position`.
+2. **Sprite-based cards.** Cards are `<div>` elements styled with `background-position` on a 10-column sprite sheet. Card number = `row * 10 + col + 1` where `col = |X%|/100`, `row = |Y%|/100`.
+3. **`gameui.gamedatas.hand` is STALE.** Frozen at page load. Use `gameui.playerHand.getAllItems()` instead.
+4. **`gameui.gamedatas.table` is STALE.** Frozen at page load. Read board from DOM `#row_card_zone_X` elements instead.
+5. **Score is "starting score" minus penalties.** Default starting score is 66. Lower = worse.
+6. **Multi-active state.** `cardSelect` is a multi-player simultaneous state. All players choose at once.
+7. **No confirmation.** Clicking a hand card immediately submits the choice via AJAX.
+8. **Tutorials are view-only.** BGA tutorials run in `g_archive_mode` and cannot be played interactively.
+9. **State names.** Live games use `cardSelect` and `takeRow` (NOT `cardChoice`/`smallestCard`).
+10. **Professional variant uses different mechanics.** When `professional === "1"`, don't auto-play.
+11. **Dojo popups.** BGA uses Dijit/Dojo popups that can intercept clicks. Dismiss with: `document.querySelector('.dijitPopup').style.display = 'none'`

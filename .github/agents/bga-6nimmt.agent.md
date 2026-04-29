@@ -47,9 +47,8 @@ Once in a game, run this loop:
 ```
 1. Read game state via browser_evaluate (see "Reading State" below)
 2. Based on gamestate.name:
-   - "cardSelect" or "cardChoice" + isActive → get recommendation, play card
-   - "smallestCard" or "takeRow" + isActive → get recommendation, take row
-   - "multipleChoice" + isActive → get recommendation, choose row
+   - "cardSelect" + isActive → get recommendation, play card
+   - "takeRow" + isActive → get recommendation, take row
    - anything else → wait 2s, poll again
 3. After playing, wait for state transition
 4. Repeat until "gameEnd"
@@ -63,16 +62,33 @@ When `gamestate.name === "gameEnd"`, report final scores to the user and call `e
 
 ## Reading State (browser_evaluate)
 
+> ⚠️ **CRITICAL:** `gameui.gamedatas.hand` and `gameui.gamedatas.table` are STALE (frozen at page load). Always use `gameui.playerHand` for hand and DOM-based reading for board.
+
 ```javascript
 () => {
   const gd = gameui.gamedatas;
-  const hand = Object.values(gd.hand).map(c => parseInt(c.type_arg));
-  // gd.table is { "1": [cards...], "2": [cards...], "3": [cards...], "4": [cards...] }
+  
+  // HAND: from playerHand stock (LIVE)
+  const hand = gameui.playerHand.getAllItems().map(i => parseInt(i.type)).sort((a,b) => a-b);
+  
+  // BOARD: from DOM row_card_zone elements (LIVE)
+  // Card number decoded from background-position on 10-column sprite sheet
   const board = [[], [], [], []];
-  Object.entries(gd.table).forEach(([rowKey, cards]) => {
-    const rowIdx = parseInt(rowKey) - 1;
-    cards.forEach(c => board[rowIdx].push(parseInt(c.type_arg)));
-  });
+  for (let row = 1; row <= 4; row++) {
+    const zone = document.getElementById(`row_card_zone_${row}`);
+    if (zone) {
+      zone.querySelectorAll('[id^="card_"]').forEach(card => {
+        const bgPos = card.style.backgroundPosition;
+        const match = bgPos.match(/([-\d.]+)%\s+([-\d.]+)%/);
+        if (match) {
+          const col = Math.round(Math.abs(parseFloat(match[1])) / 100);
+          const rowIdx = Math.round(Math.abs(parseFloat(match[2])) / 100);
+          board[row-1].push(rowIdx * 10 + col + 1);
+        }
+      });
+    }
+  }
+  
   const scores = {};
   Object.entries(gd.players).forEach(([id, p]) => { scores[id] = parseInt(p.score); });
   return JSON.stringify({
@@ -86,31 +102,38 @@ When `gamestate.name === "gameEnd"`, report final scores to the user and call `e
 }
 ```
 
-**IMPORTANT:** `gameui.gamedatas.hand` does NOT remove played cards immediately — it lags until server-side round resolution. Track played cards locally to derive true hand.
-
 ## Playing a Card
 
-When state is `cardSelect` (or `cardChoice`) and `isActive === true`:
+When state is `cardSelect` and `isActive === true`:
 
 1. Call `session_recommend` with:
-   - `hand`: array of card numbers
-   - `board`: `{"rows": [row1, row2, row3, row4]}` (each row is array of card numbers)
+   - `hand`: array of card numbers (from `playerHand.getAllItems()`)
+   - `board`: `{"rows": [row1, row2, row3, row4]}` (from DOM parsing)
    - `decision`: "card"
 2. Get the recommended card number from the response
-3. Click it: `page.click('#player_hand_item_' + cardNumber)`
+3. Click it via JS evaluate:
+```javascript
+() => {
+  const cardNumber = RECOMMENDED_CARD;
+  const item = gameui.playerHand.getAllItems().find(i => parseInt(i.type) === cardNumber);
+  if (!item) return { error: `Card ${cardNumber} not in hand` };
+  document.getElementById(`myhand_item_${item.id}`).click();
+  return { clicked: cardNumber, elementId: `myhand_item_${item.id}` };
+}
+```
 4. The click triggers BGA's selection handler which auto-submits via AJAX
 5. Wait 2-3 seconds for state to transition
 
 **Important:** Clicking a hand card immediately submits the move — there is no confirmation step.
+**Important:** Do NOT use `#player_hand_item_X` — that selector does NOT exist. Use `#myhand_item_{stockId}` where stockId comes from the playerHand stock component.
 
 ## Picking a Row
 
-When state is `smallestCard` (forced take) or `multipleChoice` (choose placement):
+When state is `takeRow` and `isActive === true`:
 
 1. Call `session_recommend` with `decision: "row"`
 2. Get the recommended row (0-3 in our engine = rows 1-4 in BGA)
-3. For `smallestCard`: click `#takerow_` + (row + 1)
-4. For `multipleChoice`: click `#chooserow_` + (row + 1)
+3. Click via JS: `document.getElementById('takerow_' + (row + 1)).click()`
 
 ## MCP Session Management
 
@@ -126,12 +149,15 @@ When state is `smallestCard` (forced take) or `multipleChoice` (choose placement
 
 ## Key BGA Facts
 
-- **Card IDs = card numbers.** Element `#player_hand_item_43` is card 43.
-- **Location encoding:** Table cards use `location_arg = "{row}{position}"` (e.g. "41" = row 4, pos 1)
+- **Card IDs ≠ card numbers!** `#myhand_item_79` might hold card 95. Use `playerHand.getAllItems()` to map.
+- **`gameui.gamedatas.hand` and `.table` are STALE** — frozen at page load, never updated. Always use live sources.
+- **Hand source:** `gameui.playerHand.getAllItems()` → `item.type` = card number, `item.id` = DOM element suffix.
+- **Board source:** DOM elements in `#row_card_zone_1` through `#row_card_zone_4`. Decode card number from `background-position`.
+- **Sprite formula:** `-X% -Y%` → `cardNum = (|Y|/100) * 10 + (|X|/100) + 1` (10-column sprite sheet, cards 1-104).
 - **Score = starting score (66) minus bull heads collected.** Lower = worse.
 - **No confirmation on card play.** Click = submit.
-- **gameui.gamedatas updates live** via notifications as the game progresses.
-- **Multi-active state.** In `cardChoice`, all players choose simultaneously.
+- **Multi-active state.** In `cardSelect`, all players choose simultaneously.
+- **State names:** `cardSelect` (play), `takeRow` (forced take), `cardProcess` (waiting), `cardReveal` (animating), `gameEnd`.
 
 ## Timing
 
