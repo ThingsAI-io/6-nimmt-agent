@@ -2,7 +2,7 @@ export interface SimConfig {
   readonly players: readonly {
     id: string;
     strategy: string;
-    params?: Record<string, unknown>;
+    strategyOptions?: Record<string, unknown>;
   }[];
   readonly seed?: string;
 }

@@ -147,7 +147,7 @@ export const simulateCommand = new Command('simulate')
       players: strategySpecs.map((s, i) => ({
         id: `player-${i}`,
         strategy: s.name,
-        ...(s.options ? { params: s.options } : {}),
+        ...(s.options ? { strategyOptions: s.options } : {}),
       })),
       seed,
     };
