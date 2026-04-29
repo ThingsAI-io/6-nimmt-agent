@@ -14,7 +14,7 @@ export const strategies: ReadonlyMap<string, StrategyFactory> = new Map([
   ['dummy-min', () => createDummyMinStrategy()],
   ['dummy-max', () => createDummyMaxStrategy()],
   ['bayesian-simple', () => createBayesianSimpleStrategy()],
-  ['mcs', (opts) => createMcsStrategy(opts as Parameters<typeof createMcsStrategy>[0])],
+  ['mcs', (opts?: Record<string, unknown>) => createMcsStrategy(opts as Parameters<typeof createMcsStrategy>[0])],
 ]);
 
 /**
