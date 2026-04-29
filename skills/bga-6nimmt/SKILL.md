@@ -245,6 +245,40 @@ The `recommend_once` tool requires this state format:
 
 ---
 
+## Game End Detection (CRITICAL)
+
+**Always check for game end BEFORE polling for next action.**
+
+```javascript
+() => {
+  // Method 1: Check game state (most reliable)
+  if (gameui.gamedatas.gamestate.name === 'gameEnd') {
+    const finalScores = {};
+    Object.entries(gameui.gamedatas.players).forEach(([id, p]) => {
+      finalScores[p.name] = parseInt(p.score);
+    });
+    return { gameEnded: true, finalScores };
+  }
+
+  // Method 2: Check page title
+  const title = document.title;
+  if (title.includes('game results') || title.includes('Game Over') || 
+      title.toLowerCase().includes('end')) {
+    return { gameEnded: true, reason: 'page title', title };
+  }
+
+  // Method 3: No hand cards left AND board inactive
+  const hand = gameui.playerHand.getAllItems();
+  if (hand.length === 0 && gameui.gamedatas.gamestate.name !== 'cardSelect') {
+    return { gameEnded: true, reason: 'empty hand' };
+  }
+
+  return { gameEnded: false };
+}
+```
+
+---
+
 ## Error Recovery
 
 | Situation | Action |

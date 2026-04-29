@@ -34,26 +34,33 @@ Use these skills for reference:
 
 ```
 REPEAT until game ends:
-  1. Poll page title until it matches one of:
-     - "You must choose a card to play" → go to step 2 (MY turn to play)
-     - "You must take a row" → go to step 6 (MY turn to pick row)
-     - "Everyone must choose a card to play" → continue polling (waiting for others)
-     - "gameEnd" in page or gamestate → break (game over)
-     - Poll every 500ms, retry up to 60 times (30s max)
+  1. Check for game end first:
+     - gameui.gamedatas.gamestate.name === 'gameEnd' → break
+     - Page shows "game results" or final scores → break
   
-  2. Read state via browser_evaluate (hand + board + scores)
-  3. Call recommend_once with state → get recommended card
-  4. Click #myhand_item_{stockId} where stockId comes from hand item lookup
-  5. Card is immediately submitted (no confirmation). Go to step 1.
+  2. Poll page title (max 300 retries at 500ms = ~2.5 min timeout):
+     - "You must choose a card to play" → go to step 3 (MY turn)
+     - "You must take a row" → go to step 7 (MY turn to pick row)
+     - "Everyone must choose a card to play" → keep polling (opponent playing)
+     - Any other state → keep polling (loading, etc.)
   
-  6. PICKING A ROW (only when "You must take a row"):
+  3. Read state via browser_evaluate (hand + board + scores)
+  4. Call recommend_once with state → get recommended card
+  5. Click #myhand_item_{stockId} where stockId comes from hand item lookup
+  6. Card is immediately submitted (no confirmation). Go to step 1.
+  
+  7. PICKING A ROW (only when "You must take a row"):
      - Read board state via browser_evaluate
-     - Pick cheapest row by cattle heads (or call recommend_once if state format allows)
+     - Pick cheapest row by cattle heads (or call recommend_once if format allows)
      - Click #row_slot_{row+1}_arrow (rows are 1-indexed in DOM)
      - Go to step 1
 ```
 
-**Key fix:** Don't halt on "Everyone must choose a card to play" — keep polling until page title changes to a state where I must act. Ignore opponent's playing time.
+**Key fixes:**
+- **Game end check first** — Always check `gamestate.name === 'gameEnd'` before polling
+- **Long opponent timeout** — 300 retries × 500ms = 150 seconds (covers slow players and lag)
+- **Don't batch many turns** — Play 1 turn per loop iteration, don't try 50 turns in one code block
+- **Return action details** — Log what action was taken and game state after each loop
 
 ## Reading State (CRITICAL — verified from live play)
 
