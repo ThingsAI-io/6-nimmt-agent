@@ -144,6 +144,4 @@ vite.config.ts.timestamp-*
 
 tmp/
 .playwright-mcp/
-current-state.png
-**/observations/
 *.png
