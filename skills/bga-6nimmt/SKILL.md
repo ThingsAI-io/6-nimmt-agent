@@ -21,15 +21,16 @@ All selectors and patterns below are **verified from live gameplay** (April 2026
 
 ## State Transitions (CRITICAL for game loop)
 
-After clicking a card to play, the page title will transition to **one of**:
-- **"You must choose a card to play"** → Normal next turn (your card fit on a row)
-- **"You must take a row"** → Forced row pick (your card was below all row ends)
+The page title can be in these states:
 
-**Both are valid.** Your game loop must poll the page title until it matches one of these conditions, then branch accordingly:
-- If "You must choose" → read state and play next card
-- If "You must take a row" → read board, get row recommendation, pick row, then repeat
+| State | Meaning | Your Action |
+|-------|---------|-------------|
+| **"You must choose a card to play"** | It's your turn to play a card | Read state, get recommendation, play card |
+| **"You must take a row"** | Your card was below all row ends; forced pick | Read board, pick cheapest row, click arrow |
+| **"Everyone must choose a card to play"** | Opponent(s) still playing; you already played | Keep polling, don't act — wait for state change |
+| **"gameEnd"** or similar | Game finished | Stop agent, read final scores |
 
-Use a polling approach rather than `waitFor` with a single string, since either outcome is possible and timing is unpredictable.
+**Polling strategy:** Your game loop must continuously poll page title until it reaches a state where **you must act** ("You must choose" or "You must take a row"). Ignore "Everyone must choose" states — these are just waiting periods. Poll every 500ms, don't timeout on "Everyone must choose".
 
 ---
 

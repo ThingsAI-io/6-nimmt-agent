@@ -34,10 +34,12 @@ Use these skills for reference:
 
 ```
 REPEAT until game ends:
-  1. Poll page title until it says EITHER:
-     - "You must choose a card to play" → go to step 2 (play card)
-     - "You must take a row" → go to step 6 (pick row)
-     - Poll every 500ms for 30s max to detect state changes
+  1. Poll page title until it matches one of:
+     - "You must choose a card to play" → go to step 2 (MY turn to play)
+     - "You must take a row" → go to step 6 (MY turn to pick row)
+     - "Everyone must choose a card to play" → continue polling (waiting for others)
+     - "gameEnd" in page or gamestate → break (game over)
+     - Poll every 500ms, retry up to 60 times (30s max)
   
   2. Read state via browser_evaluate (hand + board + scores)
   3. Call recommend_once with state → get recommended card
@@ -46,13 +48,12 @@ REPEAT until game ends:
   
   6. PICKING A ROW (only when "You must take a row"):
      - Read board state via browser_evaluate
-     - Call recommend_once with state + decision: "row"
-     - Get recommended row (0-3 from engine)
+     - Pick cheapest row by cattle heads (or call recommend_once if state format allows)
      - Click #row_slot_{row+1}_arrow (rows are 1-indexed in DOM)
      - Go to step 1
 ```
 
-**Why the change?** After playing a card, the page title can transition to EITHER "You must choose a card to play" (normal next turn) OR "You must take a row" (card was below all row ends). The poll-based approach handles both gracefully instead of timing out on one.
+**Key fix:** Don't halt on "Everyone must choose a card to play" — keep polling until page title changes to a state where I must act. Ignore opponent's playing time.
 
 ## Reading State (CRITICAL — verified from live play)
 
