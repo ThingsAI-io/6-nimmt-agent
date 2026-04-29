@@ -267,17 +267,30 @@ Based on the reference implementation's tournament results:
 | MCS (random playouts) | ~40% | 1745 |
 | Alpha0.5 (PUCT + neural) | ~42% | 1806 |
 
-### Our Benchmark Results (200 games, 4 players, seed: bench3)
+### Our Benchmark Results
 
-| Strategy | Win Rate | Avg Score |
-|----------|----------|-----------|
-| **bayesian-simple** | **53.0%** | **35.4** |
-| mcs | 35.5% | 38.5 |
-| random (pooled ×2) | 6.0% | 61.8 |
+#### MCS vs Random (100 games, 4 players, seed: bench-mcs-params)
 
-**Conclusion:** In our implementation, bayesian-simple outperforms MCS. The likely cause is simulation budget: MCS uses only ~10 simulations per card (capped at 100 total), producing noisy multi-turn estimates. Bayesian uses 200 samples for single-turn evaluation, yielding more reliable immediate decisions. The multi-turn lookahead advantage of MCS doesn't compensate for the higher variance from fewer samples.
+| Strategy | mcPerCard | mcMax | Win Rate | Avg Score | Time/game |
+|----------|-----------|-------|----------|-----------|-----------|
+| mcs | 10 (default) | 100 | 64.0% | 37.3 | 57ms |
+| mcs | 20 | 200 | 74.0% | 30.2 | 108ms |
+| mcs | **50** | **500** | **82.0%** | **27.5** | **270ms** |
+| bayesian-simple | K=200 | — | 70.0% | 32.5 | 567ms |
 
-**Potential improvements:**
-- Increase simulation budget (500-1000) at the cost of latency
-- Hybrid: use bayesian scoring for simulated opponent moves (instead of random)
-- Use bayesian as first-turn evaluator, MCS for later turns when fewer cards remain
+#### MCS vs Bayesian head-to-head (100 games, 4 players, seed: bench-mcs-vs-bayes)
+
+Each game: 1×MCS + 1×bayesian-simple + 2×random
+
+| MCS Config | MCS Win | Bayes Win | MCS Score | Bayes Score | Time/game |
+|------------|---------|-----------|-----------|-------------|-----------|
+| mcPerCard=10 (default) | 40.0% | 56.0% | 37.0 | 33.6 | 638ms |
+| mcPerCard=20 | **61.0%** | 32.0% | 30.2 | 36.3 | 803ms |
+| mcPerCard=50 | **75.0%** | 25.0% | **24.9** | 36.8 | 816ms |
+
+**Conclusions:**
+
+1. **MCS with adequate budget dominates bayesian.** At `mcPerCard=50`, MCS beats bayesian 3:1 in direct competition.
+2. **MCS is more efficient.** Against random, MCS@50 achieves 82% win rate in 270ms/game vs bayesian's 70% in 567ms — better results at half the cost.
+3. **The default budget (10) is too low.** This confirms the reference implementation's finding that simulation count is the key tuning parameter.
+4. **Recommended production config:** `mcPerCard=50, mcMax=500` — best win rate at acceptable latency (~27ms per move decision).
