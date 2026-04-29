@@ -2,13 +2,13 @@ import type { Strategy, TurnResolution } from './types';
 import type { CardNumber, Board } from '../types';
 import { cattleHeads } from '../card';
 
-const DEFAULT_MC_MAX = 100;
-const DEFAULT_MC_PER_CARD = 10;
+const DEFAULT_MC_MAX = 500;
+const DEFAULT_MC_PER_CARD = 50;
 
 export interface McsOptions {
-  /** Maximum total simulations across all cards (default: 100) */
+  /** Maximum total simulations across all cards (default: 500) */
   mcMax?: number;
-  /** Simulations per candidate card (default: 10, capped by mcMax) */
+  /** Simulations per candidate card (default: 50, capped by mcMax) */
   mcPerCard?: number;
 }
 
