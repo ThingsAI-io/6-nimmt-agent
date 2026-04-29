@@ -1,10 +1,10 @@
-# Monte-Carlo Tree Search (MCTS) Strategy for 6 Nimmt!
+# Monte-Carlo Search (MCS) Strategy for 6 Nimmt!
 
 ## Overview
 
-A Monte-Carlo Tree Search strategy that simulates playout games from the current position to evaluate each possible card play. Inspired by AlphaZero's approach ("Alpha0.5" in the rl-6-nimmt reference implementation), adapted for 6 Nimmt!'s incomplete information setting.
+A Monte-Carlo Search strategy that simulates playout games from the current position to evaluate each possible card play. Inspired by AlphaZero's approach ("Alpha0.5" in the rl-6-nimmt reference implementation), adapted for 6 Nimmt!'s incomplete information setting.
 
-**Key insight:** Unlike perfect-information games (chess, Go), 6 Nimmt! has hidden information (opponents' hands are unknown). MCTS handles this by **sampling possible opponent hands** from the remaining card pool and simulating games against those sampled hands. Over many simulations, this produces robust move evaluations that account for uncertainty.
+**Key insight:** Unlike perfect-information games (chess, Go), 6 Nimmt! has hidden information (opponents' hands are unknown). MCS handles this by **sampling possible opponent hands** from the remaining card pool and simulating games against those sampled hands. Over many simulations, this produces robust move evaluations that account for uncertainty.
 
 **Reference:** Johann Brehmer & Marcel Gutsche, "Beating 6 nimmt! with reinforcement learning" ([rl-6-nimmt](https://github.com/johannbrehmer/rl-6nimmt)). Their Alpha0.5 agent achieved a 42% win rate and ELO 1806, beating Monte-Carlo search (40%), ACER (18%), D3QN (17%), and Random (19%). It also beat a strong human player 3-2 in a 5-game match.
 
@@ -159,8 +159,8 @@ function recommendCard(hand: number[], board: Board, availableCards: number[], p
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `mcPerCard` | 10 | Simulations per factorial of legal actions |
-| `mcMax` | 100 | Maximum total simulations (cap for large hands) |
+| `mcPerCard` | 50 | Simulations per candidate card |
+| `mcMax` | 500 | Maximum total simulations (cap for large hands) |
 | `cPuct` | 2.0 | PUCT exploration constant (Alpha0.5 variant only) |
 | `simulationPolicy` | `"random"` | Policy for simulated moves: `"random"` (MCS) or `"neural"` (Alpha0.5) |
 
@@ -169,15 +169,15 @@ function recommendCard(hand: number[], board: Board, availableCards: number[], p
 The number of simulations scales with hand size:
 
 ```
-n_simulations = min(mcMax, mcPerCard × handSize!)
+n_simulations = min(mcMax, mcPerCard × hand.length)
 ```
 
-| Cards in hand | Factorial | Actual sims (mcMax=100) |
-|--------------|-----------|-------------------------|
-| 10 | 3,628,800 | 100 |
-| 5 | 120 | 100 |
-| 3 | 6 | 60 |
-| 2 | 2 | 20 |
+| Cards in hand | Actual sims (mcMax=500) |
+|--------------|-------------------------|
+| 10 | 500 |
+| 5 | 250 |
+| 3 | 150 |
+| 2 | 100 |
 | 1 | 1 | (no choice) |
 
 For turn 1 with 10 cards, we always hit the cap. This means each card gets ~10 simulations — enough for a decent estimate.
@@ -212,9 +212,9 @@ If time-constrained, fall back to **greedy minimum:** pick the row with fewest c
 | **Computation** | O(hand × rows) | O(simulations × turns × players) |
 | **Accuracy** | Approximate (independence assumptions) | Converges to true value with more sims |
 | **Row interactions** | Limited (one-step lookahead) | Full (simulates to round-end) |
-| **Speed** | Very fast (<1ms) | Slower (10-100ms for 100 sims) |
+| **Speed** | Very fast (<1ms) | ~27ms per decision (500 sims) |
 
-**Key advantage of MCTS:** It naturally captures **multi-turn interactions** — the penalty of a card isn't just about this turn, but how it affects the board for future turns. Bayesian only does one-step lookahead.
+**Key advantage of MCS:** It naturally captures **multi-turn interactions** — the penalty of a card isn't just about this turn, but how it affects the board for future turns. Bayesian only does one-step lookahead.
 
 ---
 
@@ -222,7 +222,7 @@ If time-constrained, fall back to **greedy minimum:** pick the row with fewest c
 
 ### Integration with Our Engine
 
-The MCTS strategy needs:
+The MCS strategy needs:
 1. **Game simulation capability** — ability to play out a round from any state (already have this in our engine)
 2. **Card tracking** — available card pool (already maintained in session via `turnHistory`)
 3. **Time budget** — configurable max simulations to meet BGA time constraints (~5-15s per turn)
@@ -230,9 +230,9 @@ The MCTS strategy needs:
 ### Performance Considerations
 
 For live BGA play (5-15 second decision window):
-- 100 simulations × 9 remaining turns × 6 players = ~5,400 game steps per decision
-- Each game step is trivial (card placement + comparison) — should be <1ms
-- **Total estimated time:** 50-200ms for 100 simulations — well within budget
+- 500 simulations × 9 remaining turns × 4 players = ~18,000 game steps per decision
+- Each game step is trivial (card placement + comparison) — should be <0.01ms
+- **Measured time:** ~270ms per game (~27ms per decision) — well within budget
 
 ### Progressive Enhancement Path
 

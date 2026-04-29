@@ -27,18 +27,21 @@ export function parseStrategySpec(spec: string): { name: string; options?: Recor
   const colonIdx = spec.indexOf(':');
   if (colonIdx === -1) return { name: spec };
 
-  const name = spec.slice(0, colonIdx);
-  const paramStr = spec.slice(colonIdx + 1);
+  const name = spec.slice(0, colonIdx).trim();
+  const paramStr = spec.slice(colonIdx + 1).trim();
   if (!paramStr) return { name };
 
   const options: Record<string, unknown> = {};
-  for (const pair of paramStr.split(',')) {
+  for (const rawPair of paramStr.split(',')) {
+    const pair = rawPair.trim();
+    if (!pair) continue;
     const eqIdx = pair.indexOf('=');
     if (eqIdx === -1) {
+      // Bare flags treated as true
       options[pair] = true;
     } else {
-      const key = pair.slice(0, eqIdx);
-      const rawVal = pair.slice(eqIdx + 1);
+      const key = pair.slice(0, eqIdx).trim();
+      const rawVal = pair.slice(eqIdx + 1).trim();
       // Attempt numeric coercion
       const num = Number(rawVal);
       options[key] = Number.isNaN(num) ? rawVal : num;
