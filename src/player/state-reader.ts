@@ -148,11 +148,12 @@ export async function captureErrorContext(page: Page): Promise<ErrorContext> {
       const items = gu?.playerHand?.getAllItems?.() ?? [];
       const rawItems = items.map((i: any) => i.id);
 
-      // Check if any row arrow is currently visible/selectable (our row pick turn)
+      // Check if any row arrow is currently selectable (our row pick turn).
+      // Only 'selectable_row' class is reliable — arrows stay visible during opponent picks.
       let rowArrowsVisible = false;
       for (let r = 1; r <= 4; r++) {
         const arrow = (window as any).document.getElementById(`row_slot_${r}_arrow`);
-        if (arrow && (arrow.classList.contains('selectable_row') || arrow.offsetParent !== null)) {
+        if (arrow && arrow.classList.contains('selectable_row')) {
           rowArrowsVisible = true;
           break;
         }
@@ -235,17 +236,15 @@ export async function detectAction(page: Page): Promise<PageAction> {
 
     // Row pick detection — tricky because BGA shows the same title structure
     // for both "You must take a row" and "OpponentName must take a row".
-    // We verify it's our turn by checking if row arrows are actually clickable.
+    // We verify it's our turn ONLY via the 'selectable_row' class — BGA adds
+    // this class exclusively when it's our turn to pick. Do NOT fall back to
+    // offsetParent/visibility checks: row arrows remain rendered and visible
+    // in the DOM during opponent picks, so visibility alone is unreliable.
     if (title.includes('must take a row') || title.includes('must choose a row')) {
       const arrows = (window as any).document.querySelectorAll('#row_slot_1_arrow, #row_slot_2_arrow, #row_slot_3_arrow, #row_slot_4_arrow');
       let anySelectable = false;
       arrows.forEach((el: any) => {
-        // BGA adds 'selectable_row' class to arrows only when it's our turn.
-        // Also check computed visibility as a secondary signal.
-        if (el.classList.contains('selectable_row') || 
-            el.style.display !== 'none' && el.style.visibility !== 'hidden' && el.offsetParent !== null) {
-          anySelectable = true;
-        }
+        if (el.classList.contains('selectable_row')) anySelectable = true;
       });
       if (anySelectable) return 'pickRow';
       // Last resort: if title explicitly starts with "you", trust it

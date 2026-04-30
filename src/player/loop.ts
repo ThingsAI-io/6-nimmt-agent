@@ -360,6 +360,26 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         round: currentRound,
         turn: turnsPlayed,
       });
+
+      // Wait for BGA to leave the row-pick state before looping.
+      // Without this, detectAction() sees the title still saying "must take a row"
+      // and selectable_row arrows on the next poll, causing repeated row picks.
+      // Poll until selectable_row arrows disappear (BGA confirmed our pick).
+      await page.waitForTimeout(500);
+      for (let i = 0; i < 20; i++) {
+        const pickDone = await page.evaluate(() => {
+          const arrows = (window as any).document.querySelectorAll(
+            '#row_slot_1_arrow, #row_slot_2_arrow, #row_slot_3_arrow, #row_slot_4_arrow'
+          );
+          let anySelectable = false;
+          arrows.forEach((el: any) => {
+            if (el.classList.contains('selectable_row')) anySelectable = true;
+          });
+          return !anySelectable;
+        });
+        if (pickDone) break;
+        await page.waitForTimeout(300);
+      }
     }
 
     // Wait for BGA animations to resolve (card placement, row clearing, etc.)
