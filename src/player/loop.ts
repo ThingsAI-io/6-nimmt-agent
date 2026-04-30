@@ -134,8 +134,8 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     // Derive turn from hand size (more reliable than counter on resume)
     const currentTurn = inferTurn(state.hand.length);
 
-    // Detect new round (hand size jumped back up to 10)
-    if (state.hand.length > lastHandSize && lastHandSize > 0) {
+    // Detect new round (hand size jumped back up — e.g. 0→10 or 1→10)
+    if (state.hand.length >= 9 && lastHandSize < 9 && lastHandSize >= 0 && turnsPlayed > 0) {
       currentRound++;
       log({ event: 'newRound', round: currentRound }, verbose);
       const hand = state.hand.map(h => h.cardValue as number);
