@@ -7,6 +7,7 @@ import type { CardNumber } from '../engine/types.js';
 
 /**
  * Play a card from hand by clicking it.
+ * Uses JS click via evaluate as BGA cards may not pass Playwright's visibility checks.
  */
 export async function playCard(page: Page, hand: HandItem[], cardValue: CardNumber): Promise<void> {
   const item = hand.find(h => h.cardValue === cardValue);
@@ -17,7 +18,19 @@ export async function playCard(page: Page, hand: HandItem[], cardValue: CardNumb
   }
 
   const selector = `#myhand_item_${item.stockId}`;
-  await page.click(selector);
+  
+  // Use JS click — more reliable than Playwright's actionability checks for BGA
+  const clicked = await page.evaluate((sel: string) => {
+    const el = document.querySelector(sel) as HTMLElement | null;
+    if (!el) return false;
+    el.click();
+    return true;
+  }, selector);
+
+  if (!clicked) {
+    // Fallback: force click via Playwright
+    await page.click(selector, { force: true, timeout: 5_000 });
+  }
 }
 
 /**
@@ -28,14 +41,15 @@ export async function pickRow(page: Page, rowIndex: 0 | 1 | 2 | 3): Promise<void
   const domIndex = rowIndex + 1; // DOM is 1-indexed
   const selector = `#row_slot_${domIndex}_arrow`;
 
-  // Wait for row arrow to become selectable (has class selectable_row)
-  await page.waitForFunction(
-    (sel: string) => {
-      const el = document.querySelector(sel);
-      return el && (el.classList.contains('selectable_row') || (el as HTMLElement).offsetHeight > 0);
-    },
-    selector,
-    { timeout: 15_000 }
-  );
-  await page.click(selector);
+  // Use JS click — BGA arrows often fail Playwright visibility checks
+  const clicked = await page.evaluate((sel: string) => {
+    const el = document.querySelector(sel) as HTMLElement | null;
+    if (!el) return false;
+    el.click();
+    return true;
+  }, selector);
+
+  if (!clicked) {
+    await page.click(selector, { force: true, timeout: 5_000 });
+  }
 }

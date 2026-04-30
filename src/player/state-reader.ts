@@ -135,20 +135,20 @@ export async function detectAction(page: Page): Promise<PageAction> {
       return 'playCard';
     }
 
-    // Row pick: must be OUR turn AND arrows must be actually visible
+    // Row pick: must be OUR turn AND arrows must be actually interactive
     if (title.includes('must take a row') || title.includes('must choose a row')) {
-      // Check if any row arrow is visible (displayed with non-zero size)
-      const arrows = (window as any).document.querySelectorAll('.arrow_slot');
-      let anyVisible = false;
+      // BGA adds 'selectable_row' class to clickable arrows only on our turn
+      const arrows = (window as any).document.querySelectorAll('#row_slot_1_arrow, #row_slot_2_arrow, #row_slot_3_arrow, #row_slot_4_arrow');
+      let anySelectable = false;
       arrows.forEach((el: any) => {
-        if (el.offsetWidth > 0 && el.offsetHeight > 0 && 
-            getComputedStyle(el).display !== 'none' &&
-            getComputedStyle(el).visibility !== 'hidden') {
-          anyVisible = true;
+        if (el.classList.contains('selectable_row') || 
+            el.style.display !== 'none' && el.style.visibility !== 'hidden' && el.offsetParent !== null) {
+          anySelectable = true;
         }
       });
-      if (anyVisible) return 'pickRow';
-      // Arrows not visible — opponent is picking, wait
+      if (anySelectable) return 'pickRow';
+      // Not our turn — could also be title mentioning "you" with active player ID check
+      if (title.startsWith('you')) return 'pickRow'; // title explicitly says "You"
       return 'waiting';
     }
 
