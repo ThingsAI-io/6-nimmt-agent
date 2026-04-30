@@ -77,6 +77,7 @@ function fisherYates<T>(arr: T[], rng: () => number): T[] {
 export function createBayesianSimpleStrategy(): Strategy {
   let rng: () => number = Math.random;
   let playerCount = 2;
+  // Persistent set of all cards ever observed — fed by onTurnResolved().
   let seenCards = new Set<number>();
 
   return {
@@ -92,6 +93,19 @@ export function createBayesianSimpleStrategy(): Strategy {
       for (const play of resolution.plays) {
         seenCards.add(play.card);
       }
+      for (const res of resolution.resolutions) {
+        if (res.collectedCards) {
+          for (const c of res.collectedCards) seenCards.add(c);
+        }
+      }
+      for (const pick of resolution.rowPicks) {
+        for (const c of pick.collectedCards) seenCards.add(c);
+      }
+      if (resolution.boardAfter) {
+        for (const row of resolution.boardAfter) {
+          for (const card of row) seenCards.add(card);
+        }
+      }
     },
 
     chooseCard(state) {
@@ -106,7 +120,6 @@ export function createBayesianSimpleStrategy(): Strategy {
         for (const c of row) known.add(c);
       }
       for (const c of seenCards) known.add(c);
-      // Also include initial board cards and turnHistory plays
       for (const entry of state.turnHistory) {
         for (const play of entry.plays) known.add(play.card);
       }

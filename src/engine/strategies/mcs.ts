@@ -141,19 +141,19 @@ function simulateRound(
  * each possible card play. Picks the card with lowest average total penalty
  * across all simulations.
  *
+ * Card counting is fed by the caller via onTurnResolved() — the strategy
+ * tracks all cards it's been told about and excludes them from the unknown pool.
+ *
  * Based on the MCS agent from:
  *   Johann Brehmer & Marcel Gutsche, "Beating 6 nimmt! with reinforcement learning"
  *   https://github.com/johannbrehmer/rl-6nimmt
- *
- * Their MCS achieved ~40% win rate (ELO 1745) in 4-player self-play tournaments.
- * With default config (mcPerCard=50, mcMax=500), our implementation achieves 82%
- * win rate vs random and 75% vs bayesian-simple in 4-player games.
  */
 export function createMcsStrategy(options: McsOptions = {}): Strategy {
   const mcMax = Math.max(1, Math.floor(Number(options.mcMax) || DEFAULT_MC_MAX));
   const mcPerCard = Math.max(1, Math.floor(Number(options.mcPerCard) || DEFAULT_MC_PER_CARD));
   let rng: () => number = Math.random;
   let playerCount = 2;
+  // Persistent set of all cards ever observed — fed by onTurnResolved().
   let seenCards = new Set<number>();
 
   return {
@@ -168,6 +168,19 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
     onTurnResolved(resolution: TurnResolution) {
       for (const play of resolution.plays) {
         seenCards.add(play.card);
+      }
+      for (const res of resolution.resolutions) {
+        if (res.collectedCards) {
+          for (const c of res.collectedCards) seenCards.add(c);
+        }
+      }
+      for (const pick of resolution.rowPicks) {
+        for (const c of pick.collectedCards) seenCards.add(c);
+      }
+      if (resolution.boardAfter) {
+        for (const row of resolution.boardAfter) {
+          for (const card of row) seenCards.add(card);
+        }
       }
     },
 

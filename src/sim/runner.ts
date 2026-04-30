@@ -142,6 +142,15 @@ export function runGame(config: SimConfig): GameResult {
     state = dealRound(state);
     roundCount++;
 
+    // 6a.1 onRoundStart — notify strategies of new round
+    for (const p of players) {
+      const strat = strategyMap.get(p.id)!;
+      const player = state.players.find((ps) => ps.id === p.id)!;
+      try {
+        strat.onRoundStart?.({ round: roundCount, hand: player.hand, board: state.board });
+      } catch { /* lifecycle errors are non-fatal */ }
+    }
+
     // 6b. 10 turns
     for (let t = 0; t < 10; t++) {
       // Collect card choices
@@ -235,6 +244,17 @@ export function runGame(config: SimConfig): GameResult {
 
     // 6e. Check game over
     if (isGameOver(state)) break;
+  }
+
+  // 6f. onGameEnd — notify strategies of final outcome
+  const finalScores = state.players.map((p) => ({ id: p.id, score: p.score }));
+  for (const p of players) {
+    const strat = strategyMap.get(p.id)!;
+    const myScore = state.players.find((ps) => ps.id === p.id)!.score;
+    const won = finalScores.every(s => s.id === p.id || s.score >= myScore);
+    try {
+      strat.onGameEnd?.({ scores: finalScores, rounds: roundCount, won });
+    } catch { /* lifecycle errors are non-fatal */ }
   }
 
   // 7. Build result with rankings

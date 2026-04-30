@@ -10,6 +10,11 @@ import { strategies, cattleHeads, deriveSeedState, xoshiro256ss } from '../engin
 import * as errors from './errors.js';
 import type { DomainError } from './errors.js';
 
+/** Convert a 4-row number[][] (already validated) to a typed Board. */
+function toBoard(rows: number[][]): Board {
+  return { rows: [rows[0], rows[1], rows[2], rows[3]] as unknown as Board['rows'] };
+}
+
 // ── Types ───────────────────────────────────────────────────────────
 
 type SessionPhase = 'awaiting-round' | 'in-round' | 'awaiting-row-pick' | 'game-over' | 'ended';
@@ -270,6 +275,15 @@ export class SessionManager {
     session.lastTurnKey = undefined;
     session.lastTurnPayload = undefined;
 
+    // onRoundStart — notify strategy of new round
+    try {
+      session.strategy.onRoundStart?.({
+        round,
+        hand: hand as CardNumber[],
+        board: toBoard(board),
+      });
+    } catch { /* lifecycle errors are non-fatal */ }
+
     return {
       sessionVersion: session.version,
       phase: 'in-round' as SessionPhase,
@@ -426,6 +440,16 @@ export class SessionManager {
 
     if (gameOver) {
       session.phase = 'game-over';
+      // onGameEnd — notify strategy of final outcome
+      try {
+        const myScore = scores.find(s => s.playerId === session.playerId)?.score ?? 0;
+        const won = scores.every(s => s.playerId === session.playerId || s.score >= myScore);
+        session.strategy.onGameEnd?.({
+          scores: scores.map(s => ({ id: s.playerId, score: s.score })),
+          rounds: session.completedRounds,
+          won,
+        });
+      } catch { /* lifecycle errors are non-fatal */ }
       const finalScores = [...scores].sort((a, b) => a.score - b.score);
       return {
         sessionVersion: session.version,
