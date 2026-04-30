@@ -31,6 +31,14 @@ import { playCard, pickRow } from './actor.js';
 import { log, logError } from './logger.js';
 import { GameCollector } from './collector.js';
 
+/** Safely extract message and stack from any thrown value. */
+function formatError(err: unknown): { message: string; stack?: string } {
+  if (err instanceof Error) {
+    return { message: err.message, ...(err.stack ? { stack: err.stack } : {}) };
+  }
+  return { message: String(err) };
+}
+
 export interface PlayOptions {
   strategy: Strategy;
   strategyName?: string;
@@ -113,7 +121,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     const stamped = { ...entry, timestamp: new Date().toISOString() };
     eventBuffer.push(stamped);
     if (eventBuffer.length > RING_SIZE) eventBuffer.shift();
-    log(stamped as any, verbose);
+    log(stamped as any, verbose); // timestamp already set — log() won't overwrite
   }
 
   // Initialize strategy with game metadata
@@ -151,10 +159,11 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       action = await waitForAction(page, timeout);
     } catch (err) {
       const dom = await captureErrorContext(page);
+      const { message, stack } = formatError(err);
       logError({
         event: 'error',
-        message: (err as Error).message,
-        context: { action: 'waitForAction', dom },
+        message,
+        context: { action: 'waitForAction', dom, ...(stack ? { stack } : {}) },
         lastEvents: [...eventBuffer],
       });
       throw err;
@@ -179,6 +188,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     // After playing 10 cards, hand is empty. We need to wait for BGA to deal
     // the next round (hand refills to 10) or end the game.
     let state = await readGameState(page);
+    let stateReadAt = Date.now(); // track when state was read for staleAgeMs diagnostics
     if (state.hand.length === 0 && action === 'playCard') {
       emit({ event: 'roundComplete', message: 'Hand empty — waiting for next round or game end', round: currentRound });
       let foundNewState = false;
@@ -238,14 +248,14 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       if (delay) await page.waitForTimeout(delay);
 
       // Attempt card play — on failure, emit enriched error with full context
-      const stateReadAt = Date.now();
       try {
         await playCard(page, card);
       } catch (err) {
         const dom = await captureErrorContext(page);
+        const { message, stack } = formatError(err);
         logError({
           event: 'error',
-          message: (err as Error).message,
+          message,
           context: {
             action: 'playCard',
             targetCard: card,
@@ -253,6 +263,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
             hand: state.hand.map(h => h.cardValue as number),
             board: boardBefore,
             dom,
+            ...(stack ? { stack } : {}),
           },
           lastEvents: [...eventBuffer],
         });
@@ -343,21 +354,22 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       if (delay) await page.waitForTimeout(delay);
 
       // Attempt row pick — on failure, emit enriched error with full context
-      const rowStateReadAt = Date.now();
       try {
         await pickRow(page, rowIdx);
       } catch (err) {
         const dom = await captureErrorContext(page);
+        const { message, stack } = formatError(err);
         logError({
           event: 'error',
-          message: (err as Error).message,
+          message,
           context: {
             action: 'pickRow',
             targetRow: rowIdx,
-            stateAgeMs: Date.now() - rowStateReadAt,
+            stateAgeMs: Date.now() - stateReadAt,
             hand: state.hand.map(h => h.cardValue as number),
             board: state.board.rows.map(r => [...r]),
             dom,
+            ...(stack ? { stack } : {}),
           },
           lastEvents: [...eventBuffer],
         });
