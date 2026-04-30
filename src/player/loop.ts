@@ -134,8 +134,8 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     rng: Math.random,
   });
 
-  /** Notify strategy that game ended. Determines win based on lowest score. */
-  function notifyGameEnd(scores: Record<string, number>, rounds: number): void {
+  /** Called when game ends. Determines win based on lowest score. */
+  function onGameEnd(scores: Record<string, number>, rounds: number): void {
     if (!strategy.onGameEnd) return;
     const myId = initialState.myPlayerId;
     const scoreEntries = Object.entries(scores).map(([id, score]) => ({ id, score }));
@@ -188,7 +188,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     if (action === 'gameEnd') {
       const scores = await getFinalScores(page);
       emit({ event: 'gameEnd', scores, turnsPlayed, rounds: currentRound });
-      notifyGameEnd(scores, currentRound);
+      onGameEnd(scores, currentRound);
       
       // Save collected data
       let dataFile: string | undefined;
@@ -219,7 +219,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         if (gameOver) {
           emit({ event: 'gameEnd', round: currentRound });
           const scores = await getFinalScores(page);
-          notifyGameEnd(scores, currentRound);
+          onGameEnd(scores, currentRound);
           let dataFile: string | undefined;
           if (collector) {
             collector.endRound(scores);
@@ -310,7 +310,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         if (abruptEnd) {
           emit({ event: 'gameAborted', reason: 'card not found in non-interactive state', gamestateName: dom.gamestateName });
           const scores = await getFinalScores(page).catch(() => ({}));
-          notifyGameEnd(scores, currentRound);
+          onGameEnd(scores, currentRound);
           if (collector) {
             collector.endRound(scores);
             collector.finalize(scores);
@@ -414,7 +414,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         if (abruptEnd) {
           emit({ event: 'gameAborted', reason: 'row pick failed in terminal state', gamestateName: dom.gamestateName });
           const scores = await getFinalScores(page).catch(() => ({}));
-          notifyGameEnd(scores, currentRound);
+          onGameEnd(scores, currentRound);
           if (collector) {
             collector.endRound(scores);
             collector.finalize(scores);
