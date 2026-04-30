@@ -27,9 +27,7 @@ npm install
 # Simulate 1000 games: MCS vs 4 random players
 npx tsx src/cli/index.ts simulate --strategies mcs,random,random,random,random --games 1000
 
-# Play live on BGA (Chrome/Edge required)
-export BGA_USERNAME=you
-export BGA_PASSWORD=secret
+# Play live on BGA — log in and join a table in Chrome/Edge first, then:
 npm run play -- --strategy mcs --verbose
 ```
 

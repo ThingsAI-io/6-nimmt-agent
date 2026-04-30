@@ -34,21 +34,14 @@ npx tsx src/cli/index.ts simulate --strategies bayesian,random --games 500 --for
 
 The headless player attaches to your browser and plays autonomously.
 
-### 1. Set credentials
+### 1. Join a table on BGA
+
+Open BGA in Chrome or Edge, log in, and join (or create) a 6 Nimmt! table. Get to the game page.
+
+### 2. Run the player
 
 ```bash
-export BGA_USERNAME=your_username
-export BGA_PASSWORD=your_password
-```
-
-### 2. Join a table on BGA
-
-Open BGA in Chrome or Edge, log in, and join (or create) a 6 Nimmt! table.
-
-### 3. Run the player
-
-```bash
-# Connect to your running browser (Chrome/Edge must already be open)
+# Connect to your running browser (Chrome/Edge must already be open at the game page)
 npm run play -- --strategy mcs
 
 # With strategy tuning
@@ -58,7 +51,7 @@ npm run play -- --strategy mcs:mcMax=1000,mcPerCard=100 --verbose
 npm run play -- --strategy mcs --delay 2000
 ```
 
-The script connects to your browser via Chrome DevTools Protocol (CDP). If no browser is found running on port 9222, it launches one automatically and prompts you to log in and join a table.
+The script connects to your browser via Chrome DevTools Protocol (CDP) on port 9222.
 
 ## Run tests
 

@@ -21,24 +21,17 @@ The player polls BGA's page title and gamestate every 500ms to detect when it's 
 
 ## Setup
 
-### 1. Credentials
+### 1. Join a table on BGA
 
-```bash
-export BGA_USERNAME=your_username
-export BGA_PASSWORD=your_password
-```
+Open Chrome or Edge, log in to [Board Game Arena](https://boardgamearena.com), and join a 6 Nimmt! table. Get to the game page.
 
-### 2. Join a game
-
-Open Chrome or Edge, navigate to BGA, log in, and join a 6 Nimmt! table. Get to the game page.
-
-### 3. Start the player
+### 2. Start the player
 
 ```bash
 npm run play -- --strategy mcs
 ```
 
-The script finds your browser via CDP on port 9222. If no browser is running there, it launches one automatically.
+The script connects to your browser via CDP on port 9222.
 
 ## Command reference
 
