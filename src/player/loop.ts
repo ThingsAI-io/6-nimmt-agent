@@ -8,19 +8,23 @@ import type { CardChoiceState, RowChoiceState, CardNumber } from '../engine/type
 import { readGameState, detectAction, getFinalScores, findCheapestRow, diagnoseDom, type GameStateFromDOM } from './state-reader.js';
 import { playCard, pickRow } from './actor.js';
 import { log } from './logger.js';
+import { GameCollector } from './collector.js';
 
 export interface PlayOptions {
   strategy: Strategy;
-  playerCount?: number; // override if known; otherwise read from DOM
-  delay?: number;       // ms delay before each play (appear human)
-  timeout?: number;     // max ms to wait for opponent (default 180s)
+  strategyName?: string;
+  playerCount?: number;
+  delay?: number;
+  timeout?: number;
   verbose?: boolean;
+  collect?: boolean; // enable data collection (default: true)
 }
 
 export interface GameResult {
   scores: Record<string, number>;
   turnsPlayed: number;
   rounds: number;
+  dataFile?: string; // path to saved game log
 }
 
 /**
@@ -46,7 +50,7 @@ async function waitForAction(
  * Play a full game from current page state until game ends.
  */
 export async function playGame(page: Page, opts: PlayOptions): Promise<GameResult> {
-  const { strategy, delay = 0, timeout = 180_000, verbose = false } = opts;
+  const { strategy, delay = 0, timeout = 180_000, verbose = false, collect = true } = opts;
   let turnsPlayed = 0;
   let currentRound = 1;
   let lastHandSize = 0;
@@ -60,6 +64,17 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     rng: Math.random,
   });
 
+  // Initialize data collector
+  const collector = collect ? new GameCollector({
+    playerCount,
+    strategy: opts.strategyName ?? strategy.name,
+  }) : null;
+
+  // Start first round
+  const initialHand = initialState.hand.map(h => h.cardValue as number);
+  const initialBoard = initialState.board.rows.map(r => [...r]);
+  collector?.startRound(1, initialBoard, initialHand);
+
   while (true) {
     // 1. Wait for our turn or game end
     const action = await waitForAction(page, timeout);
@@ -67,17 +82,24 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     if (action === 'gameEnd') {
       const scores = await getFinalScores(page);
       log({ event: 'gameEnd', scores, turnsPlayed, rounds: currentRound }, verbose);
-      return { scores, turnsPlayed, rounds: currentRound };
+      
+      // Save collected data
+      let dataFile: string | undefined;
+      if (collector) {
+        collector.endRound(scores);
+        dataFile = collector.finalize(scores);
+        log({ event: 'dataSaved', file: dataFile }, verbose);
+      }
+      
+      return { scores, turnsPlayed, rounds: currentRound, dataFile };
     }
 
-    // 2. Read current state (retry if hand is empty — DOM might still be loading)
+    // 2. Read current state (retry if hand is empty)
     let state = await readGameState(page);
     if (state.hand.length === 0 && action === 'playCard') {
       log({ event: 'emptyHand', message: 'Hand empty, retrying...' }, verbose);
-      // Diagnostic dump on first failure
       const diag = await diagnoseDom(page);
       log({ event: 'diagnostic', ...diag as Record<string, unknown> }, verbose);
-      // Retry a few times
       for (let retry = 0; retry < 5; retry++) {
         await page.waitForTimeout(1000);
         state = await readGameState(page);
@@ -92,17 +114,39 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     if (state.hand.length > lastHandSize && turnsPlayed > 0) {
       currentRound++;
       log({ event: 'newRound', round: currentRound }, verbose);
+      // Record new round in collector
+      const hand = state.hand.map(h => h.cardValue as number);
+      const board = state.board.rows.map(r => [...r]);
+      collector?.startRound(currentRound, board, hand);
     }
     lastHandSize = state.hand.length;
 
     // 3. Execute action
     if (action === 'playCard') {
+      const boardBefore = state.board.rows.map(r => [...r]);
       const cardState = buildCardChoiceState(state, playerCount, currentRound, turnsPlayed);
+      
+      const t0 = Date.now();
       const card = strategy.chooseCard(cardState);
+      const decisionTime = Date.now() - t0;
       
       if (delay) await page.waitForTimeout(delay);
       await playCard(page, state.hand, card);
       turnsPlayed++;
+
+      // Record turn data
+      collector?.recordTurn({
+        turn: turnsPlayed,
+        ourCard: card as number,
+        ourRecommendation: card as number,
+        boardBefore,
+        decision: {
+          hand: state.hand.map(h => h.cardValue as number),
+          board: boardBefore,
+          strategyUsed: opts.strategyName ?? strategy.name,
+          timeToDecide: decisionTime,
+        },
+      });
 
       log({
         event: 'playCard',
@@ -110,10 +154,10 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         round: currentRound,
         turn: turnsPlayed,
         handSize: state.hand.length - 1,
+        decisionTime,
       }, verbose);
 
     } else if (action === 'pickRow') {
-      // Try strategy's row choice, fall back to cheapest
       let rowIdx: 0 | 1 | 2 | 3;
       try {
         const rowState = buildRowChoiceState(state, playerCount, currentRound, turnsPlayed);
@@ -133,8 +177,12 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       }, verbose);
     }
 
-    // Small breathing room for animations
+    // Capture board state after resolution
     await page.waitForTimeout(1500);
+    try {
+      const postState = await readGameState(page);
+      collector?.recordBoardAfter(postState.board.rows.map(r => [...r]));
+    } catch { /* non-critical */ }
   }
 }
 

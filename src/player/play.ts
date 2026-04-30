@@ -264,6 +264,7 @@ async function main(): Promise<void> {
     // Play the game!
     const result = await playGame(page, {
       strategy,
+      strategyName: name,
       delay: args.delay,
       verbose: args.verbose,
     });
