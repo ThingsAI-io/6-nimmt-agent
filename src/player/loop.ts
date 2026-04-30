@@ -51,7 +51,6 @@ async function waitForAction(
  */
 export async function playGame(page: Page, opts: PlayOptions): Promise<GameResult> {
   const { strategy, delay = 0, timeout = 180_000, verbose = false, collect = true } = opts;
-  let turnsPlayed = 0;
   let currentRound = 1;
   let lastHandSize = 0;
 
@@ -63,6 +62,10 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     playerCount,
     rng: Math.random,
   });
+
+  // Derive current turn from hand size (10 cards = turn 1, 9 = turn 2, etc.)
+  const inferTurn = (handSize: number) => 11 - handSize;
+  let turnsPlayed = inferTurn(initialState.hand.length) - 1; // turns already played
 
   // Initialize data collector
   const collector = collect ? new GameCollector({
@@ -110,11 +113,13 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       }
     }
 
-    // Detect new round (hand size jumped back up)
-    if (state.hand.length > lastHandSize && turnsPlayed > 0) {
+    // Derive turn from hand size (more reliable than counter on resume)
+    const currentTurn = inferTurn(state.hand.length);
+
+    // Detect new round (hand size jumped back up to 10)
+    if (state.hand.length > lastHandSize && lastHandSize > 0) {
       currentRound++;
       log({ event: 'newRound', round: currentRound }, verbose);
-      // Record new round in collector
       const hand = state.hand.map(h => h.cardValue as number);
       const board = state.board.rows.map(r => [...r]);
       collector?.startRound(currentRound, board, hand);
@@ -124,7 +129,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     // 3. Execute action
     if (action === 'playCard') {
       const boardBefore = state.board.rows.map(r => [...r]);
-      const cardState = buildCardChoiceState(state, playerCount, currentRound, turnsPlayed);
+      const cardState = buildCardChoiceState(state, playerCount, currentRound, currentTurn);
       
       const t0 = Date.now();
       const card = strategy.chooseCard(cardState);
@@ -136,7 +141,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
 
       // Record turn data
       collector?.recordTurn({
-        turn: turnsPlayed,
+        turn: currentTurn,
         ourCard: card as number,
         ourRecommendation: card as number,
         boardBefore,
@@ -152,7 +157,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         event: 'playCard',
         card,
         round: currentRound,
-        turn: turnsPlayed,
+        turn: currentTurn,
         handSize: state.hand.length - 1,
         decisionTime,
       }, verbose);
