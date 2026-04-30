@@ -13,7 +13,6 @@
  *   Element IDs (myhand_item_X) use internal stock IDs that change between renders.
  */
 import type { Page } from 'playwright';
-import type { HandItem } from './state-reader.js';
 import type { CardNumber } from '../engine/types.js';
 
 /**
@@ -25,7 +24,7 @@ import type { CardNumber } from '../engine/types.js';
  * hand items, decode each card's value from its sprite, and click the one
  * that matches our target value.
  */
-export async function playCard(page: Page, _hand: HandItem[], cardValue: CardNumber): Promise<void> {
+export async function playCard(page: Page, cardValue: CardNumber): Promise<void> {
   const result = await page.evaluate((targetValue: number) => {
     const gu = (window as any).gameui;
     if (!gu?.playerHand) return { ok: false, error: 'no playerHand' };
@@ -73,15 +72,19 @@ export async function playCard(page: Page, _hand: HandItem[], cardValue: CardNum
  * These arrows have class "selectable_row" when clickable, but their CSS
  * display/visibility can still confuse Playwright — so we use JS click first,
  * falling back to Playwright's force-click if the element isn't found via JS.
+ *
+ * SAFETY: We verify selectable_row class before clicking to prevent acting
+ * on a row that's visible but belongs to an opponent's turn.
  */
 export async function pickRow(page: Page, rowIndex: 0 | 1 | 2 | 3): Promise<void> {
   const domIndex = rowIndex + 1; // Convert 0-indexed to BGA's 1-indexed DOM
   const selector = `#row_slot_${domIndex}_arrow`;
 
-  // Primary: JS click via evaluate (most reliable for BGA elements)
+  // Primary: JS click via evaluate — verify selectable_row class first
   const clicked = await page.evaluate((sel: string) => {
     const el = document.querySelector(sel) as HTMLElement | null;
     if (!el) return false;
+    if (!el.classList.contains('selectable_row')) return false;
     el.click();
     return true;
   }, selector);

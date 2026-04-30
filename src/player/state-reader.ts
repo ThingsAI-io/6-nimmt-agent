@@ -122,7 +122,54 @@ export async function readGameState(page: Page): Promise<GameStateFromDOM> {
 }
 
 /**
- * Diagnostic: dump raw hand DOM info for debugging.
+ * Capture a diagnostic DOM snapshot for error reporting.
+ *
+ * Called from loop.ts catch blocks to attach live DOM state to error events.
+ * Reads only what's needed for debugging — does NOT re-read full game state
+ * (which might itself throw if the page is in a bad state).
+ */
+export interface ErrorContext {
+  title: string;
+  gamestateName: string;
+  handItemCount: number;
+  /** Raw stock item IDs currently in hand — useful to see if card disappeared */
+  rawItems: number[];
+  rowArrowsVisible: boolean;
+}
+
+export async function captureErrorContext(page: Page): Promise<ErrorContext> {
+  try {
+    return await page.evaluate((() => {
+      /* eslint-disable no-undef */
+      const gu = (window as any).gameui;
+      const title = (window as any).document.getElementById('pagemaintitletext')?.textContent?.trim() ?? '';
+      const gamestateName = gu?.gamedatas?.gamestate?.name ?? 'unknown';
+
+      const items = gu?.playerHand?.getAllItems?.() ?? [];
+      const rawItems = items.map((i: any) => i.id);
+
+      // Check if any row arrow is currently selectable (our row pick turn).
+      // Only 'selectable_row' class is reliable — arrows stay visible during opponent picks.
+      let rowArrowsVisible = false;
+      for (let r = 1; r <= 4; r++) {
+        const arrow = (window as any).document.getElementById(`row_slot_${r}_arrow`);
+        if (arrow && arrow.classList.contains('selectable_row')) {
+          rowArrowsVisible = true;
+          break;
+        }
+      }
+
+      return { title, gamestateName, handItemCount: items.length, rawItems, rowArrowsVisible };
+      /* eslint-enable no-undef */
+    }) as any);
+  } catch {
+    // Page may be mid-navigation or crashed — return a safe fallback
+    return { title: '', gamestateName: 'unknown', handItemCount: -1, rawItems: [], rowArrowsVisible: false };
+  }
+}
+/**
+ * Debug utility — dump raw DOM state for manual investigation.
+ * Not used in normal play; kept for ad-hoc troubleshooting via REPL/agent.
  */
 export async function diagnoseDom(page: Page): Promise<unknown> {
   return await page.evaluate((() => {
@@ -170,9 +217,18 @@ export type PageAction = 'playCard' | 'pickRow' | 'waiting' | 'gameEnd';
 export async function detectAction(page: Page): Promise<PageAction> {
   return await page.evaluate((() => {
     const gs = (window as any).gameui?.gamedatas?.gamestate;
+    const gsName: string = gs?.name ?? '';
 
-    // Game end is always authoritative from gamestate
-    if (gs?.name === 'gameEnd') return 'gameEnd';
+    // Game end — check multiple possible state names BGA uses
+    if (gsName === 'gameEnd' || gsName === 'endGame' || gsName === 'gameOver') return 'gameEnd';
+
+    // BGA non-interactive resolution states — cards are flying/animating, not our turn.
+    // These occur during normal play AND when a player quits mid-game (which can push
+    // BGA into cardReveal or similar without a clean gameEnd transition).
+    // Returning 'waiting' here prevents the fallback below from falsely triggering 'playCard'.
+    // NOTE: add new states here as they are discovered in live play.
+    const NON_INTERACTIVE = ['cardReveal', 'cardProcess', 'resolveStack', 'betweenRounds', 'newRound', 'nextRound'];
+    if (NON_INTERACTIVE.includes(gsName)) return 'waiting';
 
     const titleEl = (window as any).document.getElementById('pagemaintitletext');
     const title = (titleEl?.textContent ?? '').toLowerCase();
@@ -184,28 +240,28 @@ export async function detectAction(page: Page): Promise<PageAction> {
 
     // Row pick detection — tricky because BGA shows the same title structure
     // for both "You must take a row" and "OpponentName must take a row".
-    // We verify it's our turn by checking if row arrows are actually clickable.
+    // We verify it's our turn ONLY via the 'selectable_row' class — BGA adds
+    // this class exclusively when it's our turn to pick. Do NOT fall back to
+    // offsetParent/visibility checks: row arrows remain rendered and visible
+    // in the DOM during opponent picks, so visibility alone is unreliable.
     if (title.includes('must take a row') || title.includes('must choose a row')) {
       const arrows = (window as any).document.querySelectorAll('#row_slot_1_arrow, #row_slot_2_arrow, #row_slot_3_arrow, #row_slot_4_arrow');
       let anySelectable = false;
       arrows.forEach((el: any) => {
-        // BGA adds 'selectable_row' class to arrows only when it's our turn.
-        // Also check computed visibility as a secondary signal.
-        if (el.classList.contains('selectable_row') || 
-            el.style.display !== 'none' && el.style.visibility !== 'hidden' && el.offsetParent !== null) {
-          anySelectable = true;
-        }
+        if (el.classList.contains('selectable_row')) anySelectable = true;
       });
       if (anySelectable) return 'pickRow';
-      // Last resort: if title explicitly starts with "you", trust it
-      if (title.startsWith('you')) return 'pickRow';
-      // Otherwise it's opponent's turn to pick — we wait
+      // NOT our turn — title says "X must take a row" where X is opponent.
+      // Do NOT fall back to title.startsWith('you') — BGA title text can be stale
+      // or misleading. Only selectable_row class is authoritative for our turn.
       return 'waiting';
     }
 
     // Fallback: gamestate name covers round transitions where title hasn't updated yet.
     // After BGA deals new cards, gamestate changes to 'cardSelect' before the title updates.
-    if (gs?.name === 'cardSelect' || gs?.name === 'playerTurn') {
+    // NOTE: this only fires for cardSelect/playerTurn — non-interactive states are handled
+    // above and must not reach here, or they'd incorrectly trigger playCard.
+    if (gsName === 'cardSelect' || gsName === 'playerTurn') {
       const handItems = (window as any).gameui?.playerHand?.getAllItems?.() ?? [];
       if (handItems.length > 0) return 'playCard';
     }
