@@ -25,7 +25,7 @@ import type { CardNumber } from '../engine/types.js';
  * hand items, decode each card's value from its sprite, and click the one
  * that matches our target value.
  */
-export async function playCard(page: Page, hand: HandItem[], cardValue: CardNumber): Promise<void> {
+export async function playCard(page: Page, _hand: HandItem[], cardValue: CardNumber): Promise<void> {
   const result = await page.evaluate((targetValue: number) => {
     const gu = (window as any).gameui;
     if (!gu?.playerHand) return { ok: false, error: 'no playerHand' };

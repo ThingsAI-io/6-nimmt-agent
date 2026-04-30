@@ -8,7 +8,8 @@
  *   2. Attach to a specific table (launches browser, handles login):
  *      npm run play -- --table 843761580 --strategy mcs -v
  */
-import { chromium, type BrowserType } from 'playwright';
+import { chromium } from 'playwright';
+import type { Page, Browser } from 'playwright';
 import { strategies, parseStrategySpec } from '../engine/strategies/index.js';
 import { getCredentials, login, saveSession } from './bga-auth.js';
 import { playGame } from './loop.js';
@@ -151,8 +152,8 @@ async function main(): Promise<void> {
     }));
   }
 
-  let page;
-  let browser;
+  let page: Page | undefined;
+  let browser: Browser | undefined;
 
   try {
     if (args.mode === 'connect') {

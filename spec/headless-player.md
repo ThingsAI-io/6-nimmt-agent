@@ -27,11 +27,10 @@ A standalone TypeScript Playwright script that:
 # Play a game on an existing table
 npx tsx src/player/play.ts --table <table-id> --strategy mcs
 
-# With options
+# With strategy options (colon-separated key=val pairs)
 npx tsx src/player/play.ts \
   --table 843761580 \
-  --strategy mcs \
-  --strategy-opts '{"mcMax": 500}' \
+  --strategy mcs:mcMax=1000,mcPerCard=100 \
   --delay 2000          # ms delay before each play (appear human)
   --verbose             # log every action
 ```
@@ -42,10 +41,12 @@ npx tsx src/player/play.ts \
 src/player/
 ├── play.ts            # Entry point — parse args, orchestrate
 ├── bga-auth.ts        # BGA login (credentials from env vars)
-├── bga-page.ts        # Page interactions (navigate, wait, click)
 ├── state-reader.ts    # Read hand/board/scores from live DOM
 ├── actor.ts           # Execute moves (play card, pick row)
-└── loop.ts            # Main game loop (poll → read → decide → act)
+├── loop.ts            # Main game loop (poll → read → decide → act)
+├── collector.ts       # Streaming JSONL data collection
+├── browser-launcher.ts # Find & launch Chrome/Edge with CDP
+└── logger.ts          # Structured JSON logging
 ```
 
 ### Dependencies

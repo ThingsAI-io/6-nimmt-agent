@@ -1,7 +1,7 @@
 /**
  * Browser launcher — find and launch Chrome/Edge with remote debugging enabled.
  */
-import { execSync, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 
 const BROWSER_PATHS: Record<string, string[]> = {

@@ -10,7 +10,7 @@
  *   `window.gameui`, etc. directly inside callbacks.
  */
 import type { Page } from 'playwright';
-import type { CardNumber, Board } from '../engine/types.js';
+import type { CardNumber } from '../engine/types.js';
 import { cattleHeads } from '../engine/card.js';
 
 export interface HandItem {
@@ -216,13 +216,14 @@ export async function detectAction(page: Page): Promise<PageAction> {
 
 /**
  * Get final scores when game ends.
+ * Uses player IDs as keys (not names) to avoid storing identity data.
  */
 export async function getFinalScores(page: Page): Promise<Record<string, number>> {
   return await page.evaluate((() => {
     const players = (window as any).gameui.gamedatas.players;
     const scores: Record<string, number> = {};
-    for (const [, p] of Object.entries(players) as [string, any][]) {
-      scores[(p as any).name] = parseInt((p as any).score) || 0;
+    for (const [id, p] of Object.entries(players) as [string, any][]) {
+      scores[id] = parseInt((p as any).score) || 0;
     }
     return scores;
   }) as any);

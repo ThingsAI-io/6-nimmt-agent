@@ -17,7 +17,7 @@
 import type { Page } from 'playwright';
 import type { Strategy } from '../engine/strategies/types.js';
 import type { CardChoiceState, RowChoiceState, CardNumber } from '../engine/types.js';
-import { readGameState, detectAction, getFinalScores, findCheapestRow, diagnoseDom, type GameStateFromDOM } from './state-reader.js';
+import { readGameState, detectAction, getFinalScores, findCheapestRow, type GameStateFromDOM } from './state-reader.js';
 import { playCard, pickRow } from './actor.js';
 import { log } from './logger.js';
 import { GameCollector } from './collector.js';
@@ -89,9 +89,11 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     strategy: opts.strategyName ?? strategy.name,
   }) : null;
 
-  // Start first round
+  // Start first round — track initial board for strategy context
   const initialHand = initialState.hand.map(h => h.cardValue as number);
   const initialBoard = initialState.board.rows.map(r => [...r]);
+  let roundStartBoard = initialBoard; // snapshot of board at round start (for initialBoardCards)
+  let lastPlayedCard: CardNumber | undefined; // track last card we played (needed for row pick context)
   collector?.startRound(1, initialBoard, initialHand);
 
   while (true) {
@@ -159,6 +161,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       log({ event: 'newRound', round: currentRound }, verbose);
       const hand = state.hand.map(h => h.cardValue as number);
       const board = state.board.rows.map(r => [...r]);
+      roundStartBoard = board; // save for initialBoardCards in strategy state
       collector?.startRound(currentRound, board, hand);
     }
     lastHandSize = state.hand.length;
@@ -166,7 +169,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     // 3. Execute action
     if (action === 'playCard') {
       const boardBefore = state.board.rows.map(r => [...r]);
-      const cardState = buildCardChoiceState(state, playerCount, currentRound, currentTurn);
+      const cardState = buildCardChoiceState(state, playerCount, currentRound, currentTurn, roundStartBoard);
       
       const t0 = Date.now();
       const card = strategy.chooseCard(cardState);
@@ -174,6 +177,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       
       if (delay) await page.waitForTimeout(delay);
       await playCard(page, state.hand, card);
+      lastPlayedCard = card; // track for potential row pick that follows
       turnsPlayed++;
 
       // CRITICAL: Wait for card to actually leave hand before continuing.
@@ -218,7 +222,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       // fallback to cheapest row (fewest cattle heads) if strategy throws.
       let rowIdx: 0 | 1 | 2 | 3;
       try {
-        const rowState = buildRowChoiceState(state, playerCount, currentRound, turnsPlayed);
+        const rowState = buildRowChoiceState(state, playerCount, currentRound, turnsPlayed, lastPlayedCard);
         rowIdx = strategy.chooseRow(rowState);
       } catch {
         rowIdx = findCheapestRow(state.board);
@@ -226,6 +230,9 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
 
       if (delay) await page.waitForTimeout(delay);
       await pickRow(page, rowIdx);
+
+      // Record row pick in data collection
+      collector?.recordRowPick(rowIdx, state.board.rows.map(r => [...r]));
 
       log({
         event: 'pickRow',
@@ -249,18 +256,20 @@ function buildCardChoiceState(
   state: GameStateFromDOM,
   playerCount: number,
   round: number,
-  turn: number
+  turn: number,
+  roundStartBoard: number[][],
 ): CardChoiceState {
   const board = { rows: state.board.rows as unknown as readonly [readonly CardNumber[], readonly CardNumber[], readonly CardNumber[], readonly CardNumber[]] };
+  const initialBoard = { rows: roundStartBoard as unknown as readonly [readonly CardNumber[], readonly CardNumber[], readonly CardNumber[], readonly CardNumber[]] };
   return {
     hand: state.hand.map(h => h.cardValue),
     board,
     playerScores: state.scores,
     playerCount,
     round,
-    turn: turn + 1,
+    turn, // already 1-based from inferTurn (11 - handSize)
     turnHistory: [],
-    initialBoardCards: board,
+    initialBoardCards: initialBoard,
   };
 }
 
@@ -268,19 +277,22 @@ function buildRowChoiceState(
   state: GameStateFromDOM,
   playerCount: number,
   round: number,
-  turn: number
+  turn: number,
+  lastPlayedCard?: CardNumber,
 ): RowChoiceState {
   const board = { rows: state.board.rows as unknown as readonly [readonly CardNumber[], readonly CardNumber[], readonly CardNumber[], readonly CardNumber[]] };
   return {
     board,
-    triggeringCard: state.hand[0]?.cardValue ?? (1 as CardNumber),
+    // triggeringCard is the card we played that forced the row pick.
+    // We track it from the previous play action; fallback to 1 if unknown.
+    triggeringCard: lastPlayedCard ?? (1 as CardNumber),
     revealedThisTurn: [],
     resolutionIndex: 0,
     hand: state.hand.map(h => h.cardValue),
     playerScores: state.scores,
     playerCount,
     round,
-    turn: turn + 1,
+    turn, // already 1-based from inferTurn
     turnHistory: [],
   };
 }
