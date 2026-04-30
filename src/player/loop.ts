@@ -60,6 +60,31 @@ async function waitForAction(
 }
 
 /**
+ * After playing a card, wait for BGA to fully resolve the turn before we poll
+ * for the next action. Without this, `waitForAction` returns `playCard` again
+ * immediately because the gamestate stays `cardSelect` while waiting for other
+ * players — causing the agent to re-run the strategy and click a second card.
+ *
+ * Strategy: poll until gamestate is no longer `cardSelect`/`playerTurn` (i.e.
+ * BGA has moved into resolution — cardProcess, cardReveal, etc.), then return.
+ * The main loop resumes and calls `waitForAction` which will correctly wait
+ * for the next interactive state.
+ */
+async function waitForTurnResolution(page: Page, timeout: number): Promise<void> {
+  const startTime = Date.now();
+  while (Date.now() - startTime < timeout) {
+    const leftCardSelect = await page.evaluate(() => {
+      const gsName = (window as any).gameui?.gamedatas?.gamestate?.name ?? '';
+      // Wait until we leave the card-selection phase entirely
+      return gsName !== 'cardSelect' && gsName !== 'playerTurn';
+    });
+    if (leftCardSelect) return;
+    await page.waitForTimeout(300);
+  }
+  // Timeout is non-fatal — main waitForAction will handle it
+}
+
+/**
  * Play a full game from current page state until game ends.
  * Can be started mid-game (e.g. after reconnecting) — state is inferred from DOM.
  */
@@ -260,6 +285,12 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         });
         if (check <= expectedSize) break;
       }
+
+      // Wait for BGA to leave the card-selection gamestate entirely before looping.
+      // This prevents waitForAction from firing 'playCard' again while other players
+      // are still selecting (gamestate stays 'cardSelect' until all have submitted).
+      // Fixes: agent re-running strategy and clicking a second card mid-turn.
+      await waitForTurnResolution(page, 30_000);
 
       // Record turn data
       collector?.recordTurn({
