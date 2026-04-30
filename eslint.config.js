@@ -34,7 +34,7 @@ const testApiSelectors = testApis.map(api => ({
 
 export default [
   {
-    ignores: ['node_modules/', 'dist/', '**/*.d.ts', '**/*.js.map', '**/*.d.ts.map']
+    ignores: ['node_modules/', 'dist/', '**/*.d.ts', '**/*.js.map', '**/*.d.ts.map', 'src/player/']
   },
   {
     files: ['**/*.ts'],
