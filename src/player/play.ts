@@ -1,9 +1,12 @@
 /**
  * Headless 6 Nimmt! player for Board Game Arena.
  *
- * Usage:
- *   npx tsx src/player/play.ts --table <table-id> --strategy mcs
- *   npx tsx src/player/play.ts --table 843761580 --strategy mcs:mcMax=500 --delay 2000 --verbose
+ * Modes:
+ *   1. Connect to your existing browser (default — you login, pick table, then run this):
+ *      npm run play -- --connect --strategy mcs -v
+ *
+ *   2. Attach to a specific table (launches browser, handles login):
+ *      npm run play -- --table 843761580 --strategy mcs -v
  */
 import { chromium } from 'playwright';
 import { strategies, parseStrategySpec } from '../engine/strategies/index.js';
@@ -13,28 +16,37 @@ import { playGame } from './loop.js';
 // ── Argument parsing ───────────────────────────────────────────────────
 
 interface Args {
+  mode: 'connect' | 'table';
   table: string;
   strategy: string;
   delay: number;
   verbose: boolean;
   headless: boolean;
   sessionFile: string;
+  cdpUrl: string;
+  port: number;
 }
 
 function parseArgs(): Args {
   const args = process.argv.slice(2);
   const opts: Args = {
+    mode: 'connect',
     table: '',
     strategy: 'mcs',
     delay: 2000,
     verbose: false,
     headless: true,
     sessionFile: '.bga-session.json',
+    cdpUrl: '',
+    port: 9222,
   };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
+      case '--connect': case '-c':
+        opts.mode = 'connect'; break;
       case '--table': case '-t':
+        opts.mode = 'table';
         opts.table = args[++i]; break;
       case '--strategy': case '-s':
         opts.strategy = args[++i]; break;
@@ -46,15 +58,13 @@ function parseArgs(): Args {
         opts.headless = false; break;
       case '--session':
         opts.sessionFile = args[++i]; break;
+      case '--cdp-url':
+        opts.cdpUrl = args[++i]; break;
+      case '--port': case '-p':
+        opts.port = parseInt(args[++i]) || 9222; break;
       case '--help': case '-h':
         printUsage(); process.exit(0);
     }
-  }
-
-  if (!opts.table) {
-    console.error('Error: --table <table-id> is required');
-    printUsage();
-    process.exit(1);
   }
 
   return opts;
@@ -64,28 +74,43 @@ function printUsage(): void {
   console.log(`
 6 Nimmt! Headless Player for Board Game Arena
 
-Usage:
-  npx tsx src/player/play.ts --table <table-id> [options]
+MODES:
 
-Options:
-  --table, -t       BGA table ID (required)
+  Connect mode (default) — attach to your running browser:
+    1. Launch Chrome with: chrome --remote-debugging-port=9222
+    2. Login to BGA and open a table yourself
+    3. Run: npm run play -- --connect -s mcs -v
+
+  Table mode — script launches browser and navigates:
+    npm run play -- --table <table-id> -s mcs -v
+
+OPTIONS:
+  --connect, -c     Connect to existing browser (default mode)
+  --table, -t       BGA table ID (switches to table mode)
   --strategy, -s    Strategy to use (default: mcs)
                     Format: name or name:key=val,key=val
                     Available: ${[...strategies.keys()].join(', ')}
   --delay, -d       Ms delay before each play (default: 2000)
   --verbose, -v     Enable structured logging
-  --no-headless     Show browser window
+  --port, -p        CDP port for connect mode (default: 9222)
+  --cdp-url         Full CDP WebSocket URL (overrides --port)
+  --no-headless     Show browser window (table mode only)
   --session         Session file path (default: .bga-session.json)
   --help, -h        Show this help
 
-Environment:
-  BGA_USERNAME      Board Game Arena username
-  BGA_PASSWORD      Board Game Arena password
+ENVIRONMENT:
+  BGA_USERNAME      Board Game Arena username (table mode only)
+  BGA_PASSWORD      Board Game Arena password (table mode only)
 
-Examples:
-  npx tsx src/player/play.ts --table 843761580 --strategy mcs -v
-  npx tsx src/player/play.ts -t 843761580 -s bayesian-simple --no-headless
-  npx tsx src/player/play.ts -t 843761580 -s mcs:mcMax=1000 -d 3000 -v
+EXAMPLES:
+  # You're already on a BGA table in Chrome with --remote-debugging-port=9222
+  npm run play -- --connect -s mcs -v
+
+  # Full auto: launch browser, login, navigate to table
+  npm run play -- --table 843761580 -s mcs:mcMax=500 --no-headless -v
+
+  # Connect to a specific CDP endpoint
+  npm run play -- --connect --cdp-url ws://127.0.0.1:9222/devtools/browser/abc123 -v
 `);
 }
 
@@ -106,45 +131,83 @@ async function main(): Promise<void> {
   if (args.verbose) {
     console.log(JSON.stringify({
       event: 'init',
-      table: args.table,
+      mode: args.mode,
+      table: args.table || '(from browser)',
       strategy: name,
       options: options ?? {},
       delay: args.delay,
-      headless: args.headless,
       timestamp: new Date().toISOString(),
     }));
   }
 
-  // Launch browser
-  const browser = await chromium.launch({ headless: args.headless });
-  let context;
-  
+  let page;
+  let browser;
+
   try {
-    // Try reusing saved session
-    try {
-      context = await browser.newContext({ storageState: args.sessionFile });
-    } catch {
-      context = await browser.newContext();
-    }
-    
-    const page = await context.newPage();
+    if (args.mode === 'connect') {
+      // ── Connect mode: attach to existing browser ──
+      const cdpUrl = args.cdpUrl || `http://127.0.0.1:${args.port}`;
+      
+      if (args.verbose) {
+        console.log(JSON.stringify({
+          event: 'connecting',
+          cdpUrl,
+          timestamp: new Date().toISOString(),
+        }));
+      }
 
-    // Navigate to table
-    const tableUrl = `https://boardgamearena.com/table?table=${args.table}`;
-    await page.goto(tableUrl, { waitUntil: 'domcontentloaded' });
+      browser = await chromium.connectOverCDP(cdpUrl);
+      const contexts = browser.contexts();
+      if (contexts.length === 0) {
+        throw new Error('No browser contexts found. Is the browser open?');
+      }
+      
+      // Find BGA game page among open tabs
+      const context = contexts[0];
+      const pages = context.pages();
+      page = pages.find(p => 
+        p.url().includes('boardgamearena.com') && 
+        (p.url().includes('/table') || p.url().includes('/sechsnimmt') || p.url().includes('game='))
+      );
 
-    // Check if we need to log in
-    if (page.url().includes('/account') || page.url().includes('/login')) {
-      const creds = getCredentials();
-      await login(page, creds);
-      await saveSession(context, args.sessionFile);
-      // Navigate to table again after login
+      if (!page) {
+        console.error('No BGA game tab found. Open tabs:');
+        for (const p of pages) {
+          console.error(`  - ${p.url()}`);
+        }
+        throw new Error(
+          'Navigate to a BGA game table in your browser, then run this again.'
+        );
+      }
+
+      console.log(`Connected to: ${page.url()}`);
+
+    } else {
+      // ── Table mode: launch browser and navigate ──
+      browser = await chromium.launch({ headless: args.headless });
+      let context;
+      try {
+        context = await browser.newContext({ storageState: args.sessionFile });
+      } catch {
+        context = await browser.newContext();
+      }
+      
+      page = await context.newPage();
+      const tableUrl = `https://boardgamearena.com/table?table=${args.table}`;
       await page.goto(tableUrl, { waitUntil: 'domcontentloaded' });
+
+      // Check if we need to log in
+      if (page.url().includes('/account') || page.url().includes('/login')) {
+        const creds = getCredentials();
+        await login(page, creds);
+        await saveSession(context, args.sessionFile);
+        await page.goto(tableUrl, { waitUntil: 'domcontentloaded' });
+      }
     }
 
     // Wait for game to be ready
     await page.waitForSelector('#game_play_area', { timeout: 30_000 });
-    await page.waitForTimeout(3000); // Let animations settle
+    await page.waitForTimeout(2000); // Let animations settle
 
     if (args.verbose) {
       console.log(JSON.stringify({
@@ -161,15 +224,17 @@ async function main(): Promise<void> {
       verbose: args.verbose,
     });
 
-    // Report final result
     console.log(JSON.stringify({
       event: 'gameComplete',
       ...result,
       timestamp: new Date().toISOString(),
     }));
 
-    // Save session for next time
-    await saveSession(context, args.sessionFile);
+    // Save session if in table mode
+    if (args.mode === 'table') {
+      const context = page.context();
+      await saveSession(context, args.sessionFile);
+    }
 
   } catch (err) {
     console.error(JSON.stringify({
@@ -179,7 +244,12 @@ async function main(): Promise<void> {
     }));
     process.exit(1);
   } finally {
-    await browser.close();
+    // In connect mode, don't close the user's browser!
+    if (args.mode === 'table' && browser) {
+      await browser.close();
+    } else if (browser) {
+      browser.close().catch(() => {}); // disconnect gracefully
+    }
   }
 }
 
