@@ -1,9 +1,13 @@
 /**
  * State reader — extract game state from BGA live DOM.
- * All DOM reading code is verified from live play testing.
  *
- * Note: page.evaluate() callbacks run in browser context where `document`
- * and `gameui` exist. We use Function type to avoid needing DOM lib.
+ * KEY DESIGN DECISIONS:
+ * - All state is read from LIVE DOM elements, never from gameui.gamedatas
+ *   (gamedatas is frozen at page load and becomes stale after first turn).
+ * - Card values are decoded from CSS sprite background-position, not from
+ *   element IDs (card_X IDs are database IDs, NOT card face values).
+ * - page.evaluate() runs in the browser context — we access `document`,
+ *   `window.gameui`, etc. directly inside callbacks.
  */
 import type { Page } from 'playwright';
 import type { CardNumber, Board } from '../engine/types.js';
@@ -24,18 +28,35 @@ export interface GameStateFromDOM {
 
 /**
  * Read complete game state from BGA DOM.
- * Uses live DOM sources (not stale gamedatas).
+ *
+ * Hand cards: read from gameui.playerHand.getAllItems() which returns
+ * an array of {id, type} objects. The `id` is a stock item ID (internal
+ * to BGA's Stock component) — NOT the card value. We must look up the
+ * DOM element by stock ID and decode its sprite background-position.
+ *
+ * Board rows: read from DOM #row_card_zone_1 through _4.
+ * Each zone contains card divs with background-position sprites.
+ * Zones are 1-indexed in the DOM.
+ *
+ * Scores: read from gameui.gamedatas.players (scores are kept in sync
+ * by the BGA framework even though other gamedatas fields are stale).
  */
 export async function readGameState(page: Page): Promise<GameStateFromDOM> {
   return await page.evaluate((() => {
     /* eslint-disable no-undef */
-    // Hand: from playerHand stock (live source)
+
+    // === HAND READING ===
+    // playerHand is a BGA "Stock" component. getAllItems() returns live items
+    // but their .id is an internal stock ID — we must decode the card value
+    // from the DOM element's sprite position.
     const handItems = (window as any).gameui.playerHand.getAllItems();
     const hand = handItems.map((item: any) => {
       const el = (window as any).document.getElementById(`myhand_item_${item.id}`);
       if (!el) return null;
       
-      // Find element with background-position (could be the element itself or any descendant)
+      // BGA card sprites: background-position encodes card value.
+      // The position may be on the element itself OR on a child div
+      // (depends on BGA version/skin). We check both.
       let bgPos = '';
       if (el.style && el.style.backgroundPosition) {
         bgPos = el.style.backgroundPosition;
@@ -47,13 +68,21 @@ export async function readGameState(page: Page): Promise<GameStateFromDOM> {
       if (!bgPos) return null;
       const match = bgPos.match(/([-\d.]+)%\s+([-\d.]+)%/);
       if (!match) return null;
+
+      // Sprite decode formula (verified empirically):
+      // Cards are arranged in a 10-column sprite sheet.
+      // X% gives column (0-9), Y% gives row (0-9).
+      // value = row * 10 + column + 1  (cards are 1-104)
       const x = Math.abs(parseFloat(match[1]));
       const y = Math.abs(parseFloat(match[2]));
       const value = (y / 100) * 10 + (x / 100) + 1;
       return { stockId: item.id, cardValue: Math.round(value) };
     }).filter(Boolean);
 
-    // Board: from DOM row zones (live source)
+    // === BOARD READING ===
+    // Board has 4 rows. DOM uses #row_card_zone_1 through _4 (1-indexed).
+    // Each zone contains card divs with background-position sprites.
+    // We deduplicate by value to handle animation artifacts.
     const rows: number[][] = [];
     for (let r = 1; r <= 4; r++) {
       const zone = (window as any).document.getElementById(`row_card_zone_${r}`);
@@ -68,12 +97,15 @@ export async function readGameState(page: Page): Promise<GameStateFromDOM> {
         const x = Math.abs(parseFloat(match[1]));
         const y = Math.abs(parseFloat(match[2]));
         const value = Math.round((y / 100) * 10 + (x / 100) + 1);
+        // Filter valid range and deduplicate (animations can create duplicates)
         if (value >= 1 && value <= 104 && !cards.includes(value)) cards.push(value);
       });
       rows.push(cards);
     }
 
-    // Scores and player info
+    // === SCORES & PLAYER INFO ===
+    // Scores come from gamedatas.players — the BGA framework keeps score
+    // fields updated even though other gamedatas fields (hand, table) are stale.
     const players = (window as any).gameui.gamedatas.players;
     const scores: Record<string, number> = {};
     let playerCount = 0;
@@ -119,40 +151,60 @@ export async function diagnoseDom(page: Page): Promise<unknown> {
 }
 
 /**
- * Detect current page action state.
+ * Detect what action the page is waiting for us to take.
+ *
+ * BGA indicates the required action via:
+ * 1. The page title (#pagemaintitletext) — e.g. "You must choose a card to play"
+ * 2. The gamestate name — e.g. 'cardSelect', 'playerTurn', 'gameEnd'
+ * 3. DOM element visibility — e.g. row arrows becoming interactive
+ *
+ * IMPORTANT QUIRKS:
+ * - Title "X must take a row" appears for BOTH our turn and opponent's turn.
+ *   We must verify it's actually our turn by checking arrow visibility/interactivity.
+ * - Between rounds, title may briefly show stale text while BGA deals new cards.
+ *   Fallback: check gamestate.name === 'cardSelect' + hand has items.
+ * - gamestate.name updates reliably but title text is more human-readable for matching.
  */
 export type PageAction = 'playCard' | 'pickRow' | 'waiting' | 'gameEnd';
 
 export async function detectAction(page: Page): Promise<PageAction> {
   return await page.evaluate((() => {
     const gs = (window as any).gameui?.gamedatas?.gamestate;
+
+    // Game end is always authoritative from gamestate
     if (gs?.name === 'gameEnd') return 'gameEnd';
 
     const titleEl = (window as any).document.getElementById('pagemaintitletext');
     const title = (titleEl?.textContent ?? '').toLowerCase();
 
+    // Card selection: title explicitly addresses "you"
     if (title.includes('you must choose a card') || title.includes('you must play a card')) {
       return 'playCard';
     }
 
-    // Row pick: must be OUR turn AND arrows must be actually interactive
+    // Row pick detection — tricky because BGA shows the same title structure
+    // for both "You must take a row" and "OpponentName must take a row".
+    // We verify it's our turn by checking if row arrows are actually clickable.
     if (title.includes('must take a row') || title.includes('must choose a row')) {
-      // BGA adds 'selectable_row' class to clickable arrows only on our turn
       const arrows = (window as any).document.querySelectorAll('#row_slot_1_arrow, #row_slot_2_arrow, #row_slot_3_arrow, #row_slot_4_arrow');
       let anySelectable = false;
       arrows.forEach((el: any) => {
+        // BGA adds 'selectable_row' class to arrows only when it's our turn.
+        // Also check computed visibility as a secondary signal.
         if (el.classList.contains('selectable_row') || 
             el.style.display !== 'none' && el.style.visibility !== 'hidden' && el.offsetParent !== null) {
           anySelectable = true;
         }
       });
       if (anySelectable) return 'pickRow';
-      // Not our turn — could also be title mentioning "you" with active player ID check
-      if (title.startsWith('you')) return 'pickRow'; // title explicitly says "You"
+      // Last resort: if title explicitly starts with "you", trust it
+      if (title.startsWith('you')) return 'pickRow';
+      // Otherwise it's opponent's turn to pick — we wait
       return 'waiting';
     }
 
-    // Fallback: check game state name directly (covers round transitions)
+    // Fallback: gamestate name covers round transitions where title hasn't updated yet.
+    // After BGA deals new cards, gamestate changes to 'cardSelect' before the title updates.
     if (gs?.name === 'cardSelect' || gs?.name === 'playerTurn') {
       const handItems = (window as any).gameui?.playerHand?.getAllItems?.() ?? [];
       if (handItems.length > 0) return 'playCard';

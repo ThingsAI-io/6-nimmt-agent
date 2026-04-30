@@ -1,6 +1,18 @@
 /**
  * Game loop — the core play cycle.
- * Polls for action state, reads game state, gets recommendation, executes.
+ *
+ * Architecture: poll for action → read state → get recommendation → execute → collect data.
+ *
+ * KEY DESIGN DECISIONS:
+ * - Turn number is DERIVED from hand size (11 - cards), not incremented.
+ *   This ensures correctness even when reconnecting mid-game (counter would reset to 0).
+ * - Round transitions are detected by hand size jumping to ≥9 from <9.
+ *   After the last turn, hand goes to 0; when BGA deals new round, it jumps to 10.
+ * - After playing a card, we poll until hand size actually decreases.
+ *   BGA animations can take 1-5s — without this wait, we'd re-read stale state
+ *   and try to play the same card again.
+ * - When hand empties (all 10 cards played), we enter a wait loop for either
+ *   new round deal (hand > 0) or game end (gamestate name check).
  */
 import type { Page } from 'playwright';
 import type { Strategy } from '../engine/strategies/types.js';
@@ -29,6 +41,7 @@ export interface GameResult {
 
 /**
  * Wait for our turn or game end. Returns the detected action.
+ * Polls every 500ms — BGA has no reliable event we can hook into from CDP.
  */
 async function waitForAction(
   page: Page,
@@ -48,13 +61,14 @@ async function waitForAction(
 
 /**
  * Play a full game from current page state until game ends.
+ * Can be started mid-game (e.g. after reconnecting) — state is inferred from DOM.
  */
 export async function playGame(page: Page, opts: PlayOptions): Promise<GameResult> {
   const { strategy, delay = 0, timeout = 180_000, verbose = false, collect = true } = opts;
   let currentRound = 1;
   let lastHandSize = 0;
 
-  // Initialize strategy
+  // Initialize strategy with game metadata
   const initialState = await readGameState(page);
   const playerCount = opts.playerCount ?? initialState.playerCount;
   strategy.onGameStart?.({
@@ -63,7 +77,9 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     rng: Math.random,
   });
 
-  // Derive current turn from hand size (10 cards = turn 1, 9 = turn 2, etc.)
+  // Turn inference: in 6 Nimmt, each player gets 10 cards per round and plays
+  // one per turn. So turn number = 11 - current hand size.
+  // This works even on reconnect (no counter to reset).
   const inferTurn = (handSize: number) => 11 - handSize;
   let turnsPlayed = inferTurn(initialState.hand.length) - 1; // turns already played
 
@@ -97,15 +113,16 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       return { scores, turnsPlayed, rounds: currentRound, dataFile };
     }
 
-    // 2. Read current state (retry if hand is empty)
+    // 2. Read state — handle empty hand (round just ended)
+    // After playing 10 cards, hand is empty. We need to wait for BGA to deal
+    // the next round (hand refills to 10) or end the game.
     let state = await readGameState(page);
     if (state.hand.length === 0 && action === 'playCard') {
-      // Round is likely over (all 10 cards played). Wait for next round or game end.
       log({ event: 'roundComplete', message: 'Hand empty — waiting for next round or game end', round: currentRound }, verbose);
       let foundNewState = false;
       for (let retry = 0; retry < 20; retry++) {
         await page.waitForTimeout(1500);
-        // Check for game end
+        // Check gamestate for game end (most reliable end-of-game signal)
         const gameOver = await page.evaluate(() => {
           const gs = (window as any).gameui?.gamedatas?.gamestate;
           return gs?.name === 'gameEnd' || gs?.name === 'endGame';
@@ -131,10 +148,12 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       }
     }
 
-    // Derive turn from hand size (more reliable than counter on resume)
     const currentTurn = inferTurn(state.hand.length);
 
-    // Detect new round (hand size jumped back up — e.g. 0→10 or 1→10)
+    // Detect new round: hand jumped from <9 to ≥9 cards.
+    // Normal flow: last turn hand=1 → play → hand=0 → BGA deals → hand=10.
+    // We use ≥9 (not ==10) because getAllItems() can briefly return 9 during animation.
+    // The turnsPlayed>0 guard prevents false-triggering on initial game join.
     if (state.hand.length >= 9 && lastHandSize < 9 && lastHandSize >= 0 && turnsPlayed > 0) {
       currentRound++;
       log({ event: 'newRound', round: currentRound }, verbose);
@@ -146,7 +165,6 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
 
     // 3. Execute action
     if (action === 'playCard') {
-
       const boardBefore = state.board.rows.map(r => [...r]);
       const cardState = buildCardChoiceState(state, playerCount, currentRound, currentTurn);
       
@@ -158,7 +176,10 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       await playCard(page, state.hand, card);
       turnsPlayed++;
 
-      // Wait for card to actually leave hand before continuing
+      // CRITICAL: Wait for card to actually leave hand before continuing.
+      // Without this, the next loop iteration would read the same hand state
+      // (card still animating out) and try to play the same card again.
+      // BGA card animations take 1-3s depending on resolution speed.
       const expectedSize = state.hand.length - 1;
       for (let i = 0; i < 10; i++) {
         await page.waitForTimeout(500);
@@ -192,6 +213,9 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       }, verbose);
 
     } else if (action === 'pickRow') {
+      // Row pick: our played card was lower than all row tails, so we must
+      // pick a row to take (absorb its penalty points). Strategy decides which;
+      // fallback to cheapest row (fewest cattle heads) if strategy throws.
       let rowIdx: 0 | 1 | 2 | 3;
       try {
         const rowState = buildRowChoiceState(state, playerCount, currentRound, turnsPlayed);
@@ -211,12 +235,13 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       }, verbose);
     }
 
-    // Capture board state after resolution
+    // Wait for BGA animations to resolve (card placement, row clearing, etc.)
+    // then snapshot the board for data collection.
     await page.waitForTimeout(1500);
     try {
       const postState = await readGameState(page);
       collector?.recordBoardAfter(postState.board.rows.map(r => [...r]));
-    } catch { /* non-critical */ }
+    } catch { /* non-critical — don't crash if post-read fails */ }
   }
 }
 
