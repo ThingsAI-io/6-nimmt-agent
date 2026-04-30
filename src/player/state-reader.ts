@@ -134,18 +134,30 @@ export async function detectAction(page: Page): Promise<PageAction> {
     if (title.includes('you must choose a card') || title.includes('you must play a card')) {
       return 'playCard';
     }
-    // Only "You must take a row" — not "PlayerName must take a row"
-    if (title.startsWith('you') && (title.includes('must take a row') || title.includes('must choose a row'))) {
-      return 'pickRow';
-    }
-    // Also check if row arrows are actually visible (backup confirmation)
+
+    // Row pick: must be OUR turn AND arrows must be actually visible
     if (title.includes('must take a row') || title.includes('must choose a row')) {
-      // Someone must pick — check if it's us by looking for visible arrows
-      const arrow = (window as any).document.querySelector('.selectable_row');
-      if (arrow) return 'pickRow';
-      // Otherwise it's the opponent picking
+      // Check if any row arrow is visible (displayed with non-zero size)
+      const arrows = (window as any).document.querySelectorAll('.arrow_slot');
+      let anyVisible = false;
+      arrows.forEach((el: any) => {
+        if (el.offsetWidth > 0 && el.offsetHeight > 0 && 
+            getComputedStyle(el).display !== 'none' &&
+            getComputedStyle(el).visibility !== 'hidden') {
+          anyVisible = true;
+        }
+      });
+      if (anyVisible) return 'pickRow';
+      // Arrows not visible — opponent is picking, wait
       return 'waiting';
     }
+
+    // Fallback: check game state name directly (covers round transitions)
+    if (gs?.name === 'cardSelect' || gs?.name === 'playerTurn') {
+      const handItems = (window as any).gameui?.playerHand?.getAllItems?.() ?? [];
+      if (handItems.length > 0) return 'playCard';
+    }
+
     return 'waiting';
   }) as any);
 }
