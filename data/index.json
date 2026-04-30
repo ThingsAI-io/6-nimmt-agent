@@ -1,0 +1,28 @@
+{
+  "games": [
+    {
+      "file": "games/2026-04-30_bga_68d9ccff.jsonl",
+      "gameId": "68d9ccff",
+      "date": "2026-04-30",
+      "playerCount": 2,
+      "strategy": "mcs",
+      "finalScores": {
+        "88075076": 66,
+        "91891658": 66
+      }
+    },
+    {
+      "file": "games/2026-04-30_bga_c91bb5b5.jsonl",
+      "gameId": "c91bb5b5",
+      "date": "2026-04-30",
+      "playerCount": 4,
+      "strategy": "mcs",
+      "finalScores": {
+        "84557533": 66,
+        "88075076": 66,
+        "90975950": 66,
+        "99205691": 66
+      }
+    }
+  ]
+}
