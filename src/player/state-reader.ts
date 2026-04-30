@@ -167,6 +167,10 @@ export async function captureErrorContext(page: Page): Promise<ErrorContext> {
     return { title: '', gamestateName: 'unknown', handItemCount: -1, rawItems: [], rowArrowsVisible: false };
   }
 }
+/**
+ * Debug utility — dump raw DOM state for manual investigation.
+ * Not used in normal play; kept for ad-hoc troubleshooting via REPL/agent.
+ */
 export async function diagnoseDom(page: Page): Promise<unknown> {
   return await page.evaluate((() => {
     const gu = (window as any).gameui;
@@ -247,9 +251,9 @@ export async function detectAction(page: Page): Promise<PageAction> {
         if (el.classList.contains('selectable_row')) anySelectable = true;
       });
       if (anySelectable) return 'pickRow';
-      // Last resort: if title explicitly starts with "you", trust it
-      if (title.startsWith('you')) return 'pickRow';
-      // Otherwise it's opponent's turn to pick — we wait
+      // NOT our turn — title says "X must take a row" where X is opponent.
+      // Do NOT fall back to title.startsWith('you') — BGA title text can be stale
+      // or misleading. Only selectable_row class is authoritative for our turn.
       return 'waiting';
     }
 

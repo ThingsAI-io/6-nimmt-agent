@@ -13,6 +13,15 @@
  *   and try to play the same card again.
  * - When hand empties (all 10 cards played), we enter a wait loop for either
  *   new round deal (hand > 0) or game end (gamestate name check).
+ *
+ * KNOWN LIMITATIONS:
+ * - Strategy lifecycle: we call onGameStart() but NOT onTurnResolved() or
+ *   onRoundEnd(). Live play cannot reliably reconstruct opponent cards from DOM,
+ *   so turnHistory and revealedThisTurn are passed as empty arrays. Strategies
+ *   that rely on seen-card tracking (bayesian, mcs) operate in degraded mode.
+ *   TODO: Parse resolved cards from BGA animations/log to feed onTurnResolved.
+ * - Round numbers are "rounds since attachment" — reconnecting mid-game starts
+ *   at round 1 even if the true game round is higher.
  */
 import type { Page } from 'playwright';
 import type { Strategy } from '../engine/strategies/types.js';
@@ -70,7 +79,7 @@ async function waitForAction(
  * The main loop resumes and calls `waitForAction` which will correctly wait
  * for the next interactive state.
  */
-async function waitForTurnResolution(page: Page, timeout: number): Promise<void> {
+async function waitForTurnResolution(page: Page, timeout: number, emit: (entry: Record<string, unknown>) => void): Promise<void> {
   const startTime = Date.now();
   while (Date.now() - startTime < timeout) {
     const leftCardSelect = await page.evaluate(() => {
@@ -81,7 +90,9 @@ async function waitForTurnResolution(page: Page, timeout: number): Promise<void>
     if (leftCardSelect) return;
     await page.waitForTimeout(300);
   }
-  // Timeout is non-fatal — main waitForAction will handle it
+  // Timeout is suspicious — log it so we can detect stuck states in diagnostics.
+  // Non-fatal: the main waitForAction loop will handle the next iteration.
+  emit({ event: 'warning', message: `waitForTurnResolution timed out after ${timeout}ms` });
 }
 
 /**
@@ -229,7 +240,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       // Attempt card play — on failure, emit enriched error with full context
       const stateReadAt = Date.now();
       try {
-        await playCard(page, state.hand, card);
+        await playCard(page, card);
       } catch (err) {
         const dom = await captureErrorContext(page);
         logError({
@@ -273,6 +284,17 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       lastPlayedCard = card; // track for potential row pick that follows
       turnsPlayed++;
 
+      // Emit immediately after successful click — NOT after resolution waits.
+      // This gives accurate timestamps reflecting when the decision was executed.
+      emit({
+        event: 'playCard',
+        card,
+        round: currentRound,
+        turn: currentTurn,
+        handSize: state.hand.length - 1,
+        decisionTime,
+      });
+
       // CRITICAL: Wait for card to actually leave hand before continuing.
       // Without this, the next loop iteration would read the same hand state
       // (card still animating out) and try to play the same card again.
@@ -290,9 +312,9 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       // This prevents waitForAction from firing 'playCard' again while other players
       // are still selecting (gamestate stays 'cardSelect' until all have submitted).
       // Fixes: agent re-running strategy and clicking a second card mid-turn.
-      await waitForTurnResolution(page, 30_000);
+      await waitForTurnResolution(page, 30_000, emit);
 
-      // Record turn data
+      // Record turn data for training/analysis collection
       collector?.recordTurn({
         turn: currentTurn,
         ourCard: card as number,
@@ -306,22 +328,13 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         },
       });
 
-      emit({
-        event: 'playCard',
-        card,
-        round: currentRound,
-        turn: currentTurn,
-        handSize: state.hand.length - 1,
-        decisionTime,
-      });
-
     } else if (action === 'pickRow') {
       // Row pick: our played card was lower than all row tails, so we must
       // pick a row to take (absorb its penalty points). Strategy decides which;
       // fallback to cheapest row (fewest cattle heads) if strategy throws.
       let rowIdx: 0 | 1 | 2 | 3;
       try {
-        const rowState = buildRowChoiceState(state, playerCount, currentRound, turnsPlayed, lastPlayedCard);
+        const rowState = buildRowChoiceState(state, playerCount, currentRound, currentTurn, lastPlayedCard);
         rowIdx = strategy.chooseRow(rowState);
       } catch {
         rowIdx = findCheapestRow(state.board);
@@ -348,6 +361,25 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
           },
           lastEvents: [...eventBuffer],
         });
+
+        // Same abrupt-end handling as playCard — game may have ended mid-action
+        const TERMINAL_STATES = ['gameEnd', 'endGame', 'gameOver'];
+        const abruptEnd = await page.evaluate((terminals: string[]) => {
+          const gs = (window as any).gameui?.gamedatas?.gamestate;
+          const gsName: string = gs?.name ?? '';
+          return terminals.includes(gsName);
+        }, TERMINAL_STATES).catch(() => true);
+
+        if (abruptEnd) {
+          emit({ event: 'gameAborted', reason: 'row pick failed in terminal state', gamestateName: dom.gamestateName });
+          const scores = await getFinalScores(page).catch(() => ({}));
+          if (collector) {
+            collector.endRound(scores);
+            collector.finalize(scores);
+          }
+          return { scores, turnsPlayed, rounds: currentRound };
+        }
+
         throw err;
       }
 
@@ -358,7 +390,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         event: 'pickRow',
         row: rowIdx,
         round: currentRound,
-        turn: turnsPlayed,
+        turn: currentTurn,
       });
 
       // Wait for BGA to leave the row-pick state before looping.
