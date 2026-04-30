@@ -220,6 +220,28 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
           },
           lastEvents: [...eventBuffer],
         });
+
+        // Before crashing: check if the game ended abruptly (e.g. a player quit).
+        // BGA may not cleanly emit gameEnd — it can silently transition to cardReveal
+        // or another terminal state. If the game is over, exit gracefully.
+        const abruptEnd = await page.evaluate(() => {
+          const gs = (window as any).gameui?.gamedatas?.gamestate;
+          const gsName: string = gs?.name ?? '';
+          // If we can't find the card and the gamestate is non-interactive,
+          // the game likely ended without a clean gameEnd transition.
+          return gsName !== 'cardSelect' && gsName !== 'playerTurn';
+        }).catch(() => true); // if evaluate fails, assume game ended
+
+        if (abruptEnd) {
+          emit({ event: 'gameAborted', reason: 'card not found in non-interactive state', gamestateName: dom.gamestateName });
+          const scores = await getFinalScores(page).catch(() => ({}));
+          if (collector) {
+            collector.endRound(scores);
+            collector.finalize(scores);
+          }
+          return { scores, turnsPlayed, rounds: currentRound };
+        }
+
         throw err;
       }
 

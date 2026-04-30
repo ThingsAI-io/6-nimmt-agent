@@ -212,9 +212,17 @@ export type PageAction = 'playCard' | 'pickRow' | 'waiting' | 'gameEnd';
 export async function detectAction(page: Page): Promise<PageAction> {
   return await page.evaluate((() => {
     const gs = (window as any).gameui?.gamedatas?.gamestate;
+    const gsName: string = gs?.name ?? '';
 
-    // Game end is always authoritative from gamestate
-    if (gs?.name === 'gameEnd') return 'gameEnd';
+    // Game end — check multiple possible state names BGA uses
+    if (gsName === 'gameEnd' || gsName === 'endGame' || gsName === 'gameOver') return 'gameEnd';
+
+    // BGA non-interactive resolution states — cards are flying/animating, not our turn.
+    // These occur during normal play AND when a player quits mid-game (which can push
+    // BGA into cardReveal or similar without a clean gameEnd transition).
+    // Returning 'waiting' here prevents the fallback below from falsely triggering 'playCard'.
+    const NON_INTERACTIVE = ['cardReveal', 'resolveStack', 'betweenRounds', 'newRound', 'nextRound'];
+    if (NON_INTERACTIVE.includes(gsName)) return 'waiting';
 
     const titleEl = (window as any).document.getElementById('pagemaintitletext');
     const title = (titleEl?.textContent ?? '').toLowerCase();
@@ -247,7 +255,9 @@ export async function detectAction(page: Page): Promise<PageAction> {
 
     // Fallback: gamestate name covers round transitions where title hasn't updated yet.
     // After BGA deals new cards, gamestate changes to 'cardSelect' before the title updates.
-    if (gs?.name === 'cardSelect' || gs?.name === 'playerTurn') {
+    // NOTE: this only fires for cardSelect/playerTurn — non-interactive states are handled
+    // above and must not reach here, or they'd incorrectly trigger playCard.
+    if (gsName === 'cardSelect' || gsName === 'playerTurn') {
       const handItems = (window as any).gameui?.playerHand?.getAllItems?.() ?? [];
       if (handItems.length > 0) return 'playCard';
     }
