@@ -26,7 +26,7 @@
  */
 import type { Page } from 'playwright';
 import type { Strategy } from '../engine/strategies/types.js';
-import type { CardChoiceState, RowChoiceState, CardNumber } from '../engine/types.js';
+import type { CardChoiceState, RowChoiceState, CardNumber, Board } from '../engine/types.js';
 import { readGameState, detectAction, getFinalScores, findCheapestRow, captureErrorContext, type GameStateFromDOM } from './state-reader.js';
 import { playCard, pickRow } from './actor.js';
 import { log, logError } from './logger.js';
@@ -165,7 +165,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
   strategy.onRoundStart?.({
     round: 1,
     hand: initialHand as CardNumber[],
-    board: { rows: initialBoard as any },
+    board: { rows: initialBoard as Board['rows'] },
   });
 
   while (true) {
@@ -259,7 +259,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       strategy.onRoundStart?.({
         round: currentRound,
         hand: hand as CardNumber[],
-        board: { rows: board as any },
+        board: { rows: board as Board['rows'] },
       });
     }
     lastHandSize = state.hand.length;

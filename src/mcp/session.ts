@@ -275,7 +275,7 @@ export class SessionManager {
       session.strategy.onRoundStart?.({
         round,
         hand: hand as CardNumber[],
-        board: { rows: board.map(r => [...r]) as any },
+        board: { rows: [[...board[0]], [...board[1]], [...board[2]], [...board[3]]] as unknown as Board['rows'] },
       });
     } catch { /* lifecycle errors are non-fatal */ }
 
