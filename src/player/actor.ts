@@ -7,29 +7,46 @@ import type { CardNumber } from '../engine/types.js';
 
 /**
  * Play a card from hand by clicking it.
- * Uses JS click via evaluate as BGA cards may not pass Playwright's visibility checks.
+ * Finds the card by value in the live DOM and clicks it atomically.
  */
 export async function playCard(page: Page, hand: HandItem[], cardValue: CardNumber): Promise<void> {
-  const item = hand.find(h => h.cardValue === cardValue);
-  if (!item) {
-    throw new Error(
-      `Card ${cardValue} not found in hand. Available: ${hand.map(h => h.cardValue).join(', ')}`
-    );
-  }
+  // Atomic: find card element by value and click it in one evaluate
+  const result = await page.evaluate((targetValue: number) => {
+    const gu = (window as any).gameui;
+    if (!gu?.playerHand) return { ok: false, error: 'no playerHand' };
 
-  const selector = `#myhand_item_${item.stockId}`;
-  
-  // Use JS click — more reliable than Playwright's actionability checks for BGA
-  const clicked = await page.evaluate((sel: string) => {
-    const el = document.querySelector(sel) as HTMLElement | null;
-    if (!el) return false;
-    el.click();
-    return true;
-  }, selector);
+    const items = gu.playerHand.getAllItems();
+    for (const item of items) {
+      const el = document.getElementById(`myhand_item_${item.id}`);
+      if (!el) continue;
 
-  if (!clicked) {
-    // Fallback: force click via Playwright
-    await page.click(selector, { force: true, timeout: 5_000 });
+      // Find background-position to decode card value
+      let bgPos = '';
+      if ((el as HTMLElement).style?.backgroundPosition) {
+        bgPos = (el as HTMLElement).style.backgroundPosition;
+      } else {
+        const inner = el.querySelector('[style*="background-position"]');
+        if (inner) bgPos = (inner as HTMLElement).style.backgroundPosition;
+      }
+      if (!bgPos) continue;
+
+      const match = bgPos.match(/([-\d.]+)%\s+([-\d.]+)%/);
+      if (!match) continue;
+      const x = Math.abs(parseFloat(match[1]));
+      const y = Math.abs(parseFloat(match[2]));
+      const value = Math.round((y / 100) * 10 + (x / 100) + 1);
+
+      if (value === targetValue) {
+        (el as HTMLElement).click();
+        return { ok: true, stockId: item.id, value };
+      }
+    }
+
+    return { ok: false, error: `Card ${targetValue} not found`, items: items.length };
+  }, cardValue as number);
+
+  if (!result.ok) {
+    throw new Error(`Failed to play card ${cardValue}: ${result.error}`);
   }
 }
 
