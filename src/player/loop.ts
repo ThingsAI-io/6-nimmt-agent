@@ -19,7 +19,8 @@
  * - onTurnResolved(): called after each turn with a partial resolution built
  *   from board diffs. We can't identify which opponent played which card, but
  *   we DO report all new cards that appeared on the board — this feeds the
- *   seenCards set for card counting. Cards from cleared rows are also captured.
+ *   seenCards set for card counting. Cards removed by row clears are not
+ *   currently captured by this board-diff logic.
  * - onRoundEnd(): called at round transitions with current scores from DOM.
  * - Round numbers are "rounds since attachment" — reconnecting mid-game starts
  *   at round 1 even if the true game round is higher.
@@ -139,8 +140,10 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     if (!strategy.onGameEnd) return;
     const myId = initialState.myPlayerId;
     const scoreEntries = Object.entries(scores).map(([id, score]) => ({ id, score }));
-    const myScore = scores[myId] ?? 0;
-    const won = scoreEntries.every(e => e.id === myId || e.score >= myScore);
+    const hasMyScore = Object.prototype.hasOwnProperty.call(scores, myId);
+    const won = hasMyScore && scoreEntries.length > 0
+      ? scoreEntries.every(e => e.id === myId || e.score >= scores[myId]!)
+      : false;
     strategy.onGameEnd({ scores: scoreEntries, rounds, won });
   }
 
@@ -487,12 +490,15 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
           if (lastPlayedCard && !newCardsOnBoard.has(lastPlayedCard)) {
             plays.push({ playerId: initialState.myPlayerId, card: lastPlayedCard });
           }
+          // When action is pickRow, hand already decreased from the prior playCard,
+          // so inferTurn() is +1 ahead — use the previous turn number instead.
+          const resolvedTurn = action === 'pickRow' ? Math.max(1, currentTurn - 1) : currentTurn;
           strategy.onTurnResolved({
-            turn: currentTurn,
+            turn: resolvedTurn,
             plays,
             resolutions: [],
             rowPicks: [],
-            boardAfter: postState.board.rows.map(r => [...r]),
+            boardAfter: postState.board.rows.map(r => [...r]) as unknown as CardNumber[][],
           });
         }
       }

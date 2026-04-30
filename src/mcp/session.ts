@@ -10,6 +10,11 @@ import { strategies, cattleHeads, deriveSeedState, xoshiro256ss } from '../engin
 import * as errors from './errors.js';
 import type { DomainError } from './errors.js';
 
+/** Convert a 4-row number[][] (already validated) to a typed Board. */
+function toBoard(rows: number[][]): Board {
+  return { rows: [rows[0], rows[1], rows[2], rows[3]] as unknown as Board['rows'] };
+}
+
 // ── Types ───────────────────────────────────────────────────────────
 
 type SessionPhase = 'awaiting-round' | 'in-round' | 'awaiting-row-pick' | 'game-over' | 'ended';
@@ -275,7 +280,7 @@ export class SessionManager {
       session.strategy.onRoundStart?.({
         round,
         hand: hand as CardNumber[],
-        board: { rows: [[...board[0]], [...board[1]], [...board[2]], [...board[3]]] as unknown as Board['rows'] },
+        board: toBoard(board),
       });
     } catch { /* lifecycle errors are non-fatal */ }
 
