@@ -100,16 +100,34 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     // 2. Read current state (retry if hand is empty)
     let state = await readGameState(page);
     if (state.hand.length === 0 && action === 'playCard') {
-      log({ event: 'emptyHand', message: 'Hand empty, retrying...' }, verbose);
-      const diag = await diagnoseDom(page);
-      log({ event: 'diagnostic', ...diag as Record<string, unknown> }, verbose);
-      for (let retry = 0; retry < 5; retry++) {
-        await page.waitForTimeout(1000);
+      // Round is likely over (all 10 cards played). Wait for next round or game end.
+      log({ event: 'roundComplete', message: 'Hand empty — waiting for next round or game end', round: currentRound }, verbose);
+      let foundNewState = false;
+      for (let retry = 0; retry < 20; retry++) {
+        await page.waitForTimeout(1500);
+        // Check for game end
+        const gameOver = await page.evaluate(() => {
+          const gs = (window as any).gameui?.gamedatas?.gamestate;
+          return gs?.name === 'gameEnd' || gs?.name === 'endGame';
+        });
+        if (gameOver) {
+          log({ event: 'gameEnd', round: currentRound }, verbose);
+          const scores = await getFinalScores(page);
+          let dataFile: string | undefined;
+          if (collector) {
+            collector.endRound(scores);
+            dataFile = collector.finalize(scores);
+          }
+          return { scores, turnsPlayed, rounds: currentRound, dataFile };
+        }
         state = await readGameState(page);
-        if (state.hand.length > 0) break;
+        if (state.hand.length > 0) {
+          foundNewState = true;
+          break;
+        }
       }
-      if (state.hand.length === 0) {
-        throw new Error('Hand is empty after retries. DOM may have changed structure.');
+      if (!foundNewState) {
+        throw new Error('Timed out waiting for new round after hand emptied.');
       }
     }
 
@@ -128,6 +146,13 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
 
     // 3. Execute action
     if (action === 'playCard') {
+      // BGA auto-plays the last card (turn 10) — skip and wait for round end
+      if (state.hand.length <= 1) {
+        log({ event: 'autoPlay', message: 'Last card — BGA auto-plays', round: currentRound, turn: currentTurn }, verbose);
+        await page.waitForTimeout(2000);
+        continue;
+      }
+
       const boardBefore = state.board.rows.map(r => [...r]);
       const cardState = buildCardChoiceState(state, playerCount, currentRound, currentTurn);
       
@@ -138,6 +163,16 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       if (delay) await page.waitForTimeout(delay);
       await playCard(page, state.hand, card);
       turnsPlayed++;
+
+      // Wait for card to actually leave hand before continuing
+      const expectedSize = state.hand.length - 1;
+      for (let i = 0; i < 10; i++) {
+        await page.waitForTimeout(500);
+        const check = await page.evaluate(() => {
+          return (window as any).gameui?.playerHand?.getAllItems?.()?.length ?? -1;
+        });
+        if (check <= expectedSize) break;
+      }
 
       // Record turn data
       collector?.recordTurn({
