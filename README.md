@@ -13,7 +13,7 @@ The rules are fully deterministic. The interesting problem is **predicting where
 This repo is a research project exploring that problem:
 
 - 🎮 **Play autonomously** on BGA using Monte Carlo simulation in ~2ms per decision
-- 📊 **Benchmark strategies** — random baseline, heuristic, Bayesian, MCS — against each other
+- 📊 **Benchmark strategies** — random baseline, Bayesian, MCS — against each other
 - 📁 **Collect game data** in streaming JSONL for post-game analysis
 - 🔬 **Iterate fast** — simulate 1000 games in seconds without touching a browser
 
