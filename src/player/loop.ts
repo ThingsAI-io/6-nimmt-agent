@@ -14,12 +14,13 @@
  * - When hand empties (all 10 cards played), we enter a wait loop for either
  *   new round deal (hand > 0) or game end (gamestate name check).
  *
- * KNOWN LIMITATIONS:
- * - Strategy lifecycle: we call onGameStart() but NOT onTurnResolved() or
- *   onRoundEnd(). Live play cannot reliably reconstruct opponent cards from DOM,
- *   so turnHistory and revealedThisTurn are passed as empty arrays. Strategies
- *   that rely on seen-card tracking (bayesian, mcs) operate in degraded mode.
- *   TODO: Parse resolved cards from BGA animations/log to feed onTurnResolved.
+ * STRATEGY LIFECYCLE:
+ * - onGameStart(): called once at attachment with player ID, count, rng.
+ * - onTurnResolved(): called after each turn with a partial resolution built
+ *   from board diffs. We can't identify which opponent played which card, but
+ *   we DO report all new cards that appeared on the board — this feeds the
+ *   seenCards set for card counting. Cards from cleared rows are also captured.
+ * - onRoundEnd(): called at round transitions with current scores from DOM.
  * - Round numbers are "rounds since attachment" — reconnecting mid-game starts
  *   at round 1 even if the true game round is higher.
  */
@@ -227,6 +228,11 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     // We use ≥9 (not ==10) because getAllItems() can briefly return 9 during animation.
     // The turnsPlayed>0 guard prevents false-triggering on initial game join.
     if (state.hand.length >= 9 && lastHandSize < 9 && lastHandSize >= 0 && turnsPlayed > 0) {
+      // Notify strategy that previous round ended (scores are from DOM, always current)
+      if (strategy.onRoundEnd) {
+        const roundScores = Object.entries(state.scores).map(([id, score]) => ({ id, score }));
+        strategy.onRoundEnd(roundScores);
+      }
       currentRound++;
       emit({ event: 'newRound', round: currentRound });
       const hand = state.hand.map(h => h.cardValue as number);
@@ -427,11 +433,45 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     }
 
     // Wait for BGA animations to resolve (card placement, row clearing, etc.)
-    // then snapshot the board for data collection.
+    // then snapshot the board and feed strategy lifecycle methods.
     await page.waitForTimeout(1500);
     try {
       const postState = await readGameState(page);
       collector?.recordBoardAfter(postState.board.rows.map(r => [...r]));
+
+      // Feed onTurnResolved with what we can infer from the board diff.
+      // We can't know which opponent played which card, but we CAN tell the
+      // strategy about all new cards that appeared on the board — this feeds
+      // the seenCards set for better unknown pool calculation.
+      if (strategy.onTurnResolved) {
+        const newCardsOnBoard = new Set<number>();
+        for (const row of postState.board.rows) {
+          for (const c of row) newCardsOnBoard.add(c);
+        }
+        // Cards that are on the post-board but weren't before this action
+        const boardBefore = state.board.rows;
+        for (const row of boardBefore) {
+          for (const c of row) newCardsOnBoard.delete(c);
+        }
+        // Build a partial resolution — we attribute all new cards to "unknown" players
+        const plays: { playerId: string; card: CardNumber }[] = [];
+        for (const card of newCardsOnBoard) {
+          plays.push({ playerId: 'unknown', card: card as CardNumber });
+        }
+        if (plays.length > 0 || lastPlayedCard) {
+          // Include our own played card if it's not already on the board
+          if (lastPlayedCard && !newCardsOnBoard.has(lastPlayedCard)) {
+            plays.push({ playerId: initialState.myPlayerId, card: lastPlayedCard });
+          }
+          strategy.onTurnResolved({
+            turn: currentTurn,
+            plays,
+            resolutions: [],
+            rowPicks: [],
+            boardAfter: postState.board.rows.map(r => [...r]),
+          });
+        }
+      }
     } catch { /* non-critical — don't crash if post-read fails */ }
   }
 }
