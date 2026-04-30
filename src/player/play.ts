@@ -8,12 +8,14 @@
  *   2. Attach to a specific table (launches browser, handles login):
  *      npm run play -- --table 843761580 --strategy mcs -v
  */
-import { chromium } from 'playwright';
+import { chromium, type BrowserType } from 'playwright';
 import { strategies, parseStrategySpec } from '../engine/strategies/index.js';
 import { getCredentials, login, saveSession } from './bga-auth.js';
 import { playGame } from './loop.js';
 
 // ── Argument parsing ───────────────────────────────────────────────────
+
+type BrowserChoice = 'chrome' | 'msedge' | 'chromium';
 
 interface Args {
   mode: 'connect' | 'table';
@@ -25,6 +27,7 @@ interface Args {
   sessionFile: string;
   cdpUrl: string;
   port: number;
+  browser: BrowserChoice;
 }
 
 function parseArgs(): Args {
@@ -39,6 +42,7 @@ function parseArgs(): Args {
     sessionFile: '.bga-session.json',
     cdpUrl: '',
     port: 9222,
+    browser: 'msedge',
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -62,6 +66,8 @@ function parseArgs(): Args {
         opts.cdpUrl = args[++i]; break;
       case '--port': case '-p':
         opts.port = parseInt(args[++i]) || 9222; break;
+      case '--browser': case '-b':
+        opts.browser = args[++i] as BrowserChoice; break;
       case '--help': case '-h':
         printUsage(); process.exit(0);
     }
@@ -87,6 +93,7 @@ MODES:
 OPTIONS:
   --connect, -c     Connect to existing browser (default mode)
   --table, -t       BGA table ID (switches to table mode)
+  --browser, -b     Browser to use: chrome, msedge, chromium (default: msedge)
   --strategy, -s    Strategy to use (default: mcs)
                     Format: name or name:key=val,key=val
                     Available: ${[...strategies.keys()].join(', ')}
@@ -103,11 +110,14 @@ ENVIRONMENT:
   BGA_PASSWORD      Board Game Arena password (table mode only)
 
 EXAMPLES:
-  # You're already on a BGA table in Chrome with --remote-debugging-port=9222
+  # You're already on a BGA table in Edge with --remote-debugging-port=9222
   npm run play -- --connect -s mcs -v
 
+  # Use Chrome instead of Edge
+  npm run play -- --connect -b chrome -s mcs -v
+
   # Full auto: launch browser, login, navigate to table
-  npm run play -- --table 843761580 -s mcs:mcMax=500 --no-headless -v
+  npm run play -- --table 843761580 -s mcs:mcMax=500 -b chrome --no-headless -v
 
   # Connect to a specific CDP endpoint
   npm run play -- --connect --cdp-url ws://127.0.0.1:9222/devtools/browser/abc123 -v
@@ -152,6 +162,7 @@ async function main(): Promise<void> {
         console.log(JSON.stringify({
           event: 'connecting',
           cdpUrl,
+          browser: args.browser,
           timestamp: new Date().toISOString(),
         }));
       }
@@ -184,7 +195,8 @@ async function main(): Promise<void> {
 
     } else {
       // ── Table mode: launch browser and navigate ──
-      browser = await chromium.launch({ headless: args.headless });
+      const channel = args.browser === 'chromium' ? undefined : args.browser;
+      browser = await chromium.launch({ headless: args.headless, channel });
       let context;
       try {
         context = await browser.newContext({ storageState: args.sessionFile });
