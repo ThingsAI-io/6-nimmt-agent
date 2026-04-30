@@ -141,20 +141,32 @@ function simulateRound(
  * each possible card play. Picks the card with lowest average total penalty
  * across all simulations.
  *
+ * Card counting:
+ * - In simulation/MCP: receives onTurnResolved() calls with all played cards.
+ * - In live play: onTurnResolved() is never called. Instead, we infer seen cards
+ *   by observing the board on every decision — any card that was ever on any board
+ *   is eliminated from the unknown pool, even after rows are cleared/taken.
+ *   This "passive card counting" works across rounds and reconnects.
+ *
  * Based on the MCS agent from:
  *   Johann Brehmer & Marcel Gutsche, "Beating 6 nimmt! with reinforcement learning"
  *   https://github.com/johannbrehmer/rl-6nimmt
- *
- * Their MCS achieved ~40% win rate (ELO 1745) in 4-player self-play tournaments.
- * With default config (mcPerCard=50, mcMax=500), our implementation achieves 82%
- * win rate vs random and 75% vs bayesian-simple in 4-player games.
  */
 export function createMcsStrategy(options: McsOptions = {}): Strategy {
   const mcMax = Math.max(1, Math.floor(Number(options.mcMax) || DEFAULT_MC_MAX));
   const mcPerCard = Math.max(1, Math.floor(Number(options.mcPerCard) || DEFAULT_MC_PER_CARD));
   let rng: () => number = Math.random;
   let playerCount = 2;
+  // Persistent set of all cards ever observed — never cleared between rounds.
+  // Fed by onTurnResolved() in simulation, and by board observation in live play.
   let seenCards = new Set<number>();
+
+  /** Observe all cards currently on the board, adding them to seenCards. */
+  function observeBoard(board: { rows: readonly (readonly CardNumber[])[] }): void {
+    for (const row of board.rows) {
+      for (const c of row) seenCards.add(c);
+    }
+  }
 
   return {
     name: 'mcs',
@@ -169,12 +181,30 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
       for (const play of resolution.plays) {
         seenCards.add(play.card);
       }
+      // Also track cards from row clears/overflows
+      for (const res of resolution.resolutions) {
+        if (res.collectedCards) {
+          for (const c of res.collectedCards) seenCards.add(c);
+        }
+      }
+      for (const pick of resolution.rowPicks) {
+        for (const c of pick.collectedCards) seenCards.add(c);
+      }
+      if (resolution.boardAfter) {
+        for (const row of resolution.boardAfter) {
+          for (const card of row) seenCards.add(card);
+        }
+      }
     },
 
     chooseCard(state) {
       const { hand, board, turn } = state;
       const opponentCount = playerCount - 1;
       const cardsPerPlayer = 10 - turn + 1; // cards remaining per hand (including this turn)
+
+      // Passive card counting: observe current board (catches cards played since last decision)
+      observeBoard(board);
+      observeBoard(state.initialBoardCards);
 
       // Build unknown pool
       const known = new Set<number>();
@@ -248,6 +278,9 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
       // Remove triggeringCard from hand — it's already been played this turn
       const hand = state.hand.filter(c => c !== state.triggeringCard);
       const cardsPerPlayer = hand.length;
+
+      // Passive card counting: observe current board
+      observeBoard(board);
 
       // Build unknown pool
       const known = new Set<number>();
