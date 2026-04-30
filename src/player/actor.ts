@@ -28,7 +28,14 @@ export async function pickRow(page: Page, rowIndex: 0 | 1 | 2 | 3): Promise<void
   const domIndex = rowIndex + 1; // DOM is 1-indexed
   const selector = `#row_slot_${domIndex}_arrow`;
 
-  // Wait for row arrow to be clickable
-  await page.waitForSelector(selector, { state: 'visible', timeout: 10_000 });
+  // Wait for row arrow to become selectable (has class selectable_row)
+  await page.waitForFunction(
+    (sel: string) => {
+      const el = document.querySelector(sel);
+      return el && (el.classList.contains('selectable_row') || (el as HTMLElement).offsetHeight > 0);
+    },
+    selector,
+    { timeout: 15_000 }
+  );
   await page.click(selector);
 }

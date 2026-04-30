@@ -131,11 +131,20 @@ export async function detectAction(page: Page): Promise<PageAction> {
     const titleEl = (window as any).document.getElementById('pagemaintitletext');
     const title = (titleEl?.textContent ?? '').toLowerCase();
 
-    if (title.includes('you must choose a card') || title.includes('must play a card')) {
+    if (title.includes('you must choose a card') || title.includes('you must play a card')) {
       return 'playCard';
     }
-    if (title.includes('must take a row') || title.includes('must choose a row')) {
+    // Only "You must take a row" — not "PlayerName must take a row"
+    if (title.startsWith('you') && (title.includes('must take a row') || title.includes('must choose a row'))) {
       return 'pickRow';
+    }
+    // Also check if row arrows are actually visible (backup confirmation)
+    if (title.includes('must take a row') || title.includes('must choose a row')) {
+      // Someone must pick — check if it's us by looking for visible arrows
+      const arrow = (window as any).document.querySelector('.selectable_row');
+      if (arrow) return 'pickRow';
+      // Otherwise it's the opponent picking
+      return 'waiting';
     }
     return 'waiting';
   }) as any);
