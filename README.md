@@ -55,8 +55,9 @@ The game loop is 100% deterministic — no LLM in the play path. The engine call
 | Strategy | Description |
 |---|---|
 | `random` | Uniform random — the baseline |
-| `heuristic` | Rule-based: avoid rows near 5, prefer safe placements |
-| `bayesian` | Expected-penalty minimisation over unseen card distribution |
+| `dummy-min` | Always plays the lowest card in hand |
+| `dummy-max` | Always plays the highest card in hand |
+| `bayesian-simple` | Expected-penalty minimisation over unseen card distribution |
 | `mcs` | Monte Carlo Simulation — strongest; simulates random game completions |
 
 ```bash

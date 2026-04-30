@@ -8,30 +8,32 @@ The engine ships with several pluggable strategies. All implement the same inter
 
 Picks a card uniformly at random. Used as the baseline in benchmarks.
 
-No options.
-
 ```bash
 npm run play -- --strategy random
 ```
 
-### `heuristic` (greedy)
+### `dummy-min`
 
-Simple rule-based play. Prefers cards that place safely on a row (far from the 6th slot) and avoids rows with high cattle-head penalties.
-
-No options.
+Always plays the lowest card in hand.
 
 ```bash
-npm run play -- --strategy heuristic
+npm run play -- --strategy dummy-min
 ```
 
-### `bayesian`
+### `dummy-max`
+
+Always plays the highest card in hand.
+
+```bash
+npm run play -- --strategy dummy-max
+```
+
+### `bayesian-simple`
 
 Maintains a probability distribution over cards not yet seen. Evaluates expected penalty for each candidate card given the current board and known card distribution.
 
-No options.
-
 ```bash
-npm run play -- --strategy bayesian
+npm run play -- --strategy bayesian-simple
 ```
 
 ### `mcs` — Monte Carlo Simulation
@@ -66,7 +68,7 @@ npx tsx src/cli/index.ts simulate \
 
 # Bayesian vs MCS (2-player, 500 games)
 npx tsx src/cli/index.ts simulate \
-  --strategies bayesian,mcs \
+  --strategies bayesian-simple,mcs \
   --games 500
 ```
 
