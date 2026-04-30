@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "outDir": "./dist/player",
+    "rootDir": "./src"
+  },
+  "include": ["src/player/**/*", "src/engine/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
+}

@@ -145,3 +145,5 @@ vite.config.ts.timestamp-*
 tmp/
 .playwright-mcp/
 *.png
+.bga-session.json
+data/games/
