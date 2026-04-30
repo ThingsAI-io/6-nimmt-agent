@@ -221,7 +221,8 @@ export async function detectAction(page: Page): Promise<PageAction> {
     // These occur during normal play AND when a player quits mid-game (which can push
     // BGA into cardReveal or similar without a clean gameEnd transition).
     // Returning 'waiting' here prevents the fallback below from falsely triggering 'playCard'.
-    const NON_INTERACTIVE = ['cardReveal', 'resolveStack', 'betweenRounds', 'newRound', 'nextRound'];
+    // NOTE: add new states here as they are discovered in live play.
+    const NON_INTERACTIVE = ['cardReveal', 'cardProcess', 'resolveStack', 'betweenRounds', 'newRound', 'nextRound'];
     if (NON_INTERACTIVE.includes(gsName)) return 'waiting';
 
     const titleEl = (window as any).document.getElementById('pagemaintitletext');

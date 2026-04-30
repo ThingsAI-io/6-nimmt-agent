@@ -222,15 +222,15 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         });
 
         // Before crashing: check if the game ended abruptly (e.g. a player quit).
-        // BGA may not cleanly emit gameEnd — it can silently transition to cardReveal
-        // or another terminal state. If the game is over, exit gracefully.
-        const abruptEnd = await page.evaluate(() => {
+        // Only treat as abrupt end if the gamestate is a known terminal state.
+        // Non-interactive states like cardProcess/cardReveal are normal mid-game
+        // states — we should NOT abort for those (they'll resolve and play continues).
+        const TERMINAL_STATES = ['gameEnd', 'endGame', 'gameOver'];
+        const abruptEnd = await page.evaluate((terminals: string[]) => {
           const gs = (window as any).gameui?.gamedatas?.gamestate;
           const gsName: string = gs?.name ?? '';
-          // If we can't find the card and the gamestate is non-interactive,
-          // the game likely ended without a clean gameEnd transition.
-          return gsName !== 'cardSelect' && gsName !== 'playerTurn';
-        }).catch(() => true); // if evaluate fails, assume game ended
+          return terminals.includes(gsName);
+        }, TERMINAL_STATES).catch(() => true); // if evaluate fails, assume game ended
 
         if (abruptEnd) {
           emit({ event: 'gameAborted', reason: 'card not found in non-interactive state', gamestateName: dom.gamestateName });
