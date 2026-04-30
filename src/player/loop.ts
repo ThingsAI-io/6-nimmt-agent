@@ -17,9 +17,9 @@
 import type { Page } from 'playwright';
 import type { Strategy } from '../engine/strategies/types.js';
 import type { CardChoiceState, RowChoiceState, CardNumber } from '../engine/types.js';
-import { readGameState, detectAction, getFinalScores, findCheapestRow, type GameStateFromDOM } from './state-reader.js';
+import { readGameState, detectAction, getFinalScores, findCheapestRow, captureErrorContext, type GameStateFromDOM } from './state-reader.js';
 import { playCard, pickRow } from './actor.js';
-import { log } from './logger.js';
+import { log, logError } from './logger.js';
 import { GameCollector } from './collector.js';
 
 export interface PlayOptions {
@@ -68,6 +68,18 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
   let currentRound = 1;
   let lastHandSize = 0;
 
+  // Ring buffer: keep last 10 log entries in memory for error diagnostics.
+  // When an error occurs, we attach this to the error event so callers can
+  // see exactly what happened in the turns leading up to the crash.
+  const eventBuffer: Record<string, unknown>[] = [];
+  const RING_SIZE = 10;
+  function emit(entry: Record<string, unknown>): void {
+    const stamped = { ...entry, timestamp: new Date().toISOString() };
+    eventBuffer.push(stamped);
+    if (eventBuffer.length > RING_SIZE) eventBuffer.shift();
+    log(stamped as any, verbose);
+  }
+
   // Initialize strategy with game metadata
   const initialState = await readGameState(page);
   const playerCount = opts.playerCount ?? initialState.playerCount;
@@ -98,18 +110,30 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
 
   while (true) {
     // 1. Wait for our turn or game end
-    const action = await waitForAction(page, timeout);
+    let action: 'playCard' | 'pickRow' | 'gameEnd';
+    try {
+      action = await waitForAction(page, timeout);
+    } catch (err) {
+      const dom = await captureErrorContext(page);
+      logError({
+        event: 'error',
+        message: (err as Error).message,
+        context: { action: 'waitForAction', dom },
+        lastEvents: [...eventBuffer],
+      });
+      throw err;
+    }
 
     if (action === 'gameEnd') {
       const scores = await getFinalScores(page);
-      log({ event: 'gameEnd', scores, turnsPlayed, rounds: currentRound }, verbose);
+      emit({ event: 'gameEnd', scores, turnsPlayed, rounds: currentRound });
       
       // Save collected data
       let dataFile: string | undefined;
       if (collector) {
         collector.endRound(scores);
         dataFile = collector.finalize(scores);
-        log({ event: 'dataSaved', file: dataFile }, verbose);
+        emit({ event: 'dataSaved', file: dataFile });
       }
       
       return { scores, turnsPlayed, rounds: currentRound, dataFile };
@@ -120,7 +144,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     // the next round (hand refills to 10) or end the game.
     let state = await readGameState(page);
     if (state.hand.length === 0 && action === 'playCard') {
-      log({ event: 'roundComplete', message: 'Hand empty — waiting for next round or game end', round: currentRound }, verbose);
+      emit({ event: 'roundComplete', message: 'Hand empty — waiting for next round or game end', round: currentRound });
       let foundNewState = false;
       for (let retry = 0; retry < 20; retry++) {
         await page.waitForTimeout(1500);
@@ -130,7 +154,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
           return gs?.name === 'gameEnd' || gs?.name === 'endGame';
         });
         if (gameOver) {
-          log({ event: 'gameEnd', round: currentRound }, verbose);
+          emit({ event: 'gameEnd', round: currentRound });
           const scores = await getFinalScores(page);
           let dataFile: string | undefined;
           if (collector) {
@@ -158,7 +182,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     // The turnsPlayed>0 guard prevents false-triggering on initial game join.
     if (state.hand.length >= 9 && lastHandSize < 9 && lastHandSize >= 0 && turnsPlayed > 0) {
       currentRound++;
-      log({ event: 'newRound', round: currentRound }, verbose);
+      emit({ event: 'newRound', round: currentRound });
       const hand = state.hand.map(h => h.cardValue as number);
       const board = state.board.rows.map(r => [...r]);
       roundStartBoard = board; // save for initialBoardCards in strategy state
@@ -176,7 +200,29 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       const decisionTime = Date.now() - t0;
       
       if (delay) await page.waitForTimeout(delay);
-      await playCard(page, state.hand, card);
+
+      // Attempt card play — on failure, emit enriched error with full context
+      const stateReadAt = Date.now();
+      try {
+        await playCard(page, state.hand, card);
+      } catch (err) {
+        const dom = await captureErrorContext(page);
+        logError({
+          event: 'error',
+          message: (err as Error).message,
+          context: {
+            action: 'playCard',
+            targetCard: card,
+            stateAgeMs: Date.now() - stateReadAt,
+            hand: state.hand.map(h => h.cardValue as number),
+            board: boardBefore,
+            dom,
+          },
+          lastEvents: [...eventBuffer],
+        });
+        throw err;
+      }
+
       lastPlayedCard = card; // track for potential row pick that follows
       turnsPlayed++;
 
@@ -207,14 +253,14 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         },
       });
 
-      log({
+      emit({
         event: 'playCard',
         card,
         round: currentRound,
         turn: currentTurn,
         handSize: state.hand.length - 1,
         decisionTime,
-      }, verbose);
+      });
 
     } else if (action === 'pickRow') {
       // Row pick: our played card was lower than all row tails, so we must
@@ -229,17 +275,38 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       }
 
       if (delay) await page.waitForTimeout(delay);
-      await pickRow(page, rowIdx);
+
+      // Attempt row pick — on failure, emit enriched error with full context
+      const rowStateReadAt = Date.now();
+      try {
+        await pickRow(page, rowIdx);
+      } catch (err) {
+        const dom = await captureErrorContext(page);
+        logError({
+          event: 'error',
+          message: (err as Error).message,
+          context: {
+            action: 'pickRow',
+            targetRow: rowIdx,
+            stateAgeMs: Date.now() - rowStateReadAt,
+            hand: state.hand.map(h => h.cardValue as number),
+            board: state.board.rows.map(r => [...r]),
+            dom,
+          },
+          lastEvents: [...eventBuffer],
+        });
+        throw err;
+      }
 
       // Record row pick in data collection
       collector?.recordRowPick(rowIdx, state.board.rows.map(r => [...r]));
 
-      log({
+      emit({
         event: 'pickRow',
         row: rowIdx,
         round: currentRound,
         turn: turnsPlayed,
-      }, verbose);
+      });
     }
 
     // Wait for BGA animations to resolve (card placement, row clearing, etc.)

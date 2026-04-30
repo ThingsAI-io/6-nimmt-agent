@@ -122,8 +122,50 @@ export async function readGameState(page: Page): Promise<GameStateFromDOM> {
 }
 
 /**
- * Diagnostic: dump raw hand DOM info for debugging.
+ * Capture a diagnostic DOM snapshot for error reporting.
+ *
+ * Called from loop.ts catch blocks to attach live DOM state to error events.
+ * Reads only what's needed for debugging — does NOT re-read full game state
+ * (which might itself throw if the page is in a bad state).
  */
+export interface ErrorContext {
+  title: string;
+  gamestateName: string;
+  handItemCount: number;
+  /** Raw stock item IDs currently in hand — useful to see if card disappeared */
+  rawItems: number[];
+  rowArrowsVisible: boolean;
+}
+
+export async function captureErrorContext(page: Page): Promise<ErrorContext> {
+  try {
+    return await page.evaluate((() => {
+      /* eslint-disable no-undef */
+      const gu = (window as any).gameui;
+      const title = (window as any).document.getElementById('pagemaintitletext')?.textContent?.trim() ?? '';
+      const gamestateName = gu?.gamedatas?.gamestate?.name ?? 'unknown';
+
+      const items = gu?.playerHand?.getAllItems?.() ?? [];
+      const rawItems = items.map((i: any) => i.id);
+
+      // Check if any row arrow is currently visible/selectable (our row pick turn)
+      let rowArrowsVisible = false;
+      for (let r = 1; r <= 4; r++) {
+        const arrow = (window as any).document.getElementById(`row_slot_${r}_arrow`);
+        if (arrow && (arrow.classList.contains('selectable_row') || arrow.offsetParent !== null)) {
+          rowArrowsVisible = true;
+          break;
+        }
+      }
+
+      return { title, gamestateName, handItemCount: items.length, rawItems, rowArrowsVisible };
+      /* eslint-enable no-undef */
+    }) as any);
+  } catch {
+    // Page may be mid-navigation or crashed — return a safe fallback
+    return { title: '', gamestateName: 'unknown', handItemCount: -1, rawItems: [], rowArrowsVisible: false };
+  }
+}
 export async function diagnoseDom(page: Page): Promise<unknown> {
   return await page.evaluate((() => {
     const gu = (window as any).gameui;
