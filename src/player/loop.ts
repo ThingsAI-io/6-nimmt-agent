@@ -134,6 +134,16 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     rng: Math.random,
   });
 
+  /** Notify strategy that game ended. Determines win based on lowest score. */
+  function notifyGameEnd(scores: Record<string, number>, rounds: number): void {
+    if (!strategy.onGameEnd) return;
+    const myId = initialState.myPlayerId;
+    const scoreEntries = Object.entries(scores).map(([id, score]) => ({ id, score }));
+    const myScore = scores[myId] ?? 0;
+    const won = scoreEntries.every(e => e.id === myId || e.score >= myScore);
+    strategy.onGameEnd({ scores: scoreEntries, rounds, won });
+  }
+
   // Turn inference: in 6 Nimmt, each player gets 10 cards per round and plays
   // one per turn. So turn number = 11 - current hand size.
   // This works even on reconnect (no counter to reset).
@@ -152,6 +162,11 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
   let roundStartBoard = initialBoard; // snapshot of board at round start (for initialBoardCards)
   let lastPlayedCard: CardNumber | undefined; // track last card we played (needed for row pick context)
   collector?.startRound(1, initialBoard, initialHand);
+  strategy.onRoundStart?.({
+    round: 1,
+    hand: initialHand as CardNumber[],
+    board: { rows: initialBoard as any },
+  });
 
   while (true) {
     // 1. Wait for our turn or game end
@@ -173,6 +188,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
     if (action === 'gameEnd') {
       const scores = await getFinalScores(page);
       emit({ event: 'gameEnd', scores, turnsPlayed, rounds: currentRound });
+      notifyGameEnd(scores, currentRound);
       
       // Save collected data
       let dataFile: string | undefined;
@@ -203,6 +219,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         if (gameOver) {
           emit({ event: 'gameEnd', round: currentRound });
           const scores = await getFinalScores(page);
+          notifyGameEnd(scores, currentRound);
           let dataFile: string | undefined;
           if (collector) {
             collector.endRound(scores);
@@ -239,6 +256,11 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       const board = state.board.rows.map(r => [...r]);
       roundStartBoard = board; // save for initialBoardCards in strategy state
       collector?.startRound(currentRound, board, hand);
+      strategy.onRoundStart?.({
+        round: currentRound,
+        hand: hand as CardNumber[],
+        board: { rows: board as any },
+      });
     }
     lastHandSize = state.hand.length;
 
@@ -288,6 +310,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         if (abruptEnd) {
           emit({ event: 'gameAborted', reason: 'card not found in non-interactive state', gamestateName: dom.gamestateName });
           const scores = await getFinalScores(page).catch(() => ({}));
+          notifyGameEnd(scores, currentRound);
           if (collector) {
             collector.endRound(scores);
             collector.finalize(scores);
@@ -391,6 +414,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         if (abruptEnd) {
           emit({ event: 'gameAborted', reason: 'row pick failed in terminal state', gamestateName: dom.gamestateName });
           const scores = await getFinalScores(page).catch(() => ({}));
+          notifyGameEnd(scores, currentRound);
           if (collector) {
             collector.endRound(scores);
             collector.finalize(scores);
