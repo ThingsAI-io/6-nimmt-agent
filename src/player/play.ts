@@ -12,6 +12,7 @@ import { chromium, type BrowserType } from 'playwright';
 import { strategies, parseStrategySpec } from '../engine/strategies/index.js';
 import { getCredentials, login, saveSession } from './bga-auth.js';
 import { playGame } from './loop.js';
+import { isCdpPortOpen, launchBrowser } from './browser-launcher.js';
 
 // ── Argument parsing ───────────────────────────────────────────────────
 
@@ -158,6 +159,36 @@ async function main(): Promise<void> {
       // ── Connect mode: attach to existing browser ──
       const cdpUrl = args.cdpUrl || `http://127.0.0.1:${args.port}`;
       
+      // Auto-launch browser if CDP port isn't open
+      const portOpen = await isCdpPortOpen(args.port);
+      if (!portOpen && !args.cdpUrl) {
+        console.log(`\nLaunching ${args.browser} with remote debugging on port ${args.port}...`);
+        launchBrowser(args.browser as 'chrome' | 'msedge', args.port, 'https://boardgamearena.com');
+        
+        // Wait for browser to start
+        let ready = false;
+        for (let i = 0; i < 20; i++) {
+          await new Promise(r => setTimeout(r, 1000));
+          if (await isCdpPortOpen(args.port)) { ready = true; break; }
+        }
+        if (!ready) {
+          throw new Error(`Browser did not start on port ${args.port} within 20s`);
+        }
+        console.log('Browser launched!\n');
+      }
+
+      // Interactive prompts — let the user prepare
+      console.log('──────────────────────────────────────────');
+      console.log('  6 Nimmt! Headless Player');
+      console.log(`  Strategy: ${name}${options ? ` (${JSON.stringify(options)})` : ''}`);
+      console.log('──────────────────────────────────────────\n');
+
+      console.log('1. Login to BGA if needed');
+      console.log('2. Open or join a 6 Nimmt! table');
+      console.log('3. When you\'re on the game table and ready to play:\n');
+      console.log('Press ENTER to start playing...');
+      await waitForEnter();
+
       if (args.verbose) {
         console.log(JSON.stringify({
           event: 'connecting',
@@ -263,6 +294,13 @@ async function main(): Promise<void> {
       browser.close().catch(() => {}); // disconnect gracefully
     }
   }
+}
+
+function waitForEnter(): Promise<void> {
+  return new Promise(resolve => {
+    process.stdin.setEncoding('utf8');
+    process.stdin.once('data', () => resolve());
+  });
 }
 
 main();
