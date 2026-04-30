@@ -34,9 +34,17 @@ export async function readGameState(page: Page): Promise<GameStateFromDOM> {
     const hand = handItems.map((item: any) => {
       const el = (window as any).document.getElementById(`myhand_item_${item.id}`);
       if (!el) return null;
-      const div = el.querySelector('div');
-      if (!div) return null;
-      const bgPos = div.style.backgroundPosition;
+      
+      // Find element with background-position (could be the element itself or any descendant)
+      let bgPos = '';
+      if (el.style && el.style.backgroundPosition) {
+        bgPos = el.style.backgroundPosition;
+      } else {
+        const inner = el.querySelector('[style*="background-position"]');
+        if (inner) bgPos = inner.style.backgroundPosition;
+      }
+      
+      if (!bgPos) return null;
       const match = bgPos.match(/([-\d.]+)%\s+([-\d.]+)%/);
       if (!match) return null;
       const x = Math.abs(parseFloat(match[1]));
@@ -69,8 +77,8 @@ export async function readGameState(page: Page): Promise<GameStateFromDOM> {
     const players = (window as any).gameui.gamedatas.players;
     const scores: Record<string, number> = {};
     let playerCount = 0;
-    for (const [, p] of Object.entries(players) as [string, any][]) {
-      scores[(p as any).id || ''] = parseInt((p as any).score) || 0;
+    for (const [id, p] of Object.entries(players) as [string, any][]) {
+      scores[id] = parseInt((p as any).score) || 0;
       playerCount++;
     }
 
@@ -78,6 +86,35 @@ export async function readGameState(page: Page): Promise<GameStateFromDOM> {
 
     return { hand, board: { rows }, scores, playerCount, myPlayerId };
     /* eslint-enable no-undef */
+  }) as any);
+}
+
+/**
+ * Diagnostic: dump raw hand DOM info for debugging.
+ */
+export async function diagnoseDom(page: Page): Promise<unknown> {
+  return await page.evaluate((() => {
+    const gu = (window as any).gameui;
+    if (!gu) return { error: 'gameui not available' };
+
+    const items = gu.playerHand?.getAllItems?.() ?? [];
+    const sampleItem = items[0];
+    let sampleHtml = '';
+    if (sampleItem) {
+      const el = (window as any).document.getElementById(`myhand_item_${sampleItem.id}`);
+      sampleHtml = el?.outerHTML?.slice(0, 500) ?? 'element not found';
+    }
+
+    const title = (window as any).document.getElementById('pagemaintitletext')?.textContent ?? '';
+    const stateName = gu.gamedatas?.gamestate?.name ?? 'unknown';
+
+    return {
+      itemCount: items.length,
+      sampleItem,
+      sampleHtml,
+      title,
+      stateName,
+    };
   }) as any);
 }
 

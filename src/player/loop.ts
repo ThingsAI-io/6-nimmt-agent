@@ -5,7 +5,7 @@
 import type { Page } from 'playwright';
 import type { Strategy } from '../engine/strategies/types.js';
 import type { CardChoiceState, RowChoiceState, CardNumber } from '../engine/types.js';
-import { readGameState, detectAction, getFinalScores, findCheapestRow, type GameStateFromDOM } from './state-reader.js';
+import { readGameState, detectAction, getFinalScores, findCheapestRow, diagnoseDom, type GameStateFromDOM } from './state-reader.js';
 import { playCard, pickRow } from './actor.js';
 import { log } from './logger.js';
 
@@ -70,8 +70,23 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       return { scores, turnsPlayed, rounds: currentRound };
     }
 
-    // 2. Read current state
-    const state = await readGameState(page);
+    // 2. Read current state (retry if hand is empty — DOM might still be loading)
+    let state = await readGameState(page);
+    if (state.hand.length === 0 && action === 'playCard') {
+      log({ event: 'emptyHand', message: 'Hand empty, retrying...' }, verbose);
+      // Diagnostic dump on first failure
+      const diag = await diagnoseDom(page);
+      log({ event: 'diagnostic', ...diag as Record<string, unknown> }, verbose);
+      // Retry a few times
+      for (let retry = 0; retry < 5; retry++) {
+        await page.waitForTimeout(1000);
+        state = await readGameState(page);
+        if (state.hand.length > 0) break;
+      }
+      if (state.hand.length === 0) {
+        throw new Error('Hand is empty after retries. DOM may have changed structure.');
+      }
+    }
 
     // Detect new round (hand size jumped back up)
     if (state.hand.length > lastHandSize && turnsPlayed > 0) {
