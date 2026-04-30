@@ -151,6 +151,15 @@ export const playCommand = new Command('play')
         const initialBoard = state.board.rows.map((row) => [...row] as number[]);
         const turns: PlayTurn[] = [];
 
+        // onRoundStart — notify strategies of new round
+        for (const p of players) {
+          const strat = strategyMap.get(p.id)!;
+          const player = state.players.find((ps) => ps.id === p.id)!;
+          try {
+            strat.onRoundStart?.({ round: state.round, hand: player.hand, board: state.board });
+          } catch { /* lifecycle errors are non-fatal */ }
+        }
+
         // Track scores at round start
         for (const p of state.players) scoresBefore.set(p.id, p.score);
 
@@ -238,6 +247,17 @@ export const playCommand = new Command('play')
         rounds.push({ round: state.round - 1, initialBoard, turns, scores });
 
         if (isGameOver(state)) break;
+      }
+
+      // onGameEnd — notify strategies of final outcome
+      const endScores = state.players.map((p) => ({ id: p.id, score: p.score }));
+      for (const p of players) {
+        const strat = strategyMap.get(p.id)!;
+        const myScore = state.players.find((ps) => ps.id === p.id)!.score;
+        const won = endScores.every(s => s.id === p.id || s.score >= myScore);
+        try {
+          strat.onGameEnd?.({ scores: endScores, rounds: rounds.length, won });
+        } catch { /* lifecycle errors are non-fatal */ }
       }
 
       // Final results with rankings

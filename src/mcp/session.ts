@@ -270,6 +270,15 @@ export class SessionManager {
     session.lastTurnKey = undefined;
     session.lastTurnPayload = undefined;
 
+    // onRoundStart — notify strategy of new round
+    try {
+      session.strategy.onRoundStart?.({
+        round,
+        hand: hand as CardNumber[],
+        board: { rows: board.map(r => [...r]) as any },
+      });
+    } catch { /* lifecycle errors are non-fatal */ }
+
     return {
       sessionVersion: session.version,
       phase: 'in-round' as SessionPhase,
@@ -426,6 +435,16 @@ export class SessionManager {
 
     if (gameOver) {
       session.phase = 'game-over';
+      // onGameEnd — notify strategy of final outcome
+      try {
+        const myScore = scores.find(s => s.playerId === session.playerId)?.score ?? 0;
+        const won = scores.every(s => s.playerId === session.playerId || s.score >= myScore);
+        session.strategy.onGameEnd?.({
+          scores: scores.map(s => ({ id: s.playerId, score: s.score })),
+          rounds: session.completedRounds,
+          won,
+        });
+      } catch { /* lifecycle errors are non-fatal */ }
       const finalScores = [...scores].sort((a, b) => a.score - b.score);
       return {
         sessionVersion: session.version,
