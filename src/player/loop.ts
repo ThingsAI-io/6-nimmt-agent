@@ -146,12 +146,6 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
 
     // 3. Execute action
     if (action === 'playCard') {
-      // BGA auto-plays the last card (turn 10) — skip and wait for round end
-      if (state.hand.length <= 1) {
-        log({ event: 'autoPlay', message: 'Last card — BGA auto-plays', round: currentRound, turn: currentTurn }, verbose);
-        await page.waitForTimeout(2000);
-        continue;
-      }
 
       const boardBefore = state.board.rows.map(r => [...r]);
       const cardState = buildCardChoiceState(state, playerCount, currentRound, currentTurn);
