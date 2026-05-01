@@ -63,24 +63,36 @@ The key insight is that you choose *which* row to sacrifice. You pick up the che
 
 ### Illustrative Example
 
-The board state before cards are revealed:
+The board state before cards are revealed (bull counts computed from actual card rules):
 
-| Row | Cards                        | Top | Bulls |
-|-----|------------------------------|-----|-------|
-| 1   | 14 · 29 · **36**             |  36 |  ★★   |
-| 2   | 11 · 43 · 58 · 61 · **64**   |  64 |  ★    |
-| 3   | 7 · 22 · 51 · **80**         |  80 |  ★★★  |
-| 4   | 33 · 55 · 72 · **90**        |  90 |  ★★★★ |
+| Row | Cards              | Top | Bulls |
+|-----|--------------------|-----|-------|
+| 1   | 22 · 27 · **36**   |  36 |   8   |
+| 2   | 41 · **53**        |  53 |   2   |
+| 3   | 17 · 67 · **79**   |  79 |   3   |
+| 4   | 29 · 71 · 87 · **95** | 95 |  5   |
 
-You are playing a 5-player game. The other players' hands include cards like 38, 42, 48, 55. Row 1 (top: 36) is the obvious magnet — it's wide open and any card from 37 upward lands there safely. Rows 3 and 4 carry heavy penalties; nobody wants them. Row 2 (top: 64) is cheap but already full: the next card landing on it triggers a pickup of only 1 bull head.
+> Bull counts: 22 = ×11 → 5; 27 = odd → 1; 36 = even → 2; 41, 53 = odd → 1 each; 17, 67, 79 = odd → 1 each; 29, 71, 87 = odd → 1 each; 95 = ×5 → 2.
 
-You hold a **34**. Rather than holding it back, you play 34 — which falls below every row top, forcing you to pick up a row. You choose **Row 1** (the cheap 2-bull row). Row 1 is now gone and reset.
+You are playing a 5-player game. Row 1 (top 36, **8 bulls**) is the danger zone — it is nearly full (3 cards) and loaded. Row 2 (top 53, **2 bulls**) is the obvious safe escape hatch: anyone holding a card between 54 and 66 will naturally drift there. Rows 3 and 4 are high and out of reach for most players this turn.
 
-The other players reveal: 38, 42, 48, 55. These cards were all aimed at the now-vanished Row 1. With Row 1 gone:
-- 38 is the lowest card played; it must pick up a row (now Row 2, the reset row 1, or row 3/4 — whichever is cheapest). But the reset row won't yet have a high enough top, so 38 may still be forced to pick up.
-- 42, 48, 55 scramble for the remaining rows. Some end up on Row 3 or Row 4 and absorb the bull heads they were actively avoiding.
+The other players hold: **38, 44, 56, 65** — a cluster that, left alone, would play out like this:
+- 38 → Row 1 (4 cards)
+- 44 → Row 1 (5 cards, **full**)
+- 56 → Row 2 (top 53, closest below 56) → **safe**
+- 65 → Row 2 (top 56) → **safe**
 
-You paid 2 bulls to detonate a bomb under everyone else.
+No pickup this turn. Row 1 fills quietly, and the two players with 56 and 65 glide onto the cheap Row 2 unharmed.
+
+**The move:** you hold **31** (1 bull). You play it deliberately — it falls below all row tops, forcing a pickup. You choose **Row 2** (2 bulls). Row 2 resets with your 31 as its new top.
+
+Now the turn resolves in ascending order:
+- 38 → Row 1 (top 36, closest below 38) → Row 1: 4 cards
+- 44 → Row 1 (top 38) → Row 1: **5 cards, full**
+- 56 → Row 1 (top 44 is closest below 56; Row 2's reset top 31 is further away) → **6th card** → player with 56 picks up Row 1: 22 + 27 + 36 + 38 + 44 = **12 bulls**. Card 56 starts the new Row 1.
+- 65 → Row 1 (new top 56) → safe
+
+**You paid 2 bulls. The player with 56 paid 12 bulls — a cost they had every reason to believe they had avoided.**
 
 ### Why It Works
 
