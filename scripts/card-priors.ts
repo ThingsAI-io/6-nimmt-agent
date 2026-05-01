@@ -58,6 +58,7 @@ interface CardStats {
   timesRowPick: number;       // playing this card forced a row pick (below all tops)
   overflowPenalty: number;    // total cattle heads from overflow events
   rowPickPenalty: number;     // total cattle heads from row pick events
+  overflowGapSum: number;     // sum of (card - rowTop) when overflow occurs
   turnSum: number;            // sum of turn numbers (1-indexed) for avg calculation
   heldLateCount: number;      // times card was in hand at turn >= 7
   heldLatePenalty: number;    // sum of final game scores for holders
@@ -68,6 +69,28 @@ interface PriorData {
   playerCount: number;
   strategy: { name: string; options?: Record<string, unknown> };
   cards: CardStats[];         // 104 entries, one per card value (1–104)
+  turnStats: TurnStats[];     // 10 entries, one per turn (1-indexed in data)
+}
+
+/** Per-turn board state distribution. */
+interface TurnStats {
+  turn: number;
+  /** Histogram of min_row_top values (index = card value 1–104, value = count of occurrences). */
+  minRowTopHist: number[];
+  /** Histogram of max_row_top values. */
+  maxRowTopHist: number[];
+  /** Sum of min_row_top values (for computing mean). */
+  minRowTopSum: number;
+  /** Sum of max_row_top values. */
+  maxRowTopSum: number;
+  /** Histogram of max row length (index 0–5, value = count). How full is the fullest row? */
+  maxRowLenHist: number[];
+  /** Histogram of rows-with-5-cards count (index 0–4, value = count). How many rows are primed? */
+  primedRowsHist: number[];
+  /** Histogram of top values of primed (5-card) rows (index = value-1, 0–103). */
+  primedRowTopHist: number[];
+  /** Number of observations. */
+  observations: number;
 }
 
 // Deterministic filename from strategy spec
@@ -75,12 +98,31 @@ const safeSpec = STRATEGY_SPEC.replace(/[^a-zA-Z0-9_=-]/g, '_');
 const DATA_FILE = join(DATA_DIR, `prior-p${PLAYERS}-${safeSpec}.json`);
 
 function emptyStats(card: number): CardStats {
-  return { card, timesPlayed: 0, timesOverflow: 0, timesRowPick: 0, overflowPenalty: 0, rowPickPenalty: 0, turnSum: 0, heldLateCount: 0, heldLatePenalty: 0 };
+  return { card, timesPlayed: 0, timesOverflow: 0, timesRowPick: 0, overflowPenalty: 0, rowPickPenalty: 0, overflowGapSum: 0, turnSum: 0, heldLateCount: 0, heldLatePenalty: 0 };
+}
+
+function emptyTurnStats(turn: number): TurnStats {
+  return { turn, minRowTopHist: new Array(104).fill(0), maxRowTopHist: new Array(104).fill(0), minRowTopSum: 0, maxRowTopSum: 0, maxRowLenHist: new Array(6).fill(0), primedRowsHist: new Array(5).fill(0), primedRowTopHist: new Array(104).fill(0), observations: 0 };
 }
 
 function loadPrior(): PriorData {
   if (existsSync(DATA_FILE)) {
     const raw = JSON.parse(readFileSync(DATA_FILE, 'utf-8')) as PriorData;
+    // Backfill turnStats if loading an older prior without it
+    if (!raw.turnStats) {
+      raw.turnStats = Array.from({ length: 10 }, (_, i) => emptyTurnStats(i + 1));
+    } else {
+      // Backfill new histogram fields on existing turnStats entries
+      for (const ts of raw.turnStats) {
+        if (!ts.maxRowLenHist) ts.maxRowLenHist = new Array(6).fill(0);
+        if (!ts.primedRowsHist) ts.primedRowsHist = new Array(5).fill(0);
+        if (!ts.primedRowTopHist) ts.primedRowTopHist = new Array(104).fill(0);
+      }
+    }
+    // Backfill overflowGapSum on card stats
+    for (const cs of raw.cards) {
+      if (cs.overflowGapSum === undefined) cs.overflowGapSum = 0;
+    }
     console.log(`Loaded existing prior: ${raw.totalGames} games accumulated`);
     return raw;
   }
@@ -89,6 +131,7 @@ function loadPrior(): PriorData {
     playerCount: PLAYERS,
     strategy: { name: STRATEGY_NAME, options: STRATEGY_OPTIONS },
     cards: Array.from({ length: 104 }, (_, i) => emptyStats(i + 1)),
+    turnStats: Array.from({ length: 10 }, (_, i) => emptyTurnStats(i + 1)),
   };
 }
 
@@ -224,6 +267,28 @@ while (gamesThisRun < target && !stopping) {
         }
       }
 
+      // Record board state distribution BEFORE plays are made
+      const rowTops = state.board.rows.map(r => r[r.length - 1] as number);
+      const minTop = Math.min(...rowTops);
+      const maxTop = Math.max(...rowTops);
+      const rowLens = state.board.rows.map(r => r.length);
+      const maxLen = Math.max(...rowLens);
+      const primedCount = rowLens.filter(l => l >= 5).length;
+      const ts = prior.turnStats[t];
+      ts.minRowTopHist[minTop - 1]++;
+      ts.maxRowTopHist[maxTop - 1]++;
+      ts.minRowTopSum += minTop;
+      ts.maxRowTopSum += maxTop;
+      ts.maxRowLenHist[maxLen]++;
+      ts.primedRowsHist[primedCount]++;
+      // Record top values of primed (5-card) rows
+      for (const row of state.board.rows) {
+        if (row.length >= 5) {
+          ts.primedRowTopHist[row[row.length - 1] - 1]++;
+        }
+      }
+      ts.observations++;
+
       // Collect plays
       const plays: { playerId: string; card: CardNumber }[] = [];
       for (const pid of playerIds) {
@@ -266,6 +331,9 @@ while (gamesThisRun < target && !stopping) {
           const penalty = res.collectedCards.reduce((s, c) => s + cattleHeads(c), 0);
           cardStats[res.card - 1].timesOverflow++;
           cardStats[res.card - 1].overflowPenalty += penalty;
+          // Overflow gap: approximate using pre-turn row top
+          const gap = res.card - rowTops[res.rowIndex];
+          cardStats[res.card - 1].overflowGapSum += gap;
         }
       }
       // Row picks (card below all row tops → player chose a row)
@@ -345,6 +413,7 @@ interface SummaryRow {
   totalPenaltyRate: number; // combined penalty per play
   avgOverflowPenalty: number;
   avgRowPickPenalty: number;
+  avgOverflowGap: number; // avg distance to row top when overflow happens
   avgTurn: number;
   heldLate: number;
   avgLateScore: number;
@@ -364,6 +433,7 @@ for (let c = 1; c <= 104; c++) {
     totalPenaltyRate: totalPenalty / s.timesPlayed,
     avgOverflowPenalty: s.timesOverflow > 0 ? s.overflowPenalty / s.timesOverflow : 0,
     avgRowPickPenalty: s.timesRowPick > 0 ? s.rowPickPenalty / s.timesRowPick : 0,
+    avgOverflowGap: s.timesOverflow > 0 ? s.overflowGapSum / s.timesOverflow : 0,
     avgTurn: s.turnSum / s.timesPlayed,
     heldLate: s.heldLateCount,
     avgLateScore: s.heldLateCount > 0 ? s.heldLatePenalty / s.heldLateCount : 0,
@@ -439,8 +509,8 @@ for (const r of byLate) {
 console.log('\n═══════════════════════════════════════════════════════════════════════════');
 console.log(' AVERAGE STATS BY CARD RANGE');
 console.log('═══════════════════════════════════════════════════════════════════════════');
-console.log(' Range    │ AvgTurn │ 6nimmt% │ RowPick% │ E[penalty]');
-console.log('──────────┼─────────┼─────────┼──────────┼───────────');
+console.log(' Range    │ AvgTurn │ 6nimmt% │ RowPick% │ E[penalty] │ AvgGap');
+console.log('──────────┼─────────┼─────────┼──────────┼────────────┼───────');
 const ranges = [
   [1, 10], [11, 20], [21, 30], [31, 40], [41, 50],
   [51, 60], [61, 70], [71, 80], [81, 90], [91, 104],
@@ -452,8 +522,10 @@ for (const [lo, hi] of ranges) {
   const avgOverflow = inRange.reduce((s, r) => s + r.overflowRate, 0) / inRange.length;
   const avgRowPick = inRange.reduce((s, r) => s + r.rowPickRate, 0) / inRange.length;
   const avgPenRate = inRange.reduce((s, r) => s + r.totalPenaltyRate, 0) / inRange.length;
+  const overflowCards = inRange.filter(r => r.avgOverflowGap > 0);
+  const avgGap = overflowCards.length > 0 ? overflowCards.reduce((s, r) => s + r.avgOverflowGap, 0) / overflowCards.length : 0;
   console.log(
-    ` ${String(lo).padStart(3)}-${String(hi).padStart(3)} │ ${avgTurn.toFixed(2).padStart(7)} │ ${(avgOverflow * 100).toFixed(1).padStart(6)}% │ ${(avgRowPick * 100).toFixed(1).padStart(7)}% │ ${avgPenRate.toFixed(2).padStart(10)}`,
+    ` ${String(lo).padStart(3)}-${String(hi).padStart(3)} │ ${avgTurn.toFixed(2).padStart(7)} │ ${(avgOverflow * 100).toFixed(1).padStart(6)}% │ ${(avgRowPick * 100).toFixed(1).padStart(7)}% │ ${avgPenRate.toFixed(2).padStart(10)} │ ${avgGap.toFixed(1).padStart(5)}`,
   );
 }
 
@@ -462,4 +534,55 @@ const totalPlays = rows.reduce((s, r) => s + r.played, 0);
 const totalOverflows = rows.reduce((s, r) => s + r.played * r.overflowRate, 0);
 const totalRowPicks = rows.reduce((s, r) => s + r.played * r.rowPickRate, 0);
 console.log(`\nOverall: ${totalPlays} card plays, ${totalOverflows.toFixed(0)} overflows (${(totalOverflows / totalPlays * 100).toFixed(1)}%), ${totalRowPicks.toFixed(0)} row picks (${(totalRowPicks / totalPlays * 100).toFixed(1)}%)`);
-console.log(`Average game: ${(elapsed / GAMES).toFixed(0)}ms`);
+console.log(`Average game: ${(elapsed / gamesThisRun).toFixed(0)}ms`);
+
+// Table: Min/Max row top distribution by turn
+console.log('\n═══════════════════════════════════════════════════════════════════════════');
+console.log(' ROW TOP DISTRIBUTION BY TURN');
+console.log('═══════════════════════════════════════════════════════════════════════════');
+console.log(' Turn │ AvgMinTop │ AvgMaxTop │ P10 MinTop │ P50 MinTop │ P90 MinTop');
+console.log('──────┼───────────┼───────────┼────────────┼────────────┼───────────');
+for (const ts of prior.turnStats) {
+  if (ts.observations === 0) continue;
+  const avgMin = ts.minRowTopSum / ts.observations;
+  const avgMax = ts.maxRowTopSum / ts.observations;
+  // Compute percentiles from histogram
+  const p10 = percentileFromHist(ts.minRowTopHist, ts.observations, 0.10);
+  const p50 = percentileFromHist(ts.minRowTopHist, ts.observations, 0.50);
+  const p90 = percentileFromHist(ts.minRowTopHist, ts.observations, 0.90);
+  console.log(
+    `   ${String(ts.turn).padStart(2)} │ ${avgMin.toFixed(1).padStart(9)} │ ${avgMax.toFixed(1).padStart(9)} │ ${String(p10).padStart(10)} │ ${String(p50).padStart(10)} │ ${String(p90).padStart(9)}`,
+  );
+}
+
+// Table: Row fullness / overflow risk by turn
+console.log('\n═══════════════════════════════════════════════════════════════════════════');
+console.log(' OVERFLOW RISK BY TURN (row fullness before plays)');
+console.log('═══════════════════════════════════════════════════════════════════════════');
+console.log(' Turn │ AvgMaxLen │ P(maxLen≥4) │ P(maxLen=5) │ P(≥1 primed) │ Avg primed');
+console.log('──────┼───────────┼─────────────┼─────────────┼──────────────┼───────────');
+for (const ts of prior.turnStats) {
+  if (ts.observations === 0) continue;
+  const hist = ts.maxRowLenHist ?? new Array(6).fill(0);
+  const primed = ts.primedRowsHist ?? new Array(5).fill(0);
+  const lenObs = hist.reduce((s, c) => s + c, 0) || 1; // observations that tracked row length
+  const primedObs = primed.reduce((s, c) => s + c, 0) || 1;
+  const avgMaxLen = hist.reduce((s, c, i) => s + c * i, 0) / lenObs;
+  const pMaxLen4 = (hist[4] + hist[5]) / lenObs;
+  const pMaxLen5 = hist[5] / lenObs;
+  const pAnyPrimed = 1 - (primed[0] / primedObs);
+  const avgPrimed = primed.reduce((s, c, i) => s + c * i, 0) / primedObs;
+  console.log(
+    `   ${String(ts.turn).padStart(2)} │ ${avgMaxLen.toFixed(2).padStart(9)} │ ${(pMaxLen4 * 100).toFixed(1).padStart(10)}% │ ${(pMaxLen5 * 100).toFixed(1).padStart(10)}% │ ${(pAnyPrimed * 100).toFixed(1).padStart(11)}% │ ${avgPrimed.toFixed(2).padStart(9)}`,
+  );
+}
+
+function percentileFromHist(hist: number[], total: number, pct: number): number {
+  const target = Math.ceil(total * pct);
+  let cumulative = 0;
+  for (let i = 0; i < hist.length; i++) {
+    cumulative += hist[i];
+    if (cumulative >= target) return i + 1; // card values are 1-indexed
+  }
+  return 104;
+}
