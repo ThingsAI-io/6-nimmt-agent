@@ -1,163 +1,184 @@
 # MCS-Prior Strategy
 
-## Problem Statement
+## Overview
 
-Pure MCS simulates opponents playing **uniformly at random** from unknown cards. This is unrealistic — real players (and even MCS bots) avoid dangerous cards early and play safe mid-range cards when possible. The card priors dataset quantifies this: cards 91–104 overflow 20% of the time, cards 1–10 trigger row picks 60%+ of the time, while cards 51–60 are safest.
+MCS-Prior is a Monte Carlo Search strategy enhanced with heuristic hand evaluation derived from a pre-computed statistical prior (1300+ training games). It improves on plain MCS in two ways:
 
-Two problems result:
-1. **Our agent holds dangerous cards too long** — random opponents in sim are chaotic enough to "accidentally" clear rows, making holding a 95 look safe. In reality, opponents play smart and rows stay full.
-2. **Simulations are too noisy** — random play creates unrealistic game states, wasting simulation budget on unlikely futures.
+1. **Heuristic leaf evaluation** — Instead of simulating the entire round, simulate 1 turn forward and score the resulting hand using prior-derived danger estimates. More samples, less noise.
+2. **Prior-weighted opponent model** — Opponents play safe cards first (inverse-danger weighting) instead of uniformly at random, producing more realistic simulations.
 
-The goal: MCS-prior should make our agent **proactively dump dangerous cards when the board is safe**, just as strong human players do — while also modeling opponents more realistically.
+**Benchmark results:** ~29% win rate vs plain MCS’s ~24% (5-player, equal mcPerCard).
 
-## Approach: Prior-Informed Monte Carlo
-
-Three integration points where the prior improves MCS, ordered by expected impact:
-
-### 1. Leaf Evaluation (Heuristic Residual)
-
-**The highest-leverage improvement.**
-
-Current MCS simulates the entire remaining round to completion. This is expensive (N simulations × remaining turns). With a prior, we can:
-
-- Simulate only 1–2 turns forward (cheap)
-- Evaluate the resulting hand + board state using the prior as a **heuristic score**
-
-**Heuristic**: For each card remaining in hand after the short simulation:
-```
-handDanger = Σ E[penalty | card=v, turn≈t, board_context]
-```
-
-Where `E[penalty]` comes from the prior's per-card overflow rate, row-pick rate, and expected penalties, adjusted by the current board state (min row top, primed rows).
-
-**Board-adjusted formula:**
-```
-For each card v in remaining hand at turn t:
-  if v < minRowTop:
-    rowPickRisk = prior.rowPickRate[v] × (minRowTop - v) / baselineMinTop[t]
-  else:
-    overflowRisk = prior.overflowRate[v] × primedRowCount / baselinePrimedRows[t]
-  
-  cardDanger = rowPickRisk × prior.avgRowPickPenalty[v]
-             + overflowRisk × prior.avgOverflowPenalty[v]
-
-  // Timing pressure: penalize holding cards past their natural play time
-  timingPressure = max(0, t - prior.avgTurn[v]) × timingWeight
-  cardDanger *= (1 + timingPressure)
-```
-
-The timing pressure term captures: "if this card is normally played by turn 3 but it's turn 7, danger is escalating." This makes MCS-prior proactively dump dangerous cards early — the heuristic explicitly rewards playing cards *before* their danger window rather than holding them and hoping.
-
-This means: instead of N=100 full-round simulations, we can do N=200 **one-turn** simulations + heuristic eval. More samples, better coverage of the immediate uncertainty, with the prior handling long-term risk estimation.
-
-### 2. Opponent Modeling (Weighted Card Selection)
-
-Instead of opponents playing uniformly at random, weight their card selection by the prior:
+## Architecture
 
 ```
-P(opponent plays card v at turn t) ∝ 1 / E[penalty | v, t]
+For each candidate card in hand:
+  For N simulations:
+    1. Sample opponent hands from unknown pool
+    2. Opponents select cards via prior-weighted model (safe first)
+    3. Simulate 1 turn (resolve placements + row picks)
+    4. Score = immediate penalty + evaluateHand(remaining hand, new board)
+  Pick card with lowest average score (relative to opponents)
 ```
 
-Cards with low expected penalty (safe mid-range) are played preferentially. Cards with high expected penalty (extremes) are held/avoided.
+## Heuristic: `evaluateHand`
 
-**Implementation**: When sampling opponent plays in simulation:
-- Compute weight for each card in the sampled opponent hand
-- Sample from weighted distribution instead of uniform
+Estimates total future penalty of holding a set of cards. Three components:
 
-**Refinement by turn**: The prior tells us average turn played per card. Cards typically played early (prior.avgTurn < 4) should have higher weight in early turns, and cards typically held late (prior.avgTurn > 7) should have lower weight.
+### A. Trapped Card Management
 
-## Prior Data
+**What:** Cards below every row top (guaranteed row pick whenever played).
 
-The strategy uses a baked-in TypeScript lookup table (`prior-table.ts`) generated from training data:
+**Logic by phase:**
+
+| Phase | Condition | Behavior | Rationale |
+|-------|-----------|----------|-----------|
+| Early game | `heuristicTurn <= 4` (game turns 1–3) | Suppress danger (×0.3 scale) | Low cards cost 1–3 heads. Focus on shedding high-penalty overflow cards (55=7 heads). |
+| Mid/late + cheap row | `turn > 4` AND `minRowLen <= 2` | Amplify danger (×1.5 scale) | Short row = cheap pick window. Dump trapped cards NOW. |
+| Mid/late + expensive rows | `turn > 4` AND `minRowLen > 2` | Moderate danger (×0.7 scale) | Wait for a cheaper opportunity. |
+
+**Trapped discount (urgency ramp):**
+```
+urgency = (turn - 4) / 6          // 0.17 at turn 5, 1.0 at turn 10
+cardDanger *= (1 + remainingTurns * trappedDiscount * urgency)
+```
+
+This ensures trapped cards are eventually played — the penalty grows each turn held.
+
+### B. Overflow Risk
+
+**What:** Cards above `minRowTop` that may trigger 6th-card overflow on primed rows.
+
+```
+scale = max(0.5, primedRowCount / baselinePrimedRows[turn])
+cardDanger = overflowRate * avgOverflowPenalty * scale
+```
+
+Scaled relative to what’s “normal” for this turn number, from the prior baseline.
+
+### C. Timing Pressure
+
+**What:** Penalizes holding any card past its natural play window.
+
+```
+timingPressure = max(0, turn - prior.avgTurn) * timingWeight
+cardDanger *= (1 + timingPressure)
+```
+
+**Example:** Card with avgTurn=3 at turn 7, timingWeight=0.3 → multiplier = 1 + 4×0.3 = 2.2×
+
+## Opponent Model: `priorWeightedSelect`
+
+Models opponents as rational agents who play safe cards early and hold dangerous cards:
+
+```
+weight(card) = (1 / (expectedPenalty + 0.1)) * (1 + timingBoost)
+```
+
+Where `timingBoost = max(0, turn - avgTurn) * 0.3` — overdue cards get forced out.
+
+This matches observed behavior from training data: mid-range cards (40–60) are played early, extremes (1–10, 90–104) are held until necessary.
+
+## Options
 
 ```typescript
 interface McsPriorOptions {
-  mcPerCard?: number;          // simulations per candidate card (default: 100)
-  mcMax?: number;              // max total simulations (default: 10 × mcPerCard)
-  scoring?: 'self' | 'relative';  // scoring mode (default: 'relative')
-  simDepth?: number;           // turns to simulate forward (default: 1)
-  opponentModel?: 'uniform' | 'prior';  // how opponents select cards (default: 'prior')
-  timingWeight?: number;       // timing pressure weight (default: 0.3)
+  mcPerCard?: number;       // Simulations per candidate card (default: 100)
+  mcMax?: number;           // Max total simulations (default: 10 * mcPerCard)
+  scoring?: \'self\' | \'relative\';  // Score mode (default: \'relative\')
+  simDepth?: number;        // Turns to simulate forward (default: 1)
+  opponentModel?: \'uniform\' | \'prior\';  // Opponent selection model (default: \'prior\')
+  timingWeight?: number;    // Timing pressure multiplier (default: 0.3)
+  trappedDiscount?: number; // Trapped card urgency ramp (default: 0.3, 0=disabled)
 }
 ```
 
-The prior table provides per-card statistics:
+### Key tuning decisions (from benchmarks)
+
+| Parameter | Value | Justification |
+|-----------|-------|---------------|
+| `simDepth` | 1 | simDepth=2 underperforms (17% vs 22%) — more samples at depth 1 > fewer at depth 2 |
+| `timingWeight` | 0.3 | Sweet spot (0.0 worst, 0.7 regresses — see results below) |
+| `trappedDiscount` | 0.3 | Enables urgency ramp; 0 disables trapped management entirely |
+| `scoring` | \'relative\' | Accounts for opponent penalties, not just our own |
+
+## Prior Data
+
+Baked-in TypeScript lookup table (`prior-table.ts`) generated from 1310 MCS-vs-MCS training games.
+
+### Per-card statistics (`CARD_PRIOR[0..103]`)
 
 ```typescript
 interface CardPrior {
   overflowRate: number;        // P(overflow | play this card)
   rowPickRate: number;         // P(row pick | play this card)
   avgOverflowPenalty: number;  // E[cattle | overflow]
-  avgRowPickPenalty: number;   // E[cattle | row pick]  
+  avgRowPickPenalty: number;   // E[cattle | row pick]
   avgOverflowGap: number;     // E[card - rowTop | overflow]
   expectedPenalty: number;     // E[total penalty per play]
-  avgTurn: number;             // when this card is typically played
+  avgTurn: number;             // typical turn this card is played
 }
 ```
 
-To regenerate the prior table from training data:
+### Per-turn baselines (`TURN_BASELINE[0..9]`)
+
+```typescript
+interface TurnBaseline {
+  avgMinRowTop: number;    // average minimum row top at this turn
+  avgMaxRowLen: number;    // average maximum row length
+  avgPrimedRows: number;   // average number of rows with 5 cards
+  minRowTopP50: number;    // median min row top
+}
+```
+
+### Regenerating the prior
+
 ```bash
 npx tsx scripts/build-prior-table.ts
 ```
 
-And per-turn board context baselines:
+Reads from `project/data/` training game JSON files.
 
-```typescript
-interface TurnBaseline {
-  avgMinRowTop: number;
-  avgMaxRowLen: number;
-  avgPrimedRows: number;
-  minRowTopP50: number;        // median min row top at this turn
-}
-```
+## Benchmark Results
 
-## Implementation Phases
+See `project/results/mcs-prior.md` for full tables. Summary:
 
-### Phase 0: Extract MCS utilities into `mcs-base.ts`
+### Head-to-head (1 mcs-prior vs 4 mcs, 200 games, mcPerCard=100)
 
-Refactor `mcs.ts` to pull shared logic into a reusable module:
+| Strategy | Win Rate | Avg Score |
+|----------|----------|-----------|
+| mcs-prior | ~29% | ~18 |
+| mcs (avg) | ~24% | ~21 |
 
-**`src/engine/strategies/mcs-base.ts`** (new):
-```typescript
-// Shared simulation primitives
-export function fewestHeadsRowIndex(rows: readonly (readonly CardNumber[])[]): 0|1|2|3;
-export function cloneBoard(board: Board): CardNumber[][];
-export function fisherYates<T>(arr: T[], rng: () => number): T[];
-export function simulateTurn(plays: CardNumber[], board: CardNumber[][]): number[];
-export function accumulateTurn(taggedPlays, board, totalPenalties): void;
+### timingWeight sensitivity (200 games each)
 
-// Shared card-counting state management
-export function buildUnknownPool(hand, board, seenCards, turnHistory, initialBoardCards): CardNumber[];
-export function updateSeenCards(seenCards: Set<number>, resolution: TurnResolution): void;
+| Weight | Win Rate |
+|--------|----------|
+| 0.0 | 18% |
+| 0.15 | 23% |
+| 0.3 | 27% |
+| 0.5 | 26% |
+| 0.7 | 22% |
 
-// Shared opponent hand sampling
-export function sampleOpponentHands(unknownPool, opponentCount, cardsPerPlayer, rng): CardNumber[][];
-```
+### simDepth comparison (200 games)
 
-**`mcs.ts`** becomes thin — imports from `mcs-base.ts`, keeps only `simulateRound()` and the strategy factory.
+| simDepth | Win Rate |
+|----------|----------|
+| 1 (default) | 22% avg |
+| 2 | 17% |
 
-**`mcs-prior.ts`** imports the same base, adds prior loading, heuristic eval, weighted sampling.
+## Design Philosophy
 
-### Phase 1: Heuristic leaf evaluation
-- Reduce sim depth to 1–2 turns
-- Score terminal states with prior-based hand danger + timing pressure
-- Expected improvement: faster + better (can run 3–5× more simulations in same time budget)
+The strategy embodies a key 6 Nimmt insight: **you will pay for every dangerous card eventually — the question is when and how much.** The heuristic manages this by:
 
-### Phase 2: Opponent modeling
-- Replace uniform sampling with prior-weighted sampling
-- Expected improvement: more realistic simulations, better in crowded boards
+1. **Early game:** Shed high-penalty overflow cards (55, 66, etc.) while boards are sparse and placements are safe
+2. **Mid game:** When cheap rows appear (1–2 cards), dump trapped cards (1, 2, 3...) at minimal cost
+3. **Late game:** Urgency forces any remaining dangerous cards out before they compound
 
-## Validation
+This matches strong human play: good players shed their worst cards early when the board cooperates, rather than hoping for favorable future states.
 
-Benchmark against plain `mcs` using the existing card-priors script framework:
-- Run 1000 games of `mcs-prior` vs 4× `mcs` (both at same time budget)
-- Measure: win rate, avg final score, avg penalty per card played
-- The strategy should show improvement even at lower mcPerCard (since each sim is more informative)
+## Card Counting
 
-## Open Questions
+Both `mcs` and `mcs-prior` track cards seen during the round via `seenCards` (updated in `onTurnResolved`). This narrows the unknown pool for opponent hand sampling.
 
-1. **How sensitive is heuristic eval to prior accuracy?** The prior is built from MCS-vs-MCS games. Against human opponents, the distributions may differ. Should we support loading different priors?
-
-2. **Diminishing returns of sim depth**: Is 1-turn simulation + heuristic always better than full simulation? Probably depends on turn number — early game (many turns remaining) benefits more from heuristic; late game (1–2 turns left) should simulate fully.
-
-3. **Prior staleness**: The prior is static. Should the strategy adapt its internal model based on observed opponent behavior within the current game? (e.g., if opponents are clearly aggressive, adjust risk estimates up)
+**Important:** `seenCards` resets each round (`onRoundStart`) because decks regenerate via `createDeck(seed, round)` — cards can reappear across rounds.
