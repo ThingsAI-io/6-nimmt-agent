@@ -94,7 +94,8 @@ async function waitForTurnResolution(page: Page, timeout: number, emit: (entry: 
   while (Date.now() - startTime < timeout) {
     const leftCardSelect = await page.evaluate(() => {
       const gsName = (window as any).gameui?.gamedatas?.gamestate?.name ?? '';
-      // Wait until we leave the card-selection phase entirely
+      // Wait until we leave the card-selection phase entirely.
+      // takeRow (for any player) also indicates resolution has begun.
       return gsName !== 'cardSelect' && gsName !== 'playerTurn';
     });
     if (leftCardSelect) return;
@@ -282,8 +283,25 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       try {
         await playCard(page, card);
       } catch (err) {
+        const { message } = formatError(err);
+
+        // If "card not found" and it matches our last played card, this is a
+        // stale-state replay: the card was already submitted but BGA's hand stock
+        // hasn't visually removed it yet (common when waitForTurnResolution times
+        // out with slow human opponents). Recover by continuing the loop.
+        if (message.includes('not found') && card === lastPlayedCard) {
+          emit({
+            event: 'warning',
+            message: `Stale replay detected: card ${card} already submitted, skipping`,
+            timestamp: new Date().toISOString(),
+          });
+          // Wait briefly for BGA to catch up, then re-enter the main loop
+          await page.waitForTimeout(2000);
+          continue;
+        }
+
         const dom = await captureErrorContext(page);
-        const { message, stack } = formatError(err);
+        const { stack } = formatError(err);
         logError({
           event: 'error',
           message,
@@ -355,7 +373,7 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       // This prevents waitForAction from firing 'playCard' again while other players
       // are still selecting (gamestate stays 'cardSelect' until all have submitted).
       // Fixes: agent re-running strategy and clicking a second card mid-turn.
-      await waitForTurnResolution(page, 30_000, emit);
+      await waitForTurnResolution(page, 60_000, emit);
 
       // Record turn data for training/analysis collection
       collector?.recordTurn({
