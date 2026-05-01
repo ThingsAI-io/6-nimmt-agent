@@ -10,12 +10,11 @@
  * and per-turn board baselines (min row top, primed rows) from thousands of games.
  */
 import type { Strategy, TurnResolution } from './types';
-import type { CardNumber, Board } from '../types';
+import type { CardNumber } from '../types';
 import { cattleHeads } from '../card';
 import {
   fewestHeadsRowIndex,
   cloneBoard,
-  fisherYates,
   accumulateTurn,
   buildUnknownPool,
   buildUnknownPoolForRowChoice,
@@ -23,7 +22,6 @@ import {
   sampleOpponentHands,
 } from './mcs-base';
 import { CARD_PRIOR, TURN_BASELINE } from './prior-table';
-import type { CardPrior, TurnBaseline } from './prior-table';
 
 export interface McsPriorOptions {
   /** Simulations per candidate card (default: 100) */

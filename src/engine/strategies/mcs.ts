@@ -1,5 +1,5 @@
 import type { Strategy, TurnResolution } from './types';
-import type { CardNumber, Board } from '../types';
+import type { CardNumber } from '../types';
 import { cattleHeads } from '../card';
 import {
   fewestHeadsRowIndex,
