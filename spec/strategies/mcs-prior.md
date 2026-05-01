@@ -66,20 +66,22 @@ Cards with low expected penalty (safe mid-range) are played preferentially. Card
 
 **Refinement by turn**: The prior tells us average turn played per card. Cards typically played early (prior.avgTurn < 4) should have higher weight in early turns, and cards typically held late (prior.avgTurn > 7) should have lower weight.
 
-## Prior Data Requirements
+## Prior Data
 
-The strategy loads the prior JSON at initialization:
+The strategy uses a baked-in TypeScript lookup table (`prior-table.ts`) generated from training data:
 
 ```typescript
-interface McsPriorOptions extends McsOptions {
-  priorPath?: string;          // path to prior JSON (default: auto-detect)
-  simDepth?: number;           // turns to simulate forward (default: 1 for heuristic mode, full for classic)
-  opponentModel?: 'uniform' | 'prior';  // how opponents select cards
-  leafEval?: 'simulate' | 'heuristic' | 'hybrid';  // terminal evaluation
+interface McsPriorOptions {
+  mcPerCard?: number;          // simulations per candidate card (default: 100)
+  mcMax?: number;              // max total simulations (default: 10 × mcPerCard)
+  scoring?: 'self' | 'relative';  // scoring mode (default: 'relative')
+  simDepth?: number;           // turns to simulate forward (default: 1)
+  opponentModel?: 'uniform' | 'prior';  // how opponents select cards (default: 'prior')
+  timingWeight?: number;       // timing pressure weight (default: 0.3)
 }
 ```
 
-From the prior JSON, the strategy extracts a lookup table at init:
+The prior table provides per-card statistics:
 
 ```typescript
 interface CardPrior {
@@ -91,6 +93,11 @@ interface CardPrior {
   expectedPenalty: number;     // E[total penalty per play]
   avgTurn: number;             // when this card is typically played
 }
+```
+
+To regenerate the prior table from training data:
+```bash
+npx tsx scripts/build-prior-table.ts
 ```
 
 And per-turn board context baselines:

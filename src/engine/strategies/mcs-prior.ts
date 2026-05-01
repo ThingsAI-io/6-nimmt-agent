@@ -60,8 +60,8 @@ function evaluateHand(
   const primedCount = rowLens.filter(l => l >= 5).length;
 
   const baseline = TURN_BASELINE[Math.min(turn - 1, 9)] ?? TURN_BASELINE[9];
-  const baseMinTop = baseline.avgMinRowTop || 25;
-  const basePrimed = baseline.avgPrimedRows || 1.0;
+  const baseMinTop = baseline.avgMinRowTop ?? 25;
+  const basePrimed = baseline.avgPrimedRows ?? 1.0;
 
   let totalDanger = 0;
   for (const card of hand) {
@@ -207,9 +207,9 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
   const mcPerCard = Math.max(1, Math.floor(Number(options.mcPerCard) || DEFAULT_MC_PER_CARD));
   const mcMax = Math.max(1, Math.floor(Number(options.mcMax) || mcPerCard * 10));
   const scoring: 'self' | 'relative' = options.scoring === 'self' ? 'self' : 'relative';
-  const simDepth = Math.max(1, Math.floor(Number(options.simDepth) || DEFAULT_SIM_DEPTH));
+  const simDepth = Math.max(1, Math.floor(Number(options.simDepth ?? DEFAULT_SIM_DEPTH)));
   const opponentModel: 'uniform' | 'prior' = options.opponentModel === 'uniform' ? 'uniform' : 'prior';
-  const timingWeight = Number(options.timingWeight) || DEFAULT_TIMING_WEIGHT;
+  const timingWeight = Number(options.timingWeight ?? DEFAULT_TIMING_WEIGHT);
 
   let rng: () => number = Math.random;
   let playerCount = 2;
@@ -233,6 +233,10 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
     onGameStart(config) {
       rng = config.rng;
       playerCount = config.playerCount;
+      seenCards = new Set();
+    },
+
+    onRoundStart() {
       seenCards = new Set();
     },
 

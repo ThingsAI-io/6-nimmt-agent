@@ -128,6 +128,10 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
       seenCards = new Set();
     },
 
+    onRoundStart() {
+      seenCards = new Set();
+    },
+
     onTurnResolved(resolution: TurnResolution) {
       updateSeenCards(seenCards, resolution);
     },

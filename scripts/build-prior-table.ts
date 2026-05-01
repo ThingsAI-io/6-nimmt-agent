@@ -1,4 +1,3 @@
-#!/usr/bin/env npx tsx
 /**
  * Reads a card-priors JSON file and emits a typed TypeScript lookup table
  * for use by the mcs-prior strategy.
