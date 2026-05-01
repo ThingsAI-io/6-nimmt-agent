@@ -283,17 +283,19 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
       try {
         await playCard(page, card);
       } catch (err) {
-        const { message } = formatError(err);
+        const { message, stack } = formatError(err);
+        const expectedMissingMsg = `Failed to play card ${card}: Card ${card} not found`;
 
-        // If "card not found" and it matches our last played card, this is a
-        // stale-state replay: the card was already submitted but BGA's hand stock
-        // hasn't visually removed it yet (common when waitForTurnResolution times
-        // out with slow human opponents). Recover by continuing the loop.
-        if (message.includes('not found') && card === lastPlayedCard) {
+        // If the card-not-found error matches our last played card and the card
+        // is no longer in hand, this is a stale-state replay: the card was already
+        // submitted but BGA's hand stock hasn't visually removed it yet (common
+        // when waitForTurnResolution times out with slow human opponents).
+        // Requiring absence from hand prevents cross-round false positives.
+        const cardStillInHand = state.hand.some(h => h.cardValue === card);
+        if (message === expectedMissingMsg && card === lastPlayedCard && !cardStillInHand) {
           emit({
             event: 'warning',
             message: `Stale replay detected: card ${card} already submitted, skipping`,
-            timestamp: new Date().toISOString(),
           });
           // Wait briefly for BGA to catch up, then re-enter the main loop
           await page.waitForTimeout(2000);
@@ -301,7 +303,6 @@ export async function playGame(page: Page, opts: PlayOptions): Promise<GameResul
         }
 
         const dom = await captureErrorContext(page);
-        const { stack } = formatError(err);
         logError({
           event: 'error',
           message,
