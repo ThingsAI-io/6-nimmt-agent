@@ -90,6 +90,30 @@
         "94997339": 66,
         "98130445": 66
       }
+    },
+    {
+      "file": "games/2026-05-01_bga_9ad7efd5.jsonl",
+      "gameId": "9ad7efd5",
+      "date": "2026-05-01",
+      "playerCount": 3,
+      "strategy": "mcs",
+      "finalScores": {
+        "84989529": 66,
+        "88075076": 66,
+        "99245176": 66
+      }
+    },
+    {
+      "file": "games/2026-05-01_bga_4d0dc95f.jsonl",
+      "gameId": "4d0dc95f",
+      "date": "2026-05-01",
+      "playerCount": 3,
+      "strategy": "mcs",
+      "finalScores": {
+        "86089651": 66,
+        "88075076": 66,
+        "99245176": 66
+      }
     }
   ]
 }
