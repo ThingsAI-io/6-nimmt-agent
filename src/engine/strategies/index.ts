@@ -10,12 +10,22 @@ export type StrategyFactory = (opts?: Record<string, unknown>) => Strategy;
 
 /** Registry mapping strategy names to factory functions. */
 export const strategies: ReadonlyMap<string, StrategyFactory> = new Map([
-  ['random', () => createRandomStrategy()],
-  ['dummy-min', () => createDummyMinStrategy()],
-  ['dummy-max', () => createDummyMaxStrategy()],
-  ['bayesian-simple', () => createBayesianSimpleStrategy()],
+  ['random', noOptions('random', () => createRandomStrategy())],
+  ['dummy-min', noOptions('dummy-min', () => createDummyMinStrategy())],
+  ['dummy-max', noOptions('dummy-max', () => createDummyMaxStrategy())],
+  ['bayesian-simple', noOptions('bayesian-simple', () => createBayesianSimpleStrategy())],
   ['mcs', (opts?: Record<string, unknown>) => createMcsStrategy(opts as Parameters<typeof createMcsStrategy>[0])],
 ]);
+
+/** Wrap a no-options factory to reject any options passed by mistake. */
+function noOptions(name: string, factory: () => Strategy): StrategyFactory {
+  return (opts?: Record<string, unknown>) => {
+    if (opts && Object.keys(opts).length > 0) {
+      throw new Error(`Strategy "${name}" does not accept options. Got: ${Object.keys(opts).join(', ')}`);
+    }
+    return factory();
+  };
+}
 
 /**
  * Parse a strategy specifier string with optional colon-separated params.

@@ -147,6 +147,17 @@ function simulateRound(
  *   https://github.com/johannbrehmer/rl-6nimmt
  */
 export function createMcsStrategy(options: McsOptions = {}): Strategy {
+  // Validate options — reject unknown keys to catch typos
+  const VALID_OPTIONS = new Set(['mcPerCard', 'mcMax', 'scoring']);
+  for (const key of Object.keys(options)) {
+    if (!VALID_OPTIONS.has(key)) {
+      throw new Error(`Unknown MCS option "${key}". Valid options: ${[...VALID_OPTIONS].join(', ')}`);
+    }
+  }
+  if (options.scoring !== undefined && options.scoring !== 'self' && options.scoring !== 'relative') {
+    throw new Error(`Invalid scoring mode "${options.scoring}". Must be "self" or "relative".`);
+  }
+
   const mcPerCard = Math.max(1, Math.floor(Number(options.mcPerCard) || DEFAULT_MC_PER_CARD));
   // Default mcMax = 10 × mcPerCard (max hand size is 10, so budget never clips by default)
   const mcMax = Math.max(1, Math.floor(Number(options.mcMax) || mcPerCard * 10));
