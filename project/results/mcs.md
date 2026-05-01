@@ -132,6 +132,24 @@ At `mcPerCard=50` with a full hand (10 cards), early-round moves take ~27ms. Lat
 
 ---
 
+## Relative vs Self: competitive field (5 players, 100 games, seed: rel-vs-self-2026)
+
+**Date:** 2026-04-30
+**Setup:** 1×mcs(scoring=relative, N=100) vs 3×mcs(scoring=self, N=100) vs 1×random.
+Tests whether relative scoring gives an edge when outnumbered by equally-strong self-scoring opponents.
+
+| Strategy | Win% | Avg Score | Avg Rank |
+|----------|------|-----------|----------|
+| mcs(relative) | 29.0% | 37.1 | 2.49 |
+| mcs(self-1) | 28.0% | 36.5 | 2.44 |
+| mcs(self-2) | 23.0% | 39.0 | 2.69 |
+| mcs(self-3) | 26.0% | 37.5 | 2.47 |
+| random | 0.0% | 74.5 | 4.70 |
+
+**Key takeaway:** Against equally-strong MCS opponents, relative scoring performs on par with self-scoring (rank 2.49 vs avg 2.53 for self players). The big advantage of relative scoring seen earlier was against weaker opponents (random or lower-N). Against peers of equal strength, both modes are competitive — relative doesn't hurt and may offer marginal benefit in mixed-strength fields.
+
+---
+
 ## Recommended production config
 
 ```
