@@ -3,6 +3,7 @@ import { createRandomStrategy } from './random';
 import { createDummyMinStrategy, createDummyMaxStrategy } from './dummy';
 import { createBayesianSimpleStrategy } from './bayesian';
 import { createMcsStrategy } from './mcs';
+import { createMcsPriorStrategy } from './mcs-prior';
 
 export type { Strategy, TurnResolution } from './types';
 
@@ -15,6 +16,7 @@ export const strategies: ReadonlyMap<string, StrategyFactory> = new Map([
   ['dummy-max', noOptions('dummy-max', () => createDummyMaxStrategy())],
   ['bayesian-simple', noOptions('bayesian-simple', () => createBayesianSimpleStrategy())],
   ['mcs', (opts?: Record<string, unknown>) => createMcsStrategy(opts as Parameters<typeof createMcsStrategy>[0])],
+  ['mcs-prior', (opts?: Record<string, unknown>) => createMcsPriorStrategy(opts as Parameters<typeof createMcsPriorStrategy>[0])],
 ]);
 
 /** Wrap a no-options factory to reject any options passed by mistake. */

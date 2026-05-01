@@ -1,6 +1,15 @@
 import type { Strategy, TurnResolution } from './types';
-import type { CardNumber, Board } from '../types';
+import type { CardNumber } from '../types';
 import { cattleHeads } from '../card';
+import {
+  fewestHeadsRowIndex,
+  cloneBoard,
+  accumulateTurn,
+  buildUnknownPool,
+  buildUnknownPoolForRowChoice,
+  updateSeenCards,
+  sampleOpponentHands,
+} from './mcs-base';
 
 const DEFAULT_MC_PER_CARD = 50;
 
@@ -11,89 +20,6 @@ export interface McsOptions {
   mcPerCard?: number;
   /** Scoring mode: 'self' = minimize own penalty, 'relative' = minimize own minus avg opponent (default: 'self') */
   scoring?: 'self' | 'relative';
-}
-
-function fewestHeadsRowIndex(rows: readonly (readonly CardNumber[])[]): 0 | 1 | 2 | 3 {
-  let best = 0;
-  let bestP = Infinity;
-  for (let i = 0; i < rows.length; i++) {
-    const p = rows[i].reduce((s, c) => s + cattleHeads(c), 0);
-    if (p < bestP) {
-      bestP = p;
-      best = i;
-    }
-  }
-  return best as 0 | 1 | 2 | 3;
-}
-
-/** Deep-copy board rows into mutable arrays. */
-function cloneBoard(board: Board): CardNumber[][] {
-  return board.rows.map((row) => [...row]);
-}
-
-/** Fisher-Yates shuffle (in-place) using provided rng. */
-function fisherYates<T>(arr: T[], rng: () => number): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    const tmp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = tmp;
-  }
-  return arr;
-}
-
-/**
- * Simulate placing all plays onto the board, return penalties for each play (by position).
- * Modifies board in-place.
- */
-function simulateTurn(
-  plays: CardNumber[],
-  board: CardNumber[][],
-): number[] {
-  const indexed = plays.map((card, i) => ({ card, idx: i }));
-  indexed.sort((a, b) => a.card - b.card);
-  const penalties = new Array(plays.length).fill(0) as number[];
-
-  for (const { card, idx } of indexed) {
-    let bestRow = -1;
-    let bestTail = -1;
-    for (let i = 0; i < board.length; i++) {
-      const tail = board[i][board[i].length - 1];
-      if (tail < card && tail > bestTail) {
-        bestTail = tail;
-        bestRow = i;
-      }
-    }
-
-    if (bestRow === -1) {
-      const rowIdx = fewestHeadsRowIndex(board);
-      penalties[idx] += board[rowIdx].reduce((s, c) => s + cattleHeads(c), 0);
-      board[rowIdx] = [card];
-    } else if (board[bestRow].length >= 5) {
-      penalties[idx] += board[bestRow].reduce((s, c) => s + cattleHeads(c), 0);
-      board[bestRow] = [card];
-    } else {
-      board[bestRow].push(card);
-    }
-  }
-
-  return penalties;
-}
-
-/**
- * Simulate a turn with tagged plays and accumulate penalties into a player-indexed array.
- * Handles the mapping from play-position penalties to player indices.
- */
-function accumulateTurn(
-  taggedPlays: { playerIdx: number; card: CardNumber }[],
-  board: CardNumber[][],
-  totalPenalties: number[],
-): void {
-  const cards = taggedPlays.map(p => p.card) as CardNumber[];
-  const turnPenalties = simulateTurn(cards, board);
-  for (let i = 0; i < taggedPlays.length; i++) {
-    totalPenalties[taggedPlays[i].playerIdx] += turnPenalties[i];
-  }
 }
 
 /**
@@ -202,48 +128,20 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
       seenCards = new Set();
     },
 
+    onRoundStart() {
+      seenCards = new Set();
+    },
+
     onTurnResolved(resolution: TurnResolution) {
-      for (const play of resolution.plays) {
-        seenCards.add(play.card);
-      }
-      for (const res of resolution.resolutions) {
-        if (res.collectedCards) {
-          for (const c of res.collectedCards) seenCards.add(c);
-        }
-      }
-      for (const pick of resolution.rowPicks) {
-        for (const c of pick.collectedCards) seenCards.add(c);
-      }
-      if (resolution.boardAfter) {
-        for (const row of resolution.boardAfter) {
-          for (const card of row) seenCards.add(card);
-        }
-      }
+      updateSeenCards(seenCards, resolution);
     },
 
     chooseCard(state) {
       const { hand, board, turn } = state;
       const opponentCount = playerCount - 1;
-      const cardsPerPlayer = 10 - turn + 1; // cards remaining per hand (including this turn)
+      const cardsPerPlayer = 10 - turn + 1;
 
-      // Build unknown pool
-      const known = new Set<number>();
-      for (const c of hand) known.add(c);
-      for (const row of board.rows) {
-        for (const c of row) known.add(c);
-      }
-      for (const c of seenCards) known.add(c);
-      for (const entry of state.turnHistory) {
-        for (const play of entry.plays) known.add(play.card);
-      }
-      for (const row of state.initialBoardCards.rows) {
-        for (const c of row) known.add(c);
-      }
-
-      const unknownPool: CardNumber[] = [];
-      for (let i = 1; i <= 104; i++) {
-        if (!known.has(i)) unknownPool.push(i as CardNumber);
-      }
+      const unknownPool = buildUnknownPool(hand, board, seenCards, state.turnHistory, state.initialBoardCards);
 
       // Number of simulations
       const nSims = Math.min(mcMax, mcPerCard * hand.length);
@@ -259,23 +157,11 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
         const simsPerCard = Math.max(1, Math.floor(nSims / hand.length));
 
         for (let sample = 0; sample < simsPerCard; sample++) {
-          // Shuffle and deal opponent hands
-          fisherYates(unknownPool, rng);
-
-          const hands: CardNumber[][] = [];
-          // Our hand (remaining cards after playing myCard)
-          hands.push([...hand].filter((c) => c !== myCard) as CardNumber[]);
-
-          let offset = 0;
-          for (let opp = 0; opp < opponentCount; opp++) {
-            const handSize = Math.min(cardsPerPlayer, unknownPool.length - offset);
-            if (handSize > 0) {
-              hands.push(unknownPool.slice(offset, offset + handSize) as CardNumber[]);
-              offset += handSize;
-            } else {
-              hands.push([]);
-            }
-          }
+          const oppHands = sampleOpponentHands(unknownPool, opponentCount, cardsPerPlayer, rng);
+          const hands: CardNumber[][] = [
+            [...hand].filter((c) => c !== myCard) as CardNumber[],
+            ...oppHands,
+          ];
 
           const boardCopy = cloneBoard(board);
           totalPenalty += score(simulateRound(boardCopy, hands, myCard, rng));
@@ -299,26 +185,9 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
       const hand = state.hand.filter(c => c !== state.triggeringCard);
       const cardsPerPlayer = hand.length;
 
-      // Build unknown pool
-      const known = new Set<number>();
-      for (const c of hand) known.add(c);
-      for (const row of board.rows) {
-        for (const c of row) known.add(c);
-      }
-      for (const c of seenCards) known.add(c);
-      for (const entry of state.turnHistory) {
-        for (const play of entry.plays) known.add(play.card);
-      }
-      // Also add cards revealed this turn
-      for (const play of state.revealedThisTurn) {
-        known.add(play.card);
-      }
-      known.add(state.triggeringCard);
-
-      const unknownPool: CardNumber[] = [];
-      for (let i = 1; i <= 104; i++) {
-        if (!known.has(i)) unknownPool.push(i as CardNumber);
-      }
+      const unknownPool = buildUnknownPoolForRowChoice(
+        hand, board, seenCards, state.turnHistory, state.revealedThisTurn, state.triggeringCard,
+      );
 
       // If cardsPerPlayer is 0 or this is the last turn, just pick fewest heads
       if (cardsPerPlayer === 0) {
@@ -339,18 +208,8 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
           boardCopy[rowIdx] = [state.triggeringCard];
 
           // Deal opponent hands for remaining turns
-          fisherYates(unknownPool, rng);
-          const hands: CardNumber[][] = [[...hand] as CardNumber[]];
-          let offset = 0;
-          for (let opp = 0; opp < opponentCount; opp++) {
-            const hs = Math.min(cardsPerPlayer, unknownPool.length - offset);
-            if (hs > 0) {
-              hands.push(unknownPool.slice(offset, offset + hs) as CardNumber[]);
-              offset += hs;
-            } else {
-              hands.push([]);
-            }
-          }
+          const oppHands = sampleOpponentHands(unknownPool, opponentCount, cardsPerPlayer, rng);
+          const hands: CardNumber[][] = [[...hand] as CardNumber[], ...oppHands];
 
           // Play out remaining turns randomly, accumulate all penalties
           const simPenalties = new Array(hands.length).fill(0) as number[];

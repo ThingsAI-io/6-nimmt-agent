@@ -1,0 +1,189 @@
+/**
+ * Reads a card-priors JSON file and emits a typed TypeScript lookup table
+ * for use by the mcs-prior strategy.
+ *
+ * Usage:
+ *   npx tsx scripts/build-prior-table.ts [--input path/to/prior.json] [--output src/engine/strategies/prior-table.ts]
+ */
+import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+// --- CLI args ---
+const args = process.argv.slice(2);
+function getArg(name: string, fallback: string): string {
+  const idx = args.indexOf(`--${name}`);
+  return idx !== -1 && args[idx + 1] ? args[idx + 1] : fallback;
+}
+
+const DEFAULT_OUTPUT = resolve('src/engine/strategies/prior-table.ts');
+
+// Auto-detect input: find the largest prior JSON in project/data/card-priors/
+function findDefaultInput(): string {
+  const dir = resolve('project/data/card-priors');
+  try {
+    const files = readdirSync(dir).filter((f: string) => f.endsWith('.json'));
+    if (files.length === 0) {
+      console.error('No prior JSON files found in project/data/card-priors/');
+      process.exit(1);
+    }
+    let best = files[0];
+    let bestSize = 0;
+    for (const f of files) {
+      const size = statSync(resolve(dir, f)).size;
+      if (size > bestSize) { bestSize = size; best = f; }
+    }
+    return resolve(dir, best);
+  } catch {
+    console.error('Cannot read project/data/card-priors/ directory');
+    process.exit(1);
+  }
+}
+
+const inputPath = getArg('input', findDefaultInput());
+const outputPath = getArg('output', DEFAULT_OUTPUT);
+
+// --- Load prior ---
+interface PriorJson {
+  totalGames: number;
+  playerCount: number;
+  strategy: { name: string; options?: Record<string, unknown> };
+  cards: {
+    card: number;
+    timesPlayed: number;
+    timesOverflow: number;
+    timesRowPick: number;
+    overflowPenalty: number;
+    rowPickPenalty: number;
+    overflowGapSum?: number;
+    turnSum: number;
+  }[];
+  turnStats?: {
+    turn: number;
+    minRowTopSum: number;
+    maxRowLenHist?: number[];
+    primedRowsHist?: number[];
+    primedRowTopHist?: number[];
+    observations: number;
+    minRowTopHist: number[];
+  }[];
+}
+
+const prior: PriorJson = JSON.parse(readFileSync(inputPath, 'utf-8'));
+console.log(`Loaded prior: ${prior.totalGames} games, ${prior.playerCount} players, strategy=${prior.strategy.name}`);
+
+if (prior.totalGames < 50) {
+  console.warn(`WARNING: Prior has only ${prior.totalGames} games. Results may be noisy. Recommend 500+ games.`);
+}
+
+// --- Build card table ---
+interface CardEntry {
+  card: number;
+  overflowRate: number;
+  rowPickRate: number;
+  avgOverflowPenalty: number;
+  avgRowPickPenalty: number;
+  avgOverflowGap: number;
+  expectedPenalty: number;
+  avgTurn: number;
+}
+
+const cardTable: CardEntry[] = prior.cards.map(c => ({
+  card: c.card,
+  overflowRate: c.timesPlayed > 0 ? c.timesOverflow / c.timesPlayed : 0,
+  rowPickRate: c.timesPlayed > 0 ? c.timesRowPick / c.timesPlayed : 0,
+  avgOverflowPenalty: c.timesOverflow > 0 ? c.overflowPenalty / c.timesOverflow : 0,
+  avgRowPickPenalty: c.timesRowPick > 0 ? c.rowPickPenalty / c.timesRowPick : 0,
+  avgOverflowGap: c.timesOverflow > 0 ? (c.overflowGapSum ?? 0) / c.timesOverflow : 0,
+  expectedPenalty: c.timesPlayed > 0 ? (c.overflowPenalty + c.rowPickPenalty) / c.timesPlayed : 0,
+  avgTurn: c.timesPlayed > 0 ? c.turnSum / c.timesPlayed : 5.5,
+}));
+
+// --- Build turn baselines ---
+interface TurnEntry {
+  turn: number;
+  avgMinRowTop: number;
+  minRowTopP50: number;
+  avgPrimedRows: number;
+  avgMaxRowLen: number;
+}
+
+function percentileFromHist(hist: number[], total: number, pct: number): number {
+  const target = Math.ceil(total * pct);
+  let cumulative = 0;
+  for (let i = 0; i < hist.length; i++) {
+    cumulative += hist[i];
+    if (cumulative >= target) return i + 1;
+  }
+  return 104;
+}
+
+const turnTable: TurnEntry[] = (prior.turnStats ?? []).map(ts => {
+  const obs = ts.observations || 1;
+  const lenHist = ts.maxRowLenHist ?? new Array(6).fill(0);
+  const primedHist = ts.primedRowsHist ?? new Array(5).fill(0);
+  const lenObs = lenHist.reduce((s, c) => s + c, 0) || 1;
+  const primedObs = primedHist.reduce((s, c) => s + c, 0) || 1;
+  return {
+    turn: ts.turn,
+    avgMinRowTop: ts.minRowTopSum / obs,
+    minRowTopP50: percentileFromHist(ts.minRowTopHist, obs, 0.50),
+    avgPrimedRows: primedHist.reduce((s, c, i) => s + c * i, 0) / primedObs,
+    avgMaxRowLen: lenHist.reduce((s, c, i) => s + c * i, 0) / lenObs,
+  };
+});
+
+// Fill in turns 1–10 if missing
+while (turnTable.length < 10) {
+  turnTable.push({ turn: turnTable.length + 1, avgMinRowTop: 25, minRowTopP50: 20, avgPrimedRows: 1.0, avgMaxRowLen: 3.5 });
+}
+
+// --- Emit TypeScript ---
+const lines: string[] = [];
+lines.push('/**');
+lines.push(` * Auto-generated prior table from ${prior.totalGames} games (${prior.playerCount} players, strategy: ${prior.strategy.name}).`);
+lines.push(` * Generated by scripts/build-prior-table.ts — do not edit manually.`);
+lines.push(` */`);
+lines.push('');
+lines.push('export interface CardPrior {');
+lines.push('  card: number;');
+lines.push('  overflowRate: number;');
+lines.push('  rowPickRate: number;');
+lines.push('  avgOverflowPenalty: number;');
+lines.push('  avgRowPickPenalty: number;');
+lines.push('  avgOverflowGap: number;');
+lines.push('  expectedPenalty: number;');
+lines.push('  avgTurn: number;');
+lines.push('}');
+lines.push('');
+lines.push('export interface TurnBaseline {');
+lines.push('  turn: number;');
+lines.push('  avgMinRowTop: number;');
+lines.push('  minRowTopP50: number;');
+lines.push('  avgPrimedRows: number;');
+lines.push('  avgMaxRowLen: number;');
+lines.push('}');
+lines.push('');
+lines.push('/** Per-card prior statistics (index 0 = card 1, index 103 = card 104). */');
+lines.push('export const CARD_PRIOR: readonly CardPrior[] = [');
+for (const c of cardTable) {
+  lines.push(`  { card: ${c.card}, overflowRate: ${n(c.overflowRate)}, rowPickRate: ${n(c.rowPickRate)}, avgOverflowPenalty: ${n(c.avgOverflowPenalty)}, avgRowPickPenalty: ${n(c.avgRowPickPenalty)}, avgOverflowGap: ${n(c.avgOverflowGap)}, expectedPenalty: ${n(c.expectedPenalty)}, avgTurn: ${n(c.avgTurn)} },`);
+}
+lines.push('];');
+lines.push('');
+lines.push('/** Per-turn board state baselines (index 0 = turn 1, index 9 = turn 10). */');
+lines.push('export const TURN_BASELINE: readonly TurnBaseline[] = [');
+for (const t of turnTable) {
+  lines.push(`  { turn: ${t.turn}, avgMinRowTop: ${n(t.avgMinRowTop)}, minRowTopP50: ${t.minRowTopP50}, avgPrimedRows: ${n(t.avgPrimedRows)}, avgMaxRowLen: ${n(t.avgMaxRowLen)} },`);
+}
+lines.push('];');
+lines.push('');
+lines.push(`/** Number of games used to generate this prior. */`);
+lines.push(`export const PRIOR_GAMES = ${prior.totalGames};`);
+lines.push('');
+
+function n(v: number): string {
+  return v.toFixed(4);
+}
+
+writeFileSync(outputPath, lines.join('\n'), 'utf-8');
+console.log(`Written ${outputPath} (${cardTable.length} cards, ${turnTable.length} turns)`);

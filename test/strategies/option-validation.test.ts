@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { strategies } from '../../src/engine/strategies/index';
 import { createMcsStrategy } from '../../src/engine/strategies/mcs';
+import { createMcsPriorStrategy } from '../../src/engine/strategies/mcs-prior';
 
 describe('Strategy option validation', () => {
   describe('MCS strategy', () => {
@@ -48,6 +49,43 @@ describe('Strategy option validation', () => {
       const factory = strategies.get(name)!;
       expect(() => factory()).not.toThrow();
       expect(() => factory({})).not.toThrow();
+    });
+  });
+
+  describe('MCS-prior strategy', () => {
+
+    it('throws on unknown option key', () => {
+      expect(() => createMcsPriorStrategy({ mcPerCrad: 50 })).toThrow(
+        /Unknown mcs-prior option "mcPerCrad"/,
+      );
+    });
+
+    it('accepts valid options without throwing', () => {
+      expect(() =>
+        createMcsPriorStrategy({ mcPerCard: 100, mcMax: 500, scoring: 'relative', simDepth: 2, opponentModel: 'prior', timingWeight: 0.5 }),
+      ).not.toThrow();
+    });
+
+    it('accepts empty options (defaults)', () => {
+      expect(() => createMcsPriorStrategy()).not.toThrow();
+      expect(() => createMcsPriorStrategy({})).not.toThrow();
+    });
+
+    it('getOptions() returns resolved defaults', () => {
+      const s = createMcsPriorStrategy({});
+      const opts = s.getOptions!();
+      expect(opts).toEqual({ mcPerCard: 100, mcMax: 1000, scoring: 'relative', simDepth: 1, opponentModel: 'prior', timingWeight: 0.3 });
+    });
+
+    it('getOptions() reflects provided values', () => {
+      const s = createMcsPriorStrategy({ mcPerCard: 50, timingWeight: 0.5, opponentModel: 'uniform' });
+      const opts = s.getOptions!();
+      expect(opts).toMatchObject({ mcPerCard: 50, timingWeight: 0.5, opponentModel: 'uniform' });
+    });
+
+    it('allows timingWeight=0 (disables timing pressure)', () => {
+      const s = createMcsPriorStrategy({ timingWeight: 0 });
+      expect(s.getOptions!().timingWeight).toBe(0);
     });
   });
 });
