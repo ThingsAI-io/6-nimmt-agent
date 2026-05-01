@@ -119,7 +119,7 @@ EXAMPLES:
   npm run play -- --connect -b chrome -s mcs -v
 
   # Full auto: launch browser, login, navigate to table
-  npm run play -- --table 843761580 -s mcs:mcMax=500 -b chrome --no-headless -v
+  npm run play -- --table 843761580 -s mcs:mcPerCard=100 -b chrome --no-headless -v
 
   # Connect to a specific CDP endpoint
   npm run play -- --connect --cdp-url ws://127.0.0.1:9222/devtools/browser/abc123 -v
