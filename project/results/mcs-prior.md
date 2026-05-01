@@ -55,6 +55,29 @@
 - Single seed benchmark — results have variance. Need 500+ games for tight confidence intervals.
 - Seat 0 advantage/disadvantage is not controlled for (only one mcs-prior seat).
 
+## Simulation Depth (200 games, simDepth=2 vs simDepth=1)
+
+One player runs simDepth=2, four run simDepth=1. All other settings equal (mcPerCard=50, timingWeight=0.3, opponentModel=prior).
+
+| Seat | simDepth | Win% | Avg Score |
+|------|----------|------|-----------|
+| 0 | **2** | 17.0% | 50.2 |
+| 1 | 1 | 22.5% | 47.6 |
+| 2 | 1 | 23.0% | 51.3 |
+| 3 | 1 | 20.5% | 50.4 |
+| 4 | 1 | 22.0% | 48.8 |
+
+### Observations
+- **simDepth=2 underperforms** — 17% win rate vs simDepth=1 average of 22%.
+- At equal budget (mcPerCard=50), deeper lookahead halves the sample count per candidate card.
+- The second simulated turn adds noise (unknown opponent cards) without enough signal to compensate.
+- **Conclusion**: stick with simDepth=1 + heuristic eval. More simulations at shallow depth beats fewer at deeper depth.
+
+```bash
+npx tsx src/cli/index.ts simulate --games 200 \
+  -s "mcs-prior:mcPerCard=50,simDepth=2,mcs-prior:mcPerCard=50,simDepth=1,mcs-prior:mcPerCard=50,simDepth=1,mcs-prior:mcPerCard=50,simDepth=1,mcs-prior:mcPerCard=50,simDepth=1"
+```
+
 ## Timing Weight Sensitivity (200 games, 5× mcs-prior head-to-head)
 
 Each seat runs mcs-prior with a different `timingWeight` value. All other settings equal (mcPerCard=50, simDepth=1, opponentModel=prior).
