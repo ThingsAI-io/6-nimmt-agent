@@ -119,7 +119,7 @@ EXAMPLES:
   npm run play -- --connect -b chrome -s mcs -v
 
   # Full auto: launch browser, login, navigate to table
-  npm run play -- --table 843761580 -s mcs:mcMax=500 -b chrome --no-headless -v
+  npm run play -- --table 843761580 -s mcs:mcPerCard=100 -b chrome --no-headless -v
 
   # Connect to a specific CDP endpoint
   npm run play -- --connect --cdp-url ws://127.0.0.1:9222/devtools/browser/abc123 -v
@@ -139,6 +139,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   const strategy = factory(options);
+  const resolvedOpts = strategy.getOptions?.() ?? options ?? {};
 
   if (args.verbose) {
     console.log(JSON.stringify({
@@ -146,7 +147,7 @@ async function main(): Promise<void> {
       mode: args.mode,
       table: args.table || '(from browser)',
       strategy: name,
-      options: options ?? {},
+      options: resolvedOpts,
       delay: args.delay,
       timestamp: new Date().toISOString(),
     }));
@@ -179,7 +180,7 @@ async function main(): Promise<void> {
 
         console.log('──────────────────────────────────────────');
         console.log('  6 Nimmt! Headless Player');
-        console.log(`  Strategy: ${name}${options ? ` (${JSON.stringify(options)})` : ''}`);
+        console.log(`  Strategy: ${name} (${JSON.stringify(resolvedOpts)})`);
         console.log('──────────────────────────────────────────\n');
         console.log('1. Login to BGA if needed');
         console.log('2. Open or join a 6 Nimmt! table');

@@ -58,7 +58,7 @@ const TOOL_DEFINITIONS = [
       properties: {
         state: { type: 'object' as const, description: 'Game state for recommendation' },
         strategy: { type: 'string' as const, description: 'Strategy name to use' },
-        strategyOptions: { type: 'object' as const, description: 'Strategy-specific options (e.g. { mcMax: 500 } for mcs)' },
+        strategyOptions: { type: 'object' as const, description: 'Strategy-specific options (e.g. { mcPerCard: 100 } for mcs)' },
         decision: { type: 'string' as const, enum: ['card', 'row'], description: 'Decision type (auto-detected if omitted)' },
         timeout: { type: 'number' as const, description: 'Timeout in milliseconds' },
       },
@@ -76,7 +76,7 @@ const TOOL_DEFINITIONS = [
         playerId: { type: 'string' as const, description: 'Player ID for this session' },
         seatIndex: { type: 'number' as const, description: 'Seat index (optional)' },
         seed: { type: 'string' as const, description: 'RNG seed (optional)' },
-        strategyOptions: { type: 'object' as const, description: 'Strategy-specific options (e.g. { mcMax: 500, mcPerCard: 50 } for mcs)' },
+        strategyOptions: { type: 'object' as const, description: 'Strategy-specific options (e.g. { mcPerCard: 100 } for mcs)' },
       },
       required: ['strategy', 'playerCount', 'playerId'],
     },

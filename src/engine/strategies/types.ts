@@ -33,6 +33,9 @@ export interface TurnResolution {
 export interface Strategy {
   readonly name: string;
 
+  /** Returns the resolved options (including defaults) for logging/debugging. */
+  getOptions?(): Record<string, unknown>;
+
   /** Choose which card to play from hand. Called every turn. */
   chooseCard(state: CardChoiceState): CardNumber;
 

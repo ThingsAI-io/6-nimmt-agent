@@ -11,6 +11,7 @@ import { invalidStrategy, invalidState, engineError, type DomainError } from '..
 
 const strategyDescriptions: Record<string, string> = {
   random: 'Picks a card uniformly at random. Baseline strategy.',
+  mcs: 'Monte Carlo sampling. Options: mcPerCard (sims/card, default 50), mcMax (budget cap, default 10×mcPerCard), scoring ("self"|"relative", default "self").',
 };
 
 // ── list_strategies ─────────────────────────────────────────────────

@@ -2,14 +2,15 @@ import type { Strategy, TurnResolution } from './types';
 import type { CardNumber, Board } from '../types';
 import { cattleHeads } from '../card';
 
-const DEFAULT_MC_MAX = 500;
 const DEFAULT_MC_PER_CARD = 50;
 
 export interface McsOptions {
-  /** Maximum total simulations across all cards (default: 500) */
+  /** Maximum total simulations across all cards (default: 10 × mcPerCard) */
   mcMax?: number;
   /** Simulations per candidate card (default: 50, capped by mcMax) */
   mcPerCard?: number;
+  /** Scoring mode: 'self' = minimize own penalty, 'relative' = minimize own minus avg opponent (default: 'self') */
+  scoring?: 'self' | 'relative';
 }
 
 function fewestHeadsRowIndex(rows: readonly (readonly CardNumber[])[]): 0 | 1 | 2 | 3 {
@@ -42,17 +43,16 @@ function fisherYates<T>(arr: T[], rng: () => number): T[] {
 }
 
 /**
- * Simulate placing all plays onto the board, return penalty for player 0 (us).
+ * Simulate placing all plays onto the board, return penalties for each play (by position).
  * Modifies board in-place.
  */
 function simulateTurn(
   plays: CardNumber[],
   board: CardNumber[][],
-  myIndex: number,
-): number {
+): number[] {
   const indexed = plays.map((card, i) => ({ card, idx: i }));
   indexed.sort((a, b) => a.card - b.card);
-  let penalty = 0;
+  const penalties = new Array(plays.length).fill(0) as number[];
 
   for (const { card, idx } of indexed) {
     let bestRow = -1;
@@ -66,29 +66,39 @@ function simulateTurn(
     }
 
     if (bestRow === -1) {
-      // Card lower than all tails — pick row with fewest heads
       const rowIdx = fewestHeadsRowIndex(board);
-      if (idx === myIndex) {
-        penalty += board[rowIdx].reduce((s, c) => s + cattleHeads(c), 0);
-      }
+      penalties[idx] += board[rowIdx].reduce((s, c) => s + cattleHeads(c), 0);
       board[rowIdx] = [card];
     } else if (board[bestRow].length >= 5) {
-      // Overflow: 6th card
-      if (idx === myIndex) {
-        penalty += board[bestRow].reduce((s, c) => s + cattleHeads(c), 0);
-      }
+      penalties[idx] += board[bestRow].reduce((s, c) => s + cattleHeads(c), 0);
       board[bestRow] = [card];
     } else {
       board[bestRow].push(card);
     }
   }
 
-  return penalty;
+  return penalties;
+}
+
+/**
+ * Simulate a turn with tagged plays and accumulate penalties into a player-indexed array.
+ * Handles the mapping from play-position penalties to player indices.
+ */
+function accumulateTurn(
+  taggedPlays: { playerIdx: number; card: CardNumber }[],
+  board: CardNumber[][],
+  totalPenalties: number[],
+): void {
+  const cards = taggedPlays.map(p => p.card) as CardNumber[];
+  const turnPenalties = simulateTurn(cards, board);
+  for (let i = 0; i < taggedPlays.length; i++) {
+    totalPenalties[taggedPlays[i].playerIdx] += turnPenalties[i];
+  }
 }
 
 /**
  * Simulate the entire remaining round from a given state.
- * Returns total penalty accumulated by "us" (player index 0).
+ * Returns array of penalties for each player (index 0 = us).
  *
  * hands[0] = our hand (with myCard already chosen for turn 1)
  * hands[1..N-1] = sampled opponent hands
@@ -98,40 +108,40 @@ function simulateRound(
   hands: CardNumber[][],
   myFirstCard: CardNumber,
   rng: () => number,
-): number {
-  let totalPenalty = 0;
+): number[] {
   const playerCount = hands.length;
+  const totalPenalties = new Array(playerCount).fill(0) as number[];
 
   // First turn: we play myFirstCard, opponents play random
-  const firstPlays: CardNumber[] = [myFirstCard];
+  const firstPlays: { playerIdx: number; card: CardNumber }[] = [{ playerIdx: 0, card: myFirstCard }];
   for (let i = 1; i < playerCount; i++) {
     if (hands[i].length === 0) continue;
     const idx = Math.floor(rng() * hands[i].length);
-    firstPlays.push(hands[i][idx]);
+    firstPlays.push({ playerIdx: i, card: hands[i][idx] });
     hands[i].splice(idx, 1);
   }
   // Remove our played card from hand
   const myHandIdx = hands[0].indexOf(myFirstCard);
   if (myHandIdx !== -1) hands[0].splice(myHandIdx, 1);
 
-  totalPenalty += simulateTurn(firstPlays, board, 0);
+  accumulateTurn(firstPlays, board, totalPenalties);
 
   // Remaining turns: all players play random
   const remainingTurns = hands[0].length;
   for (let t = 0; t < remainingTurns; t++) {
-    const plays: CardNumber[] = [];
+    const plays: { playerIdx: number; card: CardNumber }[] = [];
     for (let i = 0; i < playerCount; i++) {
       if (hands[i].length === 0) continue;
       const idx = Math.floor(rng() * hands[i].length);
-      plays.push(hands[i][idx]);
+      plays.push({ playerIdx: i, card: hands[i][idx] });
       hands[i].splice(idx, 1);
     }
     if (plays.length > 0) {
-      totalPenalty += simulateTurn(plays, board, 0);
+      accumulateTurn(plays, board, totalPenalties);
     }
   }
 
-  return totalPenalty;
+  return totalPenalties;
 }
 
 /**
@@ -149,15 +159,42 @@ function simulateRound(
  *   https://github.com/johannbrehmer/rl-6nimmt
  */
 export function createMcsStrategy(options: McsOptions = {}): Strategy {
-  const mcMax = Math.max(1, Math.floor(Number(options.mcMax) || DEFAULT_MC_MAX));
+  // Validate options — reject unknown keys to catch typos
+  const VALID_OPTIONS = new Set(['mcPerCard', 'mcMax', 'scoring']);
+  for (const key of Object.keys(options)) {
+    if (!VALID_OPTIONS.has(key)) {
+      throw new Error(`Unknown MCS option "${key}". Valid options: ${[...VALID_OPTIONS].join(', ')}`);
+    }
+  }
+  if (options.scoring !== undefined && options.scoring !== 'self' && options.scoring !== 'relative') {
+    throw new Error(`Invalid scoring mode "${options.scoring}". Must be "self" or "relative".`);
+  }
+
   const mcPerCard = Math.max(1, Math.floor(Number(options.mcPerCard) || DEFAULT_MC_PER_CARD));
+  // Default mcMax = 10 × mcPerCard (max hand size is 10, so budget never clips by default)
+  const mcMax = Math.max(1, Math.floor(Number(options.mcMax) || mcPerCard * 10));
+  const scoring: 'self' | 'relative' = options.scoring === 'relative' ? 'relative' : 'self';
   let rng: () => number = Math.random;
   let playerCount = 2;
   // Persistent set of all cards ever observed — fed by onTurnResolved().
   let seenCards = new Set<number>();
 
+  /** Score a simulation result based on scoring mode. Lower = better. */
+  function score(penalties: number[]): number {
+    const myPenalty = penalties[0];
+    if (scoring === 'self') return myPenalty;
+    // 'relative': our penalty minus average opponent penalty (negative = we're winning)
+    const oppTotal = penalties.slice(1).reduce((s, p) => s + p, 0);
+    const oppAvg = penalties.length > 1 ? oppTotal / (penalties.length - 1) : 0;
+    return myPenalty - oppAvg;
+  }
+
   return {
     name: 'mcs',
+
+    getOptions() {
+      return { mcPerCard, mcMax, scoring };
+    },
 
     onGameStart(config) {
       rng = config.rng;
@@ -241,7 +278,7 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
           }
 
           const boardCopy = cloneBoard(board);
-          totalPenalty += simulateRound(boardCopy, hands, myCard, rng);
+          totalPenalty += score(simulateRound(boardCopy, hands, myCard, rng));
         }
 
         const avgPenalty = totalPenalty / simsPerCard;
@@ -301,12 +338,6 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
           const rowPenalty = boardCopy[rowIdx].reduce((s, c) => s + cattleHeads(c), 0);
           boardCopy[rowIdx] = [state.triggeringCard];
 
-          // If no cards remain, just evaluate immediate penalty
-          if (cardsPerPlayer === 0) {
-            totalPenalty += rowPenalty;
-            continue;
-          }
-
           // Deal opponent hands for remaining turns
           fisherYates(unknownPool, rng);
           const hands: CardNumber[][] = [[...hand] as CardNumber[]];
@@ -321,23 +352,24 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
             }
           }
 
-          // Play out remaining turns randomly
-          let simPenalty = rowPenalty;
+          // Play out remaining turns randomly, accumulate all penalties
+          const simPenalties = new Array(hands.length).fill(0) as number[];
+          simPenalties[0] = rowPenalty; // we already took the row
           const remainingTurns = hands[0].length;
           for (let t = 0; t < remainingTurns; t++) {
-            const plays: CardNumber[] = [];
+            const taggedPlays: { playerIdx: number; card: CardNumber }[] = [];
             for (let i = 0; i < hands.length; i++) {
               if (hands[i].length === 0) continue;
               const idx = Math.floor(rng() * hands[i].length);
-              plays.push(hands[i][idx]);
+              taggedPlays.push({ playerIdx: i, card: hands[i][idx] });
               hands[i].splice(idx, 1);
             }
-            if (plays.length > 0) {
-              simPenalty += simulateTurn(plays, boardCopy, 0);
+            if (taggedPlays.length > 0) {
+              accumulateTurn(taggedPlays, boardCopy, simPenalties);
             }
           }
 
-          totalPenalty += simPenalty;
+          totalPenalty += score(simPenalties);
         }
 
         const avgPenalty = totalPenalty / simsPerRow;
