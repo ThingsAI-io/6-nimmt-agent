@@ -177,9 +177,10 @@ async function main(): Promise<void> {
         }
         console.log('Browser launched!\n');
 
+        const resolvedOpts = strategy.getOptions?.() ?? options ?? {};
         console.log('──────────────────────────────────────────');
         console.log('  6 Nimmt! Headless Player');
-        console.log(`  Strategy: ${name}${options ? ` (${JSON.stringify(options)})` : ''}`);
+        console.log(`  Strategy: ${name} (${JSON.stringify(resolvedOpts)})`);
         console.log('──────────────────────────────────────────\n');
         console.log('1. Login to BGA if needed');
         console.log('2. Open or join a 6 Nimmt! table');

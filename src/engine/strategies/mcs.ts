@@ -180,6 +180,10 @@ export function createMcsStrategy(options: McsOptions = {}): Strategy {
   return {
     name: 'mcs',
 
+    getOptions() {
+      return { mcPerCard, mcMax, scoring };
+    },
+
     onGameStart(config) {
       rng = config.rng;
       playerCount = config.playerCount;
