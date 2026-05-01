@@ -36,11 +36,15 @@ export interface McsPriorOptions {
   opponentModel?: 'uniform' | 'prior';
   /** Weight of timing pressure in heuristic (default: 0.3) */
   timingWeight?: number;
+  /** Trapped card discount factor — multiplies row-pick danger by remainingTurns × this value.
+   *  0 = disabled (original behavior), 0.3 = moderate, 0.5 = aggressive early dump. (default: 0.3) */
+  trappedDiscount?: number;
 }
 
 const DEFAULT_MC_PER_CARD = 100;
 const DEFAULT_SIM_DEPTH = 1;
 const DEFAULT_TIMING_WEIGHT = 0.3;
+const DEFAULT_TRAPPED_DISCOUNT = 0.3;
 
 /**
  * Compute heuristic danger score for a hand given board context.
@@ -51,6 +55,7 @@ function evaluateHand(
   board: CardNumber[][],
   turn: number,
   timingWeight: number,
+  trappedDiscount: number,
 ): number {
   if (hand.length === 0) return 0;
 
@@ -63,6 +68,8 @@ function evaluateHand(
   const baseMinTop = baseline.avgMinRowTop ?? 25;
   const basePrimed = baseline.avgPrimedRows ?? 1.0;
 
+  const remainingTurns = Math.max(1, 10 - turn);
+
   let totalDanger = 0;
   for (const card of hand) {
     const prior = CARD_PRIOR[card - 1];
@@ -73,6 +80,12 @@ function evaluateHand(
       // Row pick risk — scales with how far below the min top we are
       const scale = Math.max(0.5, (minRowTop - card) / baseMinTop);
       cardDanger = prior.rowPickRate * prior.avgRowPickPenalty * scale;
+
+      // Trapped card penalty: this card is stuck below all row tops and will only
+      // get harder to play as minRowTop rises. Multiply by remaining turns.
+      if (trappedDiscount > 0) {
+        cardDanger *= (1 + remainingTurns * trappedDiscount);
+      }
     } else {
       // Overflow risk — scales with number of primed rows
       const scale = basePrimed > 0 ? Math.max(0.5, primedCount / basePrimed) : 1;
@@ -197,7 +210,7 @@ function simulateRemainingTurns(
 }
 
 export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy {
-  const VALID_OPTIONS = new Set(['mcPerCard', 'mcMax', 'scoring', 'simDepth', 'opponentModel', 'timingWeight']);
+  const VALID_OPTIONS = new Set(['mcPerCard', 'mcMax', 'scoring', 'simDepth', 'opponentModel', 'timingWeight', 'trappedDiscount']);
   for (const key of Object.keys(options)) {
     if (!VALID_OPTIONS.has(key)) {
       throw new Error(`Unknown mcs-prior option "${key}". Valid: ${[...VALID_OPTIONS].join(', ')}`);
@@ -210,6 +223,7 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
   const simDepth = Math.max(1, Math.floor(Number(options.simDepth ?? DEFAULT_SIM_DEPTH)));
   const opponentModel: 'uniform' | 'prior' = options.opponentModel === 'uniform' ? 'uniform' : 'prior';
   const timingWeight = Number(options.timingWeight ?? DEFAULT_TIMING_WEIGHT);
+  const trappedDiscount = Number(options.trappedDiscount ?? DEFAULT_TRAPPED_DISCOUNT);
 
   let rng: () => number = Math.random;
   let playerCount = 2;
@@ -227,7 +241,7 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
     name: 'mcs-prior',
 
     getOptions() {
-      return { mcPerCard, mcMax, scoring, simDepth, opponentModel, timingWeight };
+      return { mcPerCard, mcMax, scoring, simDepth, opponentModel, timingWeight, trappedDiscount };
     },
 
     onGameStart(config) {
@@ -284,7 +298,7 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
 
           // Heuristic evaluation of remaining hand + board state
           const heuristicTurn = turn + simDepth;
-          const handDanger = evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight);
+          const handDanger = evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight, trappedDiscount);
           penalties[0] += handDanger;
 
           totalScore += score(penalties);
@@ -337,7 +351,7 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
 
           // Heuristic on remaining hand
           const heuristicTurn = state.turn + 1 + turnsToSim;
-          penalties[0] += evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight);
+          penalties[0] += evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight, trappedDiscount);
 
           totalScore += score(penalties);
         }
