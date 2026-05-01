@@ -141,12 +141,13 @@ async function main(): Promise<void> {
   const strategy = factory(options);
 
   if (args.verbose) {
+    const resolvedOpts = strategy.getOptions?.() ?? options ?? {};
     console.log(JSON.stringify({
       event: 'init',
       mode: args.mode,
       table: args.table || '(from browser)',
       strategy: name,
-      options: options ?? {},
+      options: resolvedOpts,
       delay: args.delay,
       timestamp: new Date().toISOString(),
     }));
