@@ -106,7 +106,7 @@ function evaluateHand(
   const baseline = TURN_BASELINE[Math.min(turn - 1, 9)] ?? TURN_BASELINE[9];
   const basePrimed = baseline.avgPrimedRows ?? 1.0;
 
-  const remainingTurns = Math.max(1, 10 - turn);
+  const remainingTurns = Math.max(0, 10 - turn);
 
   let totalDanger = 0;
   for (const card of hand) {
@@ -139,11 +139,11 @@ function evaluateHand(
         cardDanger = prior.rowPickRate * prior.avgRowPickPenalty * scale;
 
         // Trapped discount: ramps urgency as turns run out.
-        // urgency goes from 0.17 (turn 5) to 1.0 (turn 10).
+        // urgency goes from 0.17 (turn 5) to 1.0 (turn 10), clamped to [0,1].
         // Effect: cardDanger × (1 + remainingTurns × 0.3 × urgency)
         // At turn 7 with 3 turns left: ×(1 + 3 × 0.3 × 0.5) = ×1.45
-        if (trappedDiscount > 0) {
-          const urgency = (turn - 4) / 6;
+        if (trappedDiscount > 0 && remainingTurns > 0) {
+          const urgency = Math.min(1, (turn - 4) / 6);
           cardDanger *= (1 + remainingTurns * trappedDiscount * urgency);
         }
       }
@@ -301,7 +301,8 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
   const simDepth = Math.max(1, Math.floor(Number(options.simDepth ?? DEFAULT_SIM_DEPTH)));
   const opponentModel: 'uniform' | 'prior' = options.opponentModel === 'uniform' ? 'uniform' : 'prior';
   const timingWeight = Number(options.timingWeight ?? DEFAULT_TIMING_WEIGHT);
-  const trappedDiscount = Number(options.trappedDiscount ?? DEFAULT_TRAPPED_DISCOUNT);
+  const parsedTrapped = Number(options.trappedDiscount ?? DEFAULT_TRAPPED_DISCOUNT);
+  const trappedDiscount = Math.max(0, Number.isNaN(parsedTrapped) ? DEFAULT_TRAPPED_DISCOUNT : parsedTrapped);
 
   let rng: () => number = Math.random;
   let playerCount = 2;
@@ -375,7 +376,9 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
           }
 
           // Heuristic evaluation of remaining hand + board state
-          const heuristicTurn = turn + simDepth;
+          // Use actual turns simulated (1 initial + extraTurns), not requested simDepth,
+          // since extraTurns is capped by hand size.
+          const heuristicTurn = turn + 1 + extraTurns;
           const handDanger = evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight, trappedDiscount);
           penalties[0] += handDanger;
 

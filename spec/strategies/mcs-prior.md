@@ -75,7 +75,7 @@ Models opponents as rational agents who play safe cards early and hold dangerous
 weight(card) = (1 / (expectedPenalty + 0.1)) * (1 + timingBoost)
 ```
 
-Where `timingBoost = max(0, turn - avgTurn) * 0.3` — overdue cards get forced out.
+Where `timingBoost = max(0, turn - avgTurn) * 0.2` — overdue cards get forced out.
 
 This matches observed behavior from training data: mid-range cards (40–60) are played early, extremes (1–10, 90–104) are held until necessary.
 
@@ -85,9 +85,9 @@ This matches observed behavior from training data: mid-range cards (40–60) are
 interface McsPriorOptions {
   mcPerCard?: number;       // Simulations per candidate card (default: 100)
   mcMax?: number;           // Max total simulations (default: 10 * mcPerCard)
-  scoring?: \'self\' | \'relative\';  // Score mode (default: \'relative\')
+  scoring?: 'self' | 'relative';  // Score mode (default: 'relative')
   simDepth?: number;        // Turns to simulate forward (default: 1)
-  opponentModel?: \'uniform\' | \'prior\';  // Opponent selection model (default: \'prior\')
+  opponentModel?: 'uniform' | 'prior';  // Opponent selection model (default: 'prior')
   timingWeight?: number;    // Timing pressure multiplier (default: 0.3)
   trappedDiscount?: number; // Trapped card urgency ramp (default: 0.3, 0=disabled)
 }
