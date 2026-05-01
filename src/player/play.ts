@@ -139,9 +139,9 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   const strategy = factory(options);
+  const resolvedOpts = strategy.getOptions?.() ?? options ?? {};
 
   if (args.verbose) {
-    const resolvedOpts = strategy.getOptions?.() ?? options ?? {};
     console.log(JSON.stringify({
       event: 'init',
       mode: args.mode,
@@ -178,7 +178,6 @@ async function main(): Promise<void> {
         }
         console.log('Browser launched!\n');
 
-        const resolvedOpts = strategy.getOptions?.() ?? options ?? {};
         console.log('──────────────────────────────────────────');
         console.log('  6 Nimmt! Headless Player');
         console.log(`  Strategy: ${name} (${JSON.stringify(resolvedOpts)})`);

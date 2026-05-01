@@ -99,8 +99,6 @@ The old default `mcMax=500` with `mcPerCard=50` caused early-round clipping: wit
 
 ### Why relative scoring works
 
-### Why relative scoring works
-
 6 Nimmt! is a competition — the winner is whoever has the **lowest** score, not whoever avoids all penalty. Self-scoring optimizes for safety (avoid penalty at all costs), while relative scoring asks "does this move hurt me less than it hurts opponents?" This leads to:
 
 - Accepting small penalties when opponents are likely to take bigger ones

@@ -22,11 +22,11 @@ const CONFIGS = [
 // Track per-player stats
 const stats = CONFIGS.map(() => ({ wins: 0, totalScore: 0, totalRank: 0 }));
 
-// For timing: run each config solo vs 4 randoms for 10 games to get ms/card
-function measureMsPerCard(cfg: typeof CONFIGS[0]): number {
-  const warmupGames = 10;
+// Measure ms/turn for each strategy in isolation (run solo vs 4 randoms)
+function measureMsPerTurn(cfg: typeof CONFIGS[0]): number {
+  const games = 10;
   const t0 = Date.now();
-  for (let g = 0; g < warmupGames; g++) {
+  for (let g = 0; g < games; g++) {
     runGame({
       players: [
         { id: 'p0', strategy: cfg.strategy, strategyOptions: cfg.options },
@@ -39,15 +39,13 @@ function measureMsPerCard(cfg: typeof CONFIGS[0]): number {
     });
   }
   const elapsed = Date.now() - t0;
-  // Each game has ~10 turns × 5 players card choices = 50 choices/game
-  // But we only want the cost of our strategy, so subtract random baseline
-  // Approximate: total time / (10 turns × 10 games) for the tested strategy
-  return elapsed / (10 * warmupGames);
+  // ~10 turns per game, divide total by (turns × games) for ms per turn
+  return elapsed / (10 * games);
 }
 
-// Measure ms/card for each config (solo timing to isolate)
-console.log('Measuring per-card timing...');
-const timings = CONFIGS.map(cfg => measureMsPerCard(cfg));
+// Measure ms/turn for each config (solo timing to isolate)
+console.log('Measuring per-turn timing...');
+const timings = CONFIGS.map(cfg => measureMsPerTurn(cfg));
 
 // Main benchmark: head-to-head
 const start = Date.now();
