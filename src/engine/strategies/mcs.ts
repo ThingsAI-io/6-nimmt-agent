@@ -2,11 +2,10 @@ import type { Strategy, TurnResolution } from './types';
 import type { CardNumber, Board } from '../types';
 import { cattleHeads } from '../card';
 
-const DEFAULT_MC_MAX = 500;
 const DEFAULT_MC_PER_CARD = 50;
 
 export interface McsOptions {
-  /** Maximum total simulations across all cards (default: 500) */
+  /** Maximum total simulations across all cards (default: 10 × mcPerCard) */
   mcMax?: number;
   /** Simulations per candidate card (default: 50, capped by mcMax) */
   mcPerCard?: number;
@@ -149,8 +148,9 @@ function simulateRound(
  *   https://github.com/johannbrehmer/rl-6nimmt
  */
 export function createMcsStrategy(options: McsOptions = {}): Strategy {
-  const mcMax = Math.max(1, Math.floor(Number(options.mcMax) || DEFAULT_MC_MAX));
   const mcPerCard = Math.max(1, Math.floor(Number(options.mcPerCard) || DEFAULT_MC_PER_CARD));
+  // Default mcMax = 10 × mcPerCard (max hand size is 10, so budget never clips by default)
+  const mcMax = Math.max(1, Math.floor(Number(options.mcMax) || mcPerCard * 10));
   let rng: () => number = Math.random;
   let playerCount = 2;
   // Persistent set of all cards ever observed — fed by onTurnResolved().
