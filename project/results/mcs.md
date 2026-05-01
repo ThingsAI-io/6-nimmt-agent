@@ -9,14 +9,15 @@
 
 ## Configuration
 
-MCS has two key parameters:
+MCS has three key parameters:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `mcPerCard` | Simulations per candidate card | 50 |
-| `mcMax` | Total simulation cap across all cards | 500 |
+| `mcMax` | Total simulation cap across all cards | 10 × mcPerCard (elastic) |
+| `scoring` | Scoring mode: `self` or `relative` | `self` |
 
-Effective sims/card = `min(mcMax / hand.length, mcPerCard)`. With 10 cards in hand at round start: `min(500/10, 50) = 50` sims per card.
+Effective sims/card = `min(mcMax / hand.length, mcPerCard)`. With elastic default, budget never clips.
 
 ---
 
@@ -54,7 +55,57 @@ Setup: 1×MCS + 1×bayesian-simple + 2×random
 
 ---
 
+## MCS variants head-to-head (5 players, 100 games, seed: mcs-bench-2026)
+
+**Date:** 2026-04-30
+**Setup:** mcs(N=10) vs mcs(N=20) vs mcs(N=50) vs mcs(N=100) vs random — elastic budget (mcMax = 10×mcPerCard, never clips)
+
+| Strategy | Win% | Avg Score | Avg Rank | ms/turn |
+|----------|------|-----------|----------|---------|
+| mcs(N=100) | 35.0% | 33.5 | 2.13 | 66ms |
+| mcs(N=50) | 24.0% | 36.4 | 2.36 | 27ms |
+| mcs(N=20) | 30.0% | 42.2 | 2.68 | 11ms |
+| mcs(N=10) | 11.0% | 46.9 | 3.18 | 6ms |
+| random | 3.0% | 72.3 | 4.54 | 0ms |
+
+**Key takeaway:** When MCS variants compete directly against each other, N=100 still comes out on top (rank 2.13), but all MCS variants dominate random. Diminishing returns are visible: doubling from N=50→N=100 costs 2.4× time for modest gains.
+
+---
+
+## Scoring mode comparison: self vs relative (5 players, 100 games, seed: scoring-bench-2026)
+
+**Date:** 2026-04-30
+**Setup:** Self-scoring vs relative-scoring at N=50 and N=100, plus random as 5th player.
+
+`scoring=self` minimizes own penalty. `scoring=relative` minimizes (own penalty − avg opponent penalty), optimizing for competitive advantage.
+
+| Strategy | Win% | Avg Score | Avg Rank |
+|----------|------|-----------|----------|
+| mcs(N=100, relative) | 37.0% | 33.5 | 2.38 |
+| mcs(N=100, self) | 26.0% | 34.4 | 2.45 |
+| mcs(N=50, relative) | 23.0% | 36.1 | 2.56 |
+| mcs(N=50, self) | 16.0% | 37.6 | 2.73 |
+| random | 0.0% | 73.5 | 4.78 |
+
+**Key takeaway:** Relative scoring consistently outperforms self-scoring at equal budget. mcs(N=100,rel) wins 37% vs 26% for mcs(N=100,self) — a 42% improvement in win rate. The competitive framing ("inflict relative damage") > pure self-preservation.
+
+---
+
 ## Analysis
+
+### Elastic budget (mcMax = 10×mcPerCard)
+
+The old default `mcMax=500` with `mcPerCard=50` caused early-round clipping: with 10 cards in hand, effective budget was `500/10 = 50/card` — fine. But if you set `mcPerCard=100`, you got capped to `500/10 = 50/card` anyway. The elastic default (`mcMax = 10×mcPerCard`) ensures budget never clips regardless of hand size.
+
+### Why relative scoring works
+
+### Why relative scoring works
+
+6 Nimmt! is a competition — the winner is whoever has the **lowest** score, not whoever avoids all penalty. Self-scoring optimizes for safety (avoid penalty at all costs), while relative scoring asks "does this move hurt me less than it hurts opponents?" This leads to:
+
+- Accepting small penalties when opponents are likely to take bigger ones
+- Choosing plays that force opponents into bad positions even at slight personal cost
+- Better exploitation of board states where multiple opponents are trapped
 
 ### Why simulation count matters so much
 
@@ -84,21 +135,20 @@ At `mcPerCard=50` with a full hand (10 cards), early-round moves take ~27ms. Lat
 ## Recommended production config
 
 ```
-mcs:mcPerCard=50,mcMax=500
+mcs:mcPerCard=50,scoring=relative
 ```
 
 This provides the best balance of strength and speed. For time-critical scenarios (e.g., BGA with sub-second response requirement), this is well within budget at ~27ms per decision.
 
 For maximum strength with no time constraint:
 ```
-mcs:mcPerCard=100,mcMax=1000
+mcs:mcPerCard=100,scoring=relative
 ```
 
 ---
 
 ## Future work
 
-- **Higher budgets:** Test mcPerCard=100, 200 to find diminishing returns curve
 - **Hybrid playout policy:** Use bayesian scoring inside MCS simulations instead of random play
 - **Player count scaling:** Benchmark at 2-10 players (more players = more uncertainty = may need higher budget)
 - **Head-to-head at higher game counts:** Run 1000+ games for tighter confidence intervals
