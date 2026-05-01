@@ -1,13 +1,45 @@
 /**
  * MCS-Prior strategy — Monte Carlo Search enhanced with prior-based heuristic evaluation.
  *
- * Instead of simulating entire remaining rounds (expensive, noisy), this strategy:
- * 1. Simulates only 1–2 turns forward (cheap, more samples)
- * 2. Evaluates the resulting hand + board state using a pre-computed prior
- * 3. Models opponents with prior-weighted card selection (not uniform random)
+ * ARCHITECTURE:
+ * For each candidate card, run N simulations:
+ *   1. Simulate 1 turn (our card + prior-weighted opponent cards) → immediate penalty
+ *   2. Evaluate remaining hand danger with heuristic → long-term risk
+ *   3. Total score = immediate penalty + heuristic danger (relative to opponents)
+ *   Pick the card with lowest average total score.
  *
- * The prior captures per-card danger (overflow/row-pick rates, penalties, timing)
- * and per-turn board baselines (min row top, primed rows) from thousands of games.
+ * THREE KEY HEURISTICS (see evaluateHand for implementation):
+ *
+ * A) TRAPPED CARD MANAGEMENT (cards below all row tops)
+ *    - These cards ALWAYS trigger a row pick, the question is "when."
+ *    - Turns 1-3: suppress urgency. Early game should focus on shedding high-penalty
+ *      overflow cards (e.g., 55=7 heads). Low cards cost 1-2 heads and can wait.
+ *    - Turns 4+: activate trapped penalty, ramping with urgency. If a cheap row exists
+ *      (≤2 cards), the scale is high (1.5) to encourage immediate play. If rows are
+ *      expensive (4-5 cards), scale is low (0.7) to discourage costly row picks.
+ *    - The `trappedDiscount` parameter controls how fast urgency ramps:
+ *      cardDanger *= (1 + remainingTurns × trappedDiscount × urgency)
+ *
+ * B) OVERFLOW RISK (cards above all row tops, but may overflow primed rows)
+ *    - Scaled by how many rows are primed (5 cards) relative to baseline for this turn.
+ *    - Danger = overflowRate × avgOverflowPenalty × (primedCount / baselinePrimed)
+ *
+ * C) TIMING PRESSURE (holding cards past their natural play window)
+ *    - Each card has an avgTurn from the prior (when it's typically played).
+ *    - If held past that turn: cardDanger *= (1 + (turn - avgTurn) × timingWeight)
+ *    - This ensures cards eventually get played — even if individually risky, waiting
+ *      is worse because future board states will be more dangerous.
+ *
+ * OPPONENT MODEL (see priorWeightedSelect):
+ *    - Opponents play cards weighted by INVERSE danger (safe cards first).
+ *    - Cards past their avgTurn get a timing boost (opponents dump overdue cards).
+ *    - This produces more realistic simulations than uniform random play.
+ *
+ * BENCHMARKING FINDINGS (from project/results/mcs-prior.md):
+ *    - simDepth=1 beats simDepth=2 at equal budget (more samples > deeper lookahead)
+ *    - timingWeight sweet spot is 0.3-0.5 (0 is clearly worst, 0.7 regresses)
+ *    - trappedDiscount > 0 beats disabled in head-to-head play
+ *    - Overall: mcs-prior beats plain mcs ~29% vs 24.3% win rate at equal mcPerCard
  */
 import type { Strategy, TurnResolution } from './types';
 import type { CardNumber } from '../types';
@@ -36,32 +68,45 @@ export interface McsPriorOptions {
   opponentModel?: 'uniform' | 'prior';
   /** Weight of timing pressure in heuristic (default: 0.3) */
   timingWeight?: number;
+  /** Trapped card discount factor — multiplies row-pick danger by remainingTurns × this value.
+   *  0 = disabled (original behavior), 0.3 = moderate, 0.5 = aggressive early dump. (default: 0.3) */
+  trappedDiscount?: number;
 }
 
 const DEFAULT_MC_PER_CARD = 100;
 const DEFAULT_SIM_DEPTH = 1;
 const DEFAULT_TIMING_WEIGHT = 0.3;
+const DEFAULT_TRAPPED_DISCOUNT = 0.3;
 
 /**
- * Compute heuristic danger score for a hand given board context.
- * Higher = more dangerous hand to be holding.
+ * Evaluate how dangerous a remaining hand is after simulation.
+ *
+ * This is the "terminal evaluation" — called after simulating 1 turn forward.
+ * It estimates the total future penalty of holding these cards for the rest of
+ * the round. Higher score = worse hand to be stuck with.
+ *
+ * The function implements heuristics A, B, and C from the module doc above.
  */
 function evaluateHand(
   hand: readonly CardNumber[],
   board: CardNumber[][],
   turn: number,
   timingWeight: number,
+  trappedDiscount: number,
 ): number {
   if (hand.length === 0) return 0;
 
+  // Board state analysis
   const rowTops = board.map(r => r[r.length - 1]);
   const minRowTop = Math.min(...rowTops);
   const rowLens = board.map(r => r.length);
   const primedCount = rowLens.filter(l => l >= 5).length;
 
+  // Per-turn baselines from the prior (what a "typical" board looks like at this turn)
   const baseline = TURN_BASELINE[Math.min(turn - 1, 9)] ?? TURN_BASELINE[9];
-  const baseMinTop = baseline.avgMinRowTop ?? 25;
   const basePrimed = baseline.avgPrimedRows ?? 1.0;
+
+  const remainingTurns = Math.max(0, 10 - turn);
 
   let totalDanger = 0;
   for (const card of hand) {
@@ -70,16 +115,52 @@ function evaluateHand(
 
     let cardDanger: number;
     if (card < minRowTop) {
-      // Row pick risk — scales with how far below the min top we are
-      const scale = Math.max(0.5, (minRowTop - card) / baseMinTop);
-      cardDanger = prior.rowPickRate * prior.avgRowPickPenalty * scale;
+      // ── HEURISTIC A: TRAPPED CARD MANAGEMENT ──
+      // This card is below every row top → guaranteed row pick whenever played.
+      // The decision isn't IF we pay, it's WHEN (and how much the row costs).
+      const minRowLen = Math.min(...rowLens);
+      const cheapRowAvailable = minRowLen <= 2;
+
+      if (turn <= 4) {
+        // EARLY GAME (turns 1-3, heuristicTurn ≤ 4):
+        // Low cards are a known, bounded cost (typically 1-3 heads). Don't panic.
+        // We deliberately suppress danger here so the strategy focuses on shedding
+        // HIGH-penalty cards (overflow risks like 55=7heads) in the early game,
+        // rather than "wasting" early turns on cheap row picks.
+        cardDanger = prior.rowPickRate * prior.avgRowPickPenalty * 0.3;
+      } else {
+        // MID/LATE GAME (turns 4+):
+        // Now trapped cards become urgent. Row lengths are growing, row pick costs
+        // escalate, and we're running out of turns to dump these.
+        // Scale depends on whether a cheap row exists right now:
+        //   - cheapRowAvailable (≤2 cards): scale 1.5 → "dump it NOW, this is a window"
+        //   - no cheap row (3+ cards):      scale 0.7 → "wait for a better opportunity"
+        const scale = cheapRowAvailable ? 1.5 : 0.7;
+        cardDanger = prior.rowPickRate * prior.avgRowPickPenalty * scale;
+
+        // Trapped discount: ramps urgency as turns run out.
+        // urgency goes from 0.17 (turn 5) to 1.0 (turn 10), clamped to [0,1].
+        // Effect: cardDanger × (1 + remainingTurns × 0.3 × urgency)
+        // At turn 7 with 3 turns left: ×(1 + 3 × 0.3 × 0.5) = ×1.45
+        if (trappedDiscount > 0 && remainingTurns > 0) {
+          const urgency = Math.min(1, (turn - 4) / 6);
+          cardDanger *= (1 + remainingTurns * trappedDiscount * urgency);
+        }
+      }
     } else {
-      // Overflow risk — scales with number of primed rows
+      // ── HEURISTIC B: OVERFLOW RISK ──
+      // Card is above minRowTop, so it can be placed. But if many rows are primed
+      // (5 cards = about to overflow), this card might trigger a 6th-card overflow.
+      // Scale relative to what's "normal" for this turn (basePrimed from prior).
       const scale = basePrimed > 0 ? Math.max(0.5, primedCount / basePrimed) : 1;
       cardDanger = prior.overflowRate * prior.avgOverflowPenalty * scale;
     }
 
-    // Timing pressure: penalize holding cards past their natural play window
+    // ── HEURISTIC C: TIMING PRESSURE ──
+    // Each card has a "natural" turn when it's typically played (from prior).
+    // Holding a card past that turn means we're in increasingly unusual/dangerous
+    // territory. This multiplier grows linearly after avgTurn:
+    //   turn 6, avgTurn 4, timingWeight 0.3 → multiplier = 1 + 2×0.3 = 1.6
     const timingPressure = Math.max(0, turn - prior.avgTurn) * timingWeight;
     cardDanger *= (1 + timingPressure);
 
@@ -90,8 +171,18 @@ function evaluateHand(
 }
 
 /**
- * Select a card from hand using prior-weighted distribution (inverse danger = more likely to play).
- * Cards with LOW expected penalty are played first (safe cards get dumped).
+ * OPPONENT MODEL: Prior-weighted card selection.
+ *
+ * Models how a "reasonable" opponent picks which card to play.
+ * The key insight: real players (and MCS bots) play safe cards first and hold
+ * dangerous cards as long as possible — then dump them when forced.
+ *
+ * Weight formula: (1 / (danger + 0.1)) × (1 + timingBoost)
+ *   - Safe cards (low expectedPenalty) → high weight → played early
+ *   - Dangerous cards (high expectedPenalty) → low weight → held back
+ *   - Overdue cards (past avgTurn) → timingBoost increases → eventually forced out
+ *
+ * This produces a distribution that matches observed behavior from 1300+ training games.
  */
 function priorWeightedSelect(hand: CardNumber[], turn: number, rng: () => number): CardNumber {
   if (hand.length === 0) throw new Error('Empty hand');
@@ -197,7 +288,7 @@ function simulateRemainingTurns(
 }
 
 export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy {
-  const VALID_OPTIONS = new Set(['mcPerCard', 'mcMax', 'scoring', 'simDepth', 'opponentModel', 'timingWeight']);
+  const VALID_OPTIONS = new Set(['mcPerCard', 'mcMax', 'scoring', 'simDepth', 'opponentModel', 'timingWeight', 'trappedDiscount']);
   for (const key of Object.keys(options)) {
     if (!VALID_OPTIONS.has(key)) {
       throw new Error(`Unknown mcs-prior option "${key}". Valid: ${[...VALID_OPTIONS].join(', ')}`);
@@ -210,6 +301,8 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
   const simDepth = Math.max(1, Math.floor(Number(options.simDepth ?? DEFAULT_SIM_DEPTH)));
   const opponentModel: 'uniform' | 'prior' = options.opponentModel === 'uniform' ? 'uniform' : 'prior';
   const timingWeight = Number(options.timingWeight ?? DEFAULT_TIMING_WEIGHT);
+  const parsedTrapped = Number(options.trappedDiscount ?? DEFAULT_TRAPPED_DISCOUNT);
+  const trappedDiscount = Math.max(0, Number.isNaN(parsedTrapped) ? DEFAULT_TRAPPED_DISCOUNT : parsedTrapped);
 
   let rng: () => number = Math.random;
   let playerCount = 2;
@@ -227,7 +320,7 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
     name: 'mcs-prior',
 
     getOptions() {
-      return { mcPerCard, mcMax, scoring, simDepth, opponentModel, timingWeight };
+      return { mcPerCard, mcMax, scoring, simDepth, opponentModel, timingWeight, trappedDiscount };
     },
 
     onGameStart(config) {
@@ -283,8 +376,10 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
           }
 
           // Heuristic evaluation of remaining hand + board state
-          const heuristicTurn = turn + simDepth;
-          const handDanger = evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight);
+          // Use actual turns simulated (1 initial + extraTurns), not requested simDepth,
+          // since extraTurns is capped by hand size.
+          const heuristicTurn = turn + 1 + extraTurns;
+          const handDanger = evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight, trappedDiscount);
           penalties[0] += handDanger;
 
           totalScore += score(penalties);
@@ -337,7 +432,7 @@ export function createMcsPriorStrategy(options: McsPriorOptions = {}): Strategy 
 
           // Heuristic on remaining hand
           const heuristicTurn = state.turn + 1 + turnsToSim;
-          penalties[0] += evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight);
+          penalties[0] += evaluateHand(hands[0], boardCopy, heuristicTurn, timingWeight, trappedDiscount);
 
           totalScore += score(penalties);
         }

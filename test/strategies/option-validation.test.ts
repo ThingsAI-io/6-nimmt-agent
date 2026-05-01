@@ -74,7 +74,7 @@ describe('Strategy option validation', () => {
     it('getOptions() returns resolved defaults', () => {
       const s = createMcsPriorStrategy({});
       const opts = s.getOptions!();
-      expect(opts).toEqual({ mcPerCard: 100, mcMax: 1000, scoring: 'relative', simDepth: 1, opponentModel: 'prior', timingWeight: 0.3 });
+      expect(opts).toEqual({ mcPerCard: 100, mcMax: 1000, scoring: 'relative', simDepth: 1, opponentModel: 'prior', timingWeight: 0.3, trappedDiscount: 0.3 });
     });
 
     it('getOptions() reflects provided values', () => {
