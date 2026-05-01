@@ -6,6 +6,8 @@
 
 ## The Boulevard of Death
 
+> **Applies to:** 4–5 players. In a 6-player game the dynamic inverts — see *The Ceiling of Death* below.
+
 ### What It Is
 
 The **boulevard of death** is a late-game trap where every card remaining in a player's hand falls below the last card of every row on the board. Once a player is in this situation, they are doomed: no matter which card they play, it will land below all four rows, forcing them to pick up a row on every single remaining turn. There is no escape — the player is systematically bled of points until the round ends.
@@ -48,6 +50,10 @@ There is also a secondary competition: when several players have no escape card,
 - **Pressure opponents.** If you can play cards that push row tops above an opponent's highest remaining card, you sentence them to the boulevard while keeping yourself free.
 - **In a full boulevard situation, minimise losses.** Choose the row with the fewest bulls heads on each forced pickup; you cannot avoid paying, but you can control the price.
 - **Play the boulevard offensively.** A deliberate strategy is to spend the early and mid game **locking the rows** — playing cards that push all four row tops high — while hoarding a reserve of high cards for yourself. As other players deplete their high cards coping with earlier threats, they eventually have nothing left above the row tops. You, still holding your high-card reserve, can place freely while they are systematically forced to pick up rows every turn. The cost is accepting some risk and possibly some early pickups to execute the lock; the payoff is owning the endgame entirely.
+
+### Variant: The Ceiling of Death (6 players)
+
+In a 6-player game the trap inverts. Six cards are played every turn, so rows fill fast. A player holding only high cards will always land last on rows — and will systematically be the one to trigger the 6th-card pickup, turn after turn. They can always place, but every placement risks overflowing a row. The boulevard kills you with low cards; the ceiling kills you with high ones. In 6-player endgames, mid-range cards are the safest asset.
 
 ---
 
