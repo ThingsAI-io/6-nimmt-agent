@@ -55,11 +55,39 @@
 - Single seed benchmark — results have variance. Need 500+ games for tight confidence intervals.
 - Seat 0 advantage/disadvantage is not controlled for (only one mcs-prior seat).
 
+## Timing Weight Sensitivity (200 games, 5× mcs-prior head-to-head)
+
+Each seat runs mcs-prior with a different `timingWeight` value. All other settings equal (mcPerCard=50, simDepth=1, opponentModel=prior).
+
+| timingWeight | Win% | Avg Score |
+|-------------|------|-----------|
+| 0.0 | 15.0% | 51.0 |
+| 0.15 | 22.0% | 49.1 |
+| **0.30** | **23.0%** | **49.5** |
+| 0.50 | 25.5% | 47.1 |
+| 0.70 | 19.0% | 49.8 |
+
+### Observations
+- **No timing pressure (0.0) is clearly worst** — 15% win rate, highest avg score.
+- **Sweet spot is 0.3–0.5** — both win well above baseline (20%).
+- **0.7 regresses** — too aggressive; likely dumps useful mid-range cards too early.
+- Current default of 0.3 is conservative but safe. 0.5 may be optimal but needs more data.
+
+```bash
+npx tsx src/cli/index.ts simulate --games 200 \
+  -s "mcs-prior:mcPerCard=50,timingWeight=0,mcs-prior:mcPerCard=50,timingWeight=0.15,mcs-prior:mcPerCard=50,timingWeight=0.3,mcs-prior:mcPerCard=50,timingWeight=0.5,mcs-prior:mcPerCard=50,timingWeight=0.7"
+```
+
 ## Reproduction
 
 ```bash
+# Main benchmark (mcs-prior vs mcs vs random)
 npx tsx src/cli/index.ts simulate \
   --games 100 \
   --strategies "mcs-prior:mcPerCard=50,mcs:mcPerCard=50,mcs:mcPerCard=50,mcs:mcPerCard=50,random" \
   --seed benchmark-v1
+
+# Timing weight sensitivity
+npx tsx src/cli/index.ts simulate --games 200 \
+  -s "mcs-prior:mcPerCard=50,timingWeight=0,mcs-prior:mcPerCard=50,timingWeight=0.15,mcs-prior:mcPerCard=50,timingWeight=0.3,mcs-prior:mcPerCard=50,timingWeight=0.5,mcs-prior:mcPerCard=50,timingWeight=0.7"
 ```
