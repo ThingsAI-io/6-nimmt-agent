@@ -3,14 +3,19 @@ import type {
   StrategiesResult,
   PlayResult,
   RecommendResult,
+  CompeteResult,
   CliError,
 } from './types.js';
 
-type FormattableData = SimulateResult | StrategiesResult | PlayResult | RecommendResult | CliError;
+type FormattableData = SimulateResult | StrategiesResult | PlayResult | RecommendResult | CompeteResult | CliError;
 
 export function formatTable(data: FormattableData): string {
   if ('error' in data && data.error) {
     return `Error [${data.code}]: ${data.message}`;
+  }
+
+  if ('elo' in data && 'pool' in data) {
+    return formatCompeteTable(data as CompeteResult);
   }
 
   if ('results' in data && 'gamesPlayed' in data) {
@@ -173,6 +178,44 @@ function formatRecommendTable(data: RecommendResult): string {
       lines.push(`  - ${w}`);
     }
   }
+
+  return lines.join('\n');
+}
+
+function formatCompeteTable(data: CompeteResult): string {
+  const lines: string[] = [];
+
+  lines.push(`Competition: ${data.gamesPlayed} games | Pool: ${data.pool.join(', ')} | Players: ${data.playerRange.min}–${data.playerRange.max}`);
+  lines.push('');
+
+  // ELO Leaderboard (sorted by rating descending)
+  lines.push('=== ELO Leaderboard ===');
+  const eloHeaders = ['Strategy', 'Rating', '±StdDev', 'Games'];
+  const eloSorted = [...data.elo].sort((a, b) => b.rating - a.rating);
+  const eloRows = eloSorted.map((r) => [
+    r.strategy,
+    r.rating.toFixed(0),
+    '±' + r.ratingStdDev.toFixed(0),
+    String(r.gamesPlayed),
+  ]);
+  lines.push(renderTable(eloHeaders, eloRows));
+  lines.push('');
+
+  // Strategy stats
+  lines.push('=== Strategy Stats ===');
+  const headers = ['Strategy', 'Wins', 'Win Rate', 'Avg Score', 'Median', 'Min', 'Max', 'StdDev'];
+  const statsSorted = [...data.results].sort((a, b) => a.avgScore - b.avgScore);
+  const rows = statsSorted.map((r) => [
+    r.strategy,
+    String(r.wins),
+    (r.winRate * 100).toFixed(1) + '%',
+    r.avgScore.toFixed(1),
+    String(r.medianScore),
+    String(r.minScore),
+    String(r.maxScore),
+    r.scoreStdDev.toFixed(1),
+  ]);
+  lines.push(renderTable(headers, rows));
 
   return lines.join('\n');
 }
