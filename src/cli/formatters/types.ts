@@ -122,6 +122,7 @@ export interface CompeteResult extends MetaEnvelope {
   pool: string[];
   playerRange: { min: number; max: number };
   seed: string;
+  eloConfig: { initialRating: number; K: number; D: number; normalization: string };
   results: StrategyResultRow[];
   elo: EloLeaderboardRow[];
 }

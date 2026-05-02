@@ -19,17 +19,26 @@ The current `BatchRunner` produces aggregate statistics (win rate, mean score, s
 
 ## 2. Multi-Player ELO Formula
 
-Standard ELO is defined for 2-player games. 6 Nimmt! has 2–10 players, so we use a **pairwise decomposition** that reduces each N-player game to C(N,2) virtual 1v1 matchups.
+We use **standard chess ELO** with a pairwise decomposition for multi-player games.
 
-### 2.1 Expected Score
+> **Note:** This differs from BGA's ELO which uses elastic K (60→40), K×(N/2) scaling, and a 600-point rating diff cap. We deliberately use the simpler standard formula for reproducibility and comparability with academic literature.
+
+### 2.1 Parameters
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| **Initial Rating** | 1500 | Standard chess ELO starting point |
+| **K (development coefficient)** | 32 | Standard FIDE rapid chess K-factor |
+| **D (scaling factor)** | 400 | Standard; 400-point diff → 10:1 expected odds |
+| **N-player normalization** | ÷(N−1) | Stabilizes rating changes across 2–10 player games |
+
+### 2.2 Expected Score
 
 For players *i* and *j* with ratings R_i and R_j:
 
 ```
-E(i, j) = 1 / (1 + 10^((R_j - R_i) / D))
+E(i, j) = 1 / (1 + 10^((R_j - R_i) / 400))
 ```
-
-Where **D = 400** (standard ELO scaling factor).
 
 Player *i*'s total expected score against all opponents:
 
@@ -37,7 +46,7 @@ Player *i*'s total expected score against all opponents:
 E_i = Σ_{j ≠ i} E(i, j)
 ```
 
-### 2.2 Actual Score
+### 2.3 Actual Score
 
 After a game, players are ranked by final penalty score (lowest = best). Player *i*'s actual score against each opponent *j*:
 
@@ -53,27 +62,17 @@ Total actual score:
 S_i = Σ_{j ≠ i} S(i, j)
 ```
 
-### 2.3 Ranking from Scores
+### 2.4 Ranking from Scores
 
 Players are ranked by **ascending penalty score** (lower = better). Ties are handled by **fractional ranking**: if two players share penalty 12 and would be ranks 2 and 3, both get rank 2.5.
 
-### 2.4 Rating Update
-
-```
-R_i' = R_i + K × (S_i - E_i)
-```
-
-Where **K** is the development coefficient (see §3.2).
-
-### 2.5 Normalization
-
-To keep the scale stable across different player counts, expected and actual scores are normalized by `N - 1` (the number of opponents):
+### 2.5 Rating Update
 
 ```
 R_i' = R_i + K × (S_i - E_i) / (N - 1)
 ```
 
-This ensures a K of 32 produces similar magnitude updates whether a game has 2 or 10 players.
+The division by `(N - 1)` normalizes the pairwise sum so that K=32 produces similar magnitude updates whether a game has 2 or 10 players.
 
 ---
 
@@ -84,40 +83,21 @@ This ensures a K of 32 produces similar magnitude updates whether a game has 2 o
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `initialRating` | `1500` | Starting ELO for all strategies |
-| `K` | `32` | Development coefficient (learning rate) |
+| `K` | `32` | Development coefficient (constant, no schedule) |
 | `D` | `400` | Scaling factor in expected score formula |
 
-### 3.2 K Factor
+### 3.2 Comparison with BGA
 
-K controls how quickly ratings react to results:
+| Aspect | BGA | Our Implementation |
+|--------|-----|-------------------|
+| Initial rating | 1500 | 1500 |
+| K (early games) | 60 (first 30 games) | 32 (constant) |
+| K (established) | 40 | 32 (constant) |
+| N-player scaling | K × (N/2) — amplifies | K / (N−1) — normalizes |
+| Rating diff cap | 600 | None |
+| D | 400 | 400 |
 
-- **K = 32** — standard, appropriate for early rating establishment (< 100 games per strategy)
-- **K = 16** — reduced volatility for established ratings
-- **K = 8** — very stable, for long-running tournaments (1000+ games)
-
-A **K schedule** can optionally reduce K over time:
-```
-K(n) = max(K_min, K_initial × decay^n)
-```
-Where `n` is the number of games played by the strategy. Default: no schedule (constant K).
-
-### 3.3 Options Interface
-
-```typescript
-interface EloConfig {
-  /** Starting rating for new strategies. Default: 1500 */
-  readonly initialRating?: number;
-  /** Development coefficient. Default: 32 */
-  readonly K?: number;
-  /** Scaling factor. Default: 400 */
-  readonly D?: number;
-  /** Optional K schedule: { minK, decay }. If omitted, K is constant. */
-  readonly kSchedule?: {
-    readonly minK: number;
-    readonly decay: number;
-  };
-}
-```
+Source: https://el.doc.boardgamearena.com/Rating
 
 ---
 

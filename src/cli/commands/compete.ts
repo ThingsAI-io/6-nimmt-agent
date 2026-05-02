@@ -185,6 +185,12 @@ export const competeCommand = new Command('compete')
         pool: poolKeys,
         playerRange: { min: minPlayers, max: maxPlayers },
         seed,
+        eloConfig: {
+          initialRating: 1500,
+          K: eloK,
+          D: 400,
+          normalization: '÷(N−1)',
+        },
         results: buildResultRows(result.perStrategy),
         elo: buildEloRows(result.elo),
       };

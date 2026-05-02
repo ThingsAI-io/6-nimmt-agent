@@ -1,9 +1,14 @@
 /**
  * Multi-player ELO rating system for 6 Nimmt! strategy benchmarking.
  *
- * Uses pairwise decomposition: each N-player game becomes C(N,2) virtual 1v1
- * matchups. Expected/actual scores are normalized by (N-1) to keep K-factor
- * effects stable across different player counts.
+ * Standard chess ELO with pairwise decomposition for multi-player games:
+ * - Initial rating: 1500
+ * - K-factor: 32 (constant, no elastic period)
+ * - D (scaling): 400 (400-point diff → 10:1 expected odds)
+ * - N-player normalization: ÷(N−1) to stabilize across 2–10 player games
+ *
+ * Note: This differs from BGA's ELO (elastic K=60→40, K×N/2 scaling, 600 cap).
+ * We use standard chess ELO for reproducibility and academic comparability.
  *
  * See spec/strategies/elo.md for the full specification.
  */
