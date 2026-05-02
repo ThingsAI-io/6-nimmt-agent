@@ -17,13 +17,13 @@ function getArg(name: string, fallback: string): string {
 
 const DEFAULT_OUTPUT = resolve('src/engine/strategies/prior-table.ts');
 
-// Auto-detect input: find the largest prior JSON in project/data/card-priors/
+// Auto-detect input: find the largest prior JSON in data/training/card-priors/
 function findDefaultInput(): string {
-  const dir = resolve('project/data/card-priors');
+  const dir = resolve('data/training/card-priors');
   try {
     const files = readdirSync(dir).filter((f: string) => f.endsWith('.json'));
     if (files.length === 0) {
-      console.error('No prior JSON files found in project/data/card-priors/');
+      console.error('No prior JSON files found in data/training/card-priors/');
       process.exit(1);
     }
     let best = files[0];
@@ -34,7 +34,7 @@ function findDefaultInput(): string {
     }
     return resolve(dir, best);
   } catch {
-    console.error('Cannot read project/data/card-priors/ directory');
+    console.error('Cannot read data/training/card-priors/ directory');
     process.exit(1);
   }
 }

@@ -35,7 +35,8 @@ src/
 spec/                Technical specifications (normative — describes current behavior)
 docs/                User-facing documentation (how-to guides)
 test/                Vitest test suites
-project/results/     Benchmark results and provenance data
+data/             Game data (logs, training data — mostly gitignored)
+docs/results/        Benchmark results and provenance data
 scripts/             Utility scripts (prior table generation)
 ```
 
@@ -103,4 +104,4 @@ The `mcs-prior` strategy uses a baked-in lookup table. To regenerate from traini
 npx tsx scripts/build-prior-table.ts
 ```
 
-This reads game data from `project/data/` and writes `src/engine/strategies/prior-table.ts`.
+This reads game data from `data/training/` and writes `src/engine/strategies/prior-table.ts`.

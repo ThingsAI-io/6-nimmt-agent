@@ -137,11 +137,11 @@ interface TurnBaseline {
 npx tsx scripts/build-prior-table.ts
 ```
 
-Reads from `project/data/` training game JSON files.
+Reads from `data/training/` game JSON files.
 
 ## Benchmark Results
 
-See `project/results/mcs-prior.md` for full tables. Summary:
+See `docs/results/mcs-prior.md` for full tables. Summary:
 
 ### Head-to-head (1 mcs-prior vs 4 mcs, 200 games, mcPerCard=100)
 

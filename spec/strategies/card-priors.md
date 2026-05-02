@@ -62,7 +62,7 @@ If your hand's average E[penalty] exceeds a threshold, you're approaching the bo
 
 ## Data accumulation
 
-The script `scripts/card-priors.ts` saves results incrementally to `project/data/card-priors/`. Each run adds to accumulated stats:
+The script `scripts/card-priors.ts` saves results incrementally to `data/training/card-priors/`. Each run adds to accumulated stats:
 
 ```bash
 npx tsx scripts/card-priors.ts --games 200 --mcPerCard 100   # first batch

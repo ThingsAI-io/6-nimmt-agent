@@ -147,4 +147,4 @@ tmp/
 *.png
 .bga-session.json
 data/games/
-project/data/
+data/training/

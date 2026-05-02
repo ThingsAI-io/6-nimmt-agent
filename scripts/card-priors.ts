@@ -9,7 +9,7 @@
  *   npx tsx scripts/card-priors.ts --games 200 --mcPerCard 100      # run exactly 200, then stop
  *   npx tsx scripts/card-priors.ts --mcPerCard 50 --checkpoint 5    # checkpoint every 5 games
  *
- * Data is saved incrementally to project/data/card-priors/prior-p{N}-mc{N}.json.
+ * Data is saved incrementally to data/training/card-priors/prior-p{N}-mc{N}.json.
  * Each run accumulates into the existing prior.
  */
 
@@ -39,7 +39,7 @@ const STRATEGY_SPEC = process.argv.find((_, i, a) => a[i - 1] === '--strategy') 
 const GAMES = parseInt(process.argv.find((_, i, a) => a[i - 1] === '--games') ?? '0', 10); // 0 = infinite
 const PLAYERS = parseInt(process.argv.find((_, i, a) => a[i - 1] === '--players') ?? '5', 10);
 const SEED = process.argv.find((_, i, a) => a[i - 1] === '--seed') ?? 'priors-2026';
-const DATA_DIR = process.argv.find((_, i, a) => a[i - 1] === '--dataDir') ?? 'project/data/card-priors';
+const DATA_DIR = process.argv.find((_, i, a) => a[i - 1] === '--dataDir') ?? 'data/training/card-priors';
 const CHECKPOINT_EVERY = parseInt(process.argv.find((_, i, a) => a[i - 1] === '--checkpoint') ?? '10', 10);
 
 const { name: STRATEGY_NAME, options: STRATEGY_OPTIONS } = parseStrategySpec(STRATEGY_SPEC);
