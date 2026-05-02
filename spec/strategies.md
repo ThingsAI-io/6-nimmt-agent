@@ -10,7 +10,7 @@ Strategies are pluggable via a single interface. New strategies are added by imp
 
 ```typescript
 interface Strategy {
-  /** Unique identifier, e.g. "random", "bayesian". Used in CLI and logs. */
+  /** Unique identifier, e.g. "random", "mcs-prior". Used in CLI and logs. */
   readonly name: string;
 
   /** Choose which card to play from hand. Called every turn. */
@@ -96,10 +96,13 @@ The simplest possible strategy. Provides a performance floor for benchmarking.
 Strategies are registered in a map for CLI lookup:
 
 ```typescript
-const strategies: ReadonlyMap<string, () => Strategy>;
-// "random" → RandomStrategy
-// "greedy" → GreedyStrategy (future)
-// "bayesian" → BayesianStrategy (future)
+const strategies: ReadonlyMap<string, (opts?: Record<string, unknown>) => Strategy>;
+// "random"          → RandomStrategy
+// "dummy-min"       → DummyMinStrategy
+// "dummy-max"       → DummyMaxStrategy
+// "bayesian-simple" → BayesianSimpleStrategy
+// "mcs"             → McsStrategy
+// "mcs-prior"       → McsPriorStrategy
 ```
 
 The [CLI](cli.md) `strategies` command lists all registered strategies.

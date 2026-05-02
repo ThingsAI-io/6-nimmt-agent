@@ -12,7 +12,7 @@ npx tsx src/cli/index.ts simulate \
 
 # Two strategies head to head
 npx tsx src/cli/index.ts simulate \
-  --strategies bayesian,mcs \
+  --strategies bayesian-simple,mcs \
   --games 500
 
 # Reproducible run with a seed

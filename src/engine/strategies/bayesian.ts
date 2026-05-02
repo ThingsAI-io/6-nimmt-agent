@@ -1,8 +1,24 @@
+/**
+ * Bayesian-Simple strategy — expected-penalty minimisation.
+ *
+ * For each candidate card, estimates its expected penalty by sampling K random
+ * opponent hands from the unknown card pool and simulating a single turn.
+ * Unlike MCS (which simulates entire rounds), this evaluates only the immediate
+ * next turn — making it fast but short-sighted.
+ *
+ * The "Bayesian" label comes from treating opponent hands as drawn from a
+ * uniform distribution over unseen cards (the posterior given our observations).
+ * In practice this is Monte Carlo sampling, not full Bayesian inference.
+ *
+ * Strengths: Fast (~200 samples), good at avoiding immediate danger.
+ * Weaknesses: No long-term planning, no opponent modeling beyond uniform random.
+ */
 import type { Strategy, TurnResolution } from './types';
 import type { CardNumber, Board } from '../types';
 import { cattleHeads } from '../card';
 
-const K = 200; // Monte Carlo samples per decision
+/** Monte Carlo samples per decision — higher = more accurate but slower. */
+const K = 200;
 
 function fewestHeadsRowIndex(rows: readonly (readonly CardNumber[])[]): 0 | 1 | 2 | 3 {
   let best = 0;

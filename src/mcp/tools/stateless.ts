@@ -11,7 +11,11 @@ import { invalidStrategy, invalidState, engineError, type DomainError } from '..
 
 const strategyDescriptions: Record<string, string> = {
   random: 'Picks a card uniformly at random. Baseline strategy.',
-  mcs: 'Monte Carlo sampling. Options: mcPerCard (sims/card, default 50), mcMax (budget cap, default 10×mcPerCard), scoring ("self"|"relative", default "self").',
+  'dummy-min': 'Always plays the lowest card in hand.',
+  'dummy-max': 'Always plays the highest card in hand.',
+  'bayesian-simple': 'Expected-penalty minimisation over unseen card distribution.',
+  mcs: 'Monte Carlo Simulation. Options: mcPerCard (default 50), mcMax (default 10×mcPerCard), scoring ("self"|"relative").',
+  'mcs-prior': 'MCS + prior-based heuristic + opponent modeling. Strongest. Options: mcPerCard (100), timingWeight (0.3), trappedDiscount (0.3), opponentModel ("prior"|"uniform").',
 };
 
 // ── list_strategies ─────────────────────────────────────────────────

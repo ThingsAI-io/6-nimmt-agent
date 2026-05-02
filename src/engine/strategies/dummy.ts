@@ -1,3 +1,12 @@
+/**
+ * Dummy strategies — deterministic baselines for benchmarking.
+ *
+ * - dummy-min: Always plays the lowest card in hand (conservative — holds high cards).
+ * - dummy-max: Always plays the highest card in hand (aggressive — dumps big cards first).
+ *
+ * Both pick the row with fewest cattle heads when forced to choose a row.
+ * These are useful as lower-bound benchmarks: any real strategy should beat them.
+ */
 import type { Strategy } from './types';
 import { cattleHeads } from '../card';
 

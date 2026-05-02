@@ -121,7 +121,7 @@ When multiple players share a strategy name, their results are pooled:
 - `winRate = wins / (gamesPlayed × playersWithThisStrategy)`.
 - `avgScore`, `medianScore`, `minScore`, `maxScore`, and `scoreStdDev` are computed over all player-game final scores for that strategy.
 
-**Example:** with `--strategies bayesian,random,random,random,random` and 1000 games, the `random` strategy has 4000 player-game data points.
+**Example:** with `--strategies mcs-prior,random,random,random,random` and 1000 games, the `random` strategy has 4000 player-game data points.
 
 ---
 

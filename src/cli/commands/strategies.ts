@@ -6,6 +6,11 @@ import { createMeta } from '../helpers.js';
 
 const strategyDescriptions: Record<string, string> = {
   random: 'Picks a card uniformly at random. Baseline strategy.',
+  'dummy-min': 'Always plays the lowest card in hand.',
+  'dummy-max': 'Always plays the highest card in hand.',
+  'bayesian-simple': 'Expected-penalty minimisation over unseen card distribution.',
+  mcs: 'Monte Carlo Simulation — samples random game completions to evaluate moves.',
+  'mcs-prior': 'MCS enhanced with prior-based heuristic evaluation and opponent modeling. Strongest strategy.',
 };
 
 export const strategiesCommand = new Command('strategies')

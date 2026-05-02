@@ -35,7 +35,7 @@
  *    - Cards past their avgTurn get a timing boost (opponents dump overdue cards).
  *    - This produces more realistic simulations than uniform random play.
  *
- * BENCHMARKING FINDINGS (from project/results/mcs-prior.md):
+ * BENCHMARKING FINDINGS (from docs/results/mcs-prior.md):
  *    - simDepth=1 beats simDepth=2 at equal budget (more samples > deeper lookahead)
  *    - timingWeight sweet spot is 0.3-0.5 (0 is clearly worst, 0.7 regresses)
  *    - trappedDiscount > 0 beats disabled in head-to-head play
