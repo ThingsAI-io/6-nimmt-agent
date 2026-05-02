@@ -31,8 +31,8 @@ These are deterministic baseline strategies used for benchmarking. They apply th
 
 ```bash
 # Compare dummies against each other and random
-npx tsx src/cli/main.ts simulate -s dummy-min,dummy-max,random,random -n 1000
+npx tsx src/cli/index.ts simulate -s dummy-min,dummy-max,random,random -n 1000
 
 # Use as benchmarks for smarter strategies
-npx tsx src/cli/main.ts simulate -s bayesian,dummy-min,dummy-max,random -n 1000
+npx tsx src/cli/index.ts simulate -s bayesian-simple,dummy-min,dummy-max,random -n 1000
 ```

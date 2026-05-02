@@ -12,8 +12,8 @@ The rules are fully deterministic. The interesting problem is **predicting where
 
 This repo is a research project exploring that problem:
 
-- 🎮 **Play autonomously** on BGA using Monte Carlo simulation in ~2ms per decision
-- 📊 **Benchmark strategies** — random baseline, Bayesian, MCS — against each other
+- 🎮 **Play autonomously** on BGA using Monte Carlo simulation with prior-based heuristics
+- 📊 **Benchmark strategies** — random, Bayesian, MCS, MCS-Prior — against each other
 - 📁 **Collect game data** in streaming JSONL for post-game analysis
 - 🔬 **Iterate fast** — simulate 1000 games in seconds without touching a browser
 
@@ -24,11 +24,11 @@ This repo is a research project exploring that problem:
 ```bash
 npm install
 
-# Simulate 1000 games: MCS vs 4 random players
-npx tsx src/cli/index.ts simulate --strategies mcs,random,random,random,random --games 1000
+# Simulate 1000 games: MCS-Prior vs 4 random players
+npx tsx src/cli/index.ts simulate --strategies mcs-prior,random,random,random,random --games 1000
 
 # Play live on BGA — log in and join a table in Chrome/Edge first, then:
-npm run play -- --strategy mcs --verbose
+npm run play -- --strategy mcs-prior --verbose
 ```
 
 ---
@@ -56,11 +56,12 @@ The game loop is 100% deterministic — no LLM in the play path. The engine call
 | `dummy-min` | Always plays the lowest card in hand |
 | `dummy-max` | Always plays the highest card in hand |
 | `bayesian-simple` | Expected-penalty minimisation over unseen card distribution |
-| `mcs` | Monte Carlo Simulation — strongest; simulates random game completions |
+| `mcs` | Monte Carlo Simulation — simulates random game completions |
+| `mcs-prior` | **Strongest** — MCS + prior-based heuristic + opponent modeling (~29% win rate vs mcs's ~24%) |
 
 ```bash
-# Tune MCS iterations
-npm run play -- --strategy mcs:mcMax=2000,mcPerCard=200
+# Tune MCS-Prior options
+npm run play -- --strategy mcs-prior:mcPerCard=200,timingWeight=0.3,trappedDiscount=0.3
 ```
 
 ---
@@ -81,7 +82,7 @@ npm run play -- --strategy mcs:mcMax=2000,mcPerCard=200
 ## Development
 
 ```bash
-npm test          # 413 tests
+npm test          # Vitest test suite
 npm run lint      # ESLint
 npm run build     # tsc
 ```

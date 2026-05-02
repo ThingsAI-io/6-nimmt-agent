@@ -20,14 +20,14 @@ npm install
 The CLI simulates games between strategies — no browser needed.
 
 ```bash
-# Run 1000 games: MCS vs 4 random players
-npx tsx src/cli/index.ts simulate --strategies mcs,random,random,random,random --games 1000
+# Run 1000 games: MCS-Prior vs 4 random players
+npx tsx src/cli/index.ts simulate --strategies mcs-prior,random,random,random,random --games 1000
 
 # List all available strategies
 npx tsx src/cli/index.ts strategies
 
 # Output as JSON
-npx tsx src/cli/index.ts simulate --strategies bayesian,random --games 500 --format json
+npx tsx src/cli/index.ts simulate --strategies bayesian-simple,random --games 500 --format json
 ```
 
 ## Play live on Board Game Arena

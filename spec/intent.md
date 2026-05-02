@@ -54,7 +54,7 @@ The game's card-placement rules are entirely deterministic; the only decision po
 │            Simulator / Benchmark CLI                   │
 │            src/sim/                                    │
 │  • Runs N games with configurable players             │
-│  • e.g. 1 bayesian vs 4 random                       │
+│  • e.g. 1 mcs-prior vs 4 random                      │
 │  • Outputs win rates, avg scores, etc.                │
 └──────────────────────────────────────────────────────┘
 ```
@@ -144,7 +144,7 @@ A Chrome extension overlay that:
 
 A CLI tool that:
 
-- Runs N complete games with configurable player compositions (e.g. `--strategies bayesian,random,random,random,random`).
+- Runs N complete games with configurable player compositions (e.g. `--strategies mcs-prior,random,random,random,random`).
 - Outputs per-strategy statistics: win rate, average score, score distribution.
 - Enables rapid iteration on strategies without needing a live BGA session.
 
