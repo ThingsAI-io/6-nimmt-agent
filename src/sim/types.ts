@@ -90,6 +90,8 @@ export interface CompetitionConfig {
   readonly seed: string;
   /** ELO configuration overrides. */
   readonly eloConfig?: Partial<EloConfig>;
+  /** Progress callback invoked after each game completes. */
+  readonly onProgress?: (completed: number, total: number) => void;
 }
 
 export interface CompetitionResult {

@@ -92,6 +92,8 @@ export function runCompetition(config: CompetitionConfig): CompetitionResult {
         penaltyScore: pr.finalScore,
       })),
     });
+
+    config.onProgress?.(i + 1, games);
   }
 
   const perStrategy = aggregateByStrategy(allResults);

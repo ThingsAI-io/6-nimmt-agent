@@ -167,6 +167,15 @@ export const competeCommand = new Command('compete')
         games,
         seed,
         eloConfig: { K: eloK },
+        onProgress: opts.verbose
+          ? (completed: number, total: number) => {
+              if (completed % 50 === 0 || completed === total) {
+                const pct = ((completed / total) * 100).toFixed(0);
+                process.stderr.write(`\r  Progress: ${completed}/${total} games (${pct}%)`);
+                if (completed === total) process.stderr.write('\n');
+              }
+            }
+          : undefined,
       });
 
       const poolKeys = poolSpecs.map((s) => strategyKey(s.name, s.options));
