@@ -146,4 +146,30 @@ describe('CompetitionRunner', () => {
       runCompetition(makeConfig({ maxPlayers: 11 })),
     ).toThrow('Invalid player range');
   });
+
+  it('tracks same strategy with different options as separate entries', () => {
+    const result = runCompetition({
+      pool: [
+        { strategy: 'mcs', strategyOptions: { mcPerCard: 10 } },
+        { strategy: 'mcs', strategyOptions: { mcPerCard: 50 } },
+        { strategy: 'random' },
+      ],
+      minPlayers: 3,
+      maxPlayers: 3,
+      games: 5,
+      seed: 'dedup-test',
+    });
+
+    // Should have 3 distinct entries (not 2)
+    const eloKeys = [...result.elo.ratings.keys()];
+    expect(eloKeys).toContain('mcs:mcPerCard=10');
+    expect(eloKeys).toContain('mcs:mcPerCard=50');
+    expect(eloKeys).toContain('random');
+    expect(eloKeys.length).toBe(3);
+
+    // perStrategy should also distinguish them
+    expect(result.perStrategy.has('mcs:mcPerCard=10')).toBe(true);
+    expect(result.perStrategy.has('mcs:mcPerCard=50')).toBe(true);
+    expect(result.perStrategy.has('random')).toBe(true);
+  });
 });

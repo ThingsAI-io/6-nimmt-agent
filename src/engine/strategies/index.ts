@@ -61,3 +61,21 @@ export function parseStrategySpec(spec: string): { name: string; options?: Recor
   }
   return { name, options };
 }
+
+/**
+ * Produce a stable, human-readable key for a strategy+options combination.
+ * e.g. strategyKey('mcs', { mcPerCard: 100 }) → 'mcs:mcPerCard=100'
+ * Without options: strategyKey('random') → 'random'
+ * Keys are sorted for deterministic output.
+ */
+export function strategyKey(
+  name: string,
+  options?: Record<string, unknown>,
+): string {
+  if (!options || Object.keys(options).length === 0) return name;
+  const params = Object.keys(options)
+    .sort()
+    .map((k) => `${k}=${options[k]}`)
+    .join(',');
+  return `${name}:${params}`;
+}

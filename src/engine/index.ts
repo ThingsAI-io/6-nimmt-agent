@@ -45,4 +45,4 @@ export {
 export { toCardChoiceState, toRowChoiceState } from './visible-state';
 
 export type { Strategy, TurnResolution } from './strategies';
-export { strategies, parseStrategySpec } from './strategies';
+export { strategies, parseStrategySpec, strategyKey } from './strategies';

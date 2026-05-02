@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { randomUUID } from 'node:crypto';
 import { runCompetition } from '../../sim/competition.js';
-import { strategies, parseStrategySpec } from '../../engine/index.js';
+import { strategies, parseStrategySpec, strategyKey } from '../../engine/index.js';
 import { format } from '../formatters/index.js';
 import type {
   CompeteResult,
@@ -149,8 +149,9 @@ export const competeCommand = new Command('compete')
     }
 
     if (opts.verbose) {
+      const poolKeys = poolSpecs.map((s) => strategyKey(s.name, s.options));
       console.error(
-        `Competition: ${games} games, pool=[${poolSpecs.map((s) => s.name).join(',')}], players=${minPlayers}–${maxPlayers}, K=${eloK}, seed=${seed}`,
+        `Competition: ${games} games, pool=[${poolKeys.join(',')}], players=${minPlayers}–${maxPlayers}, K=${eloK}, seed=${seed}`,
       );
     }
 
@@ -168,10 +169,11 @@ export const competeCommand = new Command('compete')
         eloConfig: { K: eloK },
       });
 
+      const poolKeys = poolSpecs.map((s) => strategyKey(s.name, s.options));
       const output: CompeteResult = {
         meta: createMeta('compete', startTime),
         gamesPlayed: result.gamesPlayed,
-        pool: poolSpecs.map((s) => s.name),
+        pool: poolKeys,
         playerRange: { min: minPlayers, max: maxPlayers },
         seed,
         results: buildResultRows(result.perStrategy),

@@ -15,6 +15,7 @@ import {
   cattleHeads,
   deriveSeedState,
   xoshiro256ss,
+  parseStrategySpec,
 } from '../engine';
 import type { SimConfig, GameResult, PlayerResult } from './types';
 
@@ -105,7 +106,8 @@ export function runGame(config: SimConfig): GameResult {
     );
   }
   for (const p of players) {
-    if (!strategies.has(p.strategy)) {
+    const baseName = parseStrategySpec(p.strategy).name;
+    if (!strategies.has(baseName)) {
       throw new Error(`Unknown strategy "${p.strategy}".`);
     }
   }
@@ -120,7 +122,8 @@ export function runGame(config: SimConfig): GameResult {
   // 4. Instantiate strategies
   const strategyMap = new Map<string, Strategy>();
   for (const p of players) {
-    const factory = strategies.get(p.strategy)!;
+    const { name: baseName } = parseStrategySpec(p.strategy);
+    const factory = strategies.get(baseName)!;
     strategyMap.set(p.id, factory(p.strategyOptions));
   }
 

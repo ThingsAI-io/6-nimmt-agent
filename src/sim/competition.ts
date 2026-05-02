@@ -13,7 +13,7 @@ import type {
 import { runGame } from './runner';
 import { aggregateByStrategy } from './stats';
 import { createEloSnapshot, updateRatings } from './elo';
-import { deriveSeedState, xoshiro256ss } from '../engine';
+import { deriveSeedState, xoshiro256ss, strategyKey } from '../engine';
 
 /** Derive a per-game seed from competition seed + game index. */
 function deriveGameSeed(baseSeed: string, gameIndex: number): string {
@@ -66,9 +66,10 @@ export function runCompetition(config: CompetitionConfig): CompetitionResult {
 
     for (let seat = 0; seat < playerCount; seat++) {
       const poolEntry = pool[rng(pool.length)];
+      const qualifiedKey = strategyKey(poolEntry.strategy, poolEntry.strategyOptions);
       gamePlayers.push({
         id: `p${seat}`,
-        strategy: poolEntry.strategy,
+        strategy: qualifiedKey,
         ...(poolEntry.strategyOptions
           ? { strategyOptions: poolEntry.strategyOptions }
           : {}),
