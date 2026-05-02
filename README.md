@@ -76,6 +76,7 @@ npm run play -- --strategy mcs-prior:mcPerCard=200,timingWeight=0.3,trappedDisco
 | [Simulator](docs/simulator.md) | Batch simulation and benchmarking |
 | [Data Capture](docs/data-capture.md) | JSONL game log format |
 | [Game Rules](spec/rules/6-nimmt.md) | 6 Nimmt! rules reference |
+| [Contributing](CONTRIBUTING.md) | Setup, adding strategies, code style |
 
 ---
 
