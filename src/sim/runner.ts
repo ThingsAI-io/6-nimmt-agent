@@ -119,12 +119,15 @@ export function runGame(config: SimConfig): GameResult {
   const playerIds = players.map((p) => p.id);
   let state = createGame(playerIds, seed);
 
-  // 4. Instantiate strategies
+  // 4. Instantiate strategies (merge inline options from qualified key with explicit strategyOptions)
   const strategyMap = new Map<string, Strategy>();
   for (const p of players) {
-    const { name: baseName } = parseStrategySpec(p.strategy);
+    const { name: baseName, options: parsedOptions } = parseStrategySpec(p.strategy);
     const factory = strategies.get(baseName)!;
-    strategyMap.set(p.id, factory(p.strategyOptions));
+    const mergedOptions = parsedOptions
+      ? { ...parsedOptions, ...p.strategyOptions }
+      : p.strategyOptions;
+    strategyMap.set(p.id, factory(mergedOptions));
   }
 
   // 5. onGameStart

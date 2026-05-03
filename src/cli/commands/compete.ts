@@ -115,6 +115,20 @@ export const competeCommand = new Command('compete')
     const eloK = parseFloat(opts.eloK);
     const seed = opts.seed ?? randomUUID();
 
+    // Validate numeric arguments
+    if (!Number.isFinite(games) || !Number.isInteger(games) || games < 1) {
+      outputError(fmt, 'INVALID_GAMES', `Invalid games count '${opts.games}'. Must be a positive integer.`);
+      process.exit(1);
+    }
+    if (!Number.isFinite(eloK) || eloK <= 0) {
+      outputError(fmt, 'INVALID_ELO_K', `Invalid ELO K-factor '${opts.eloK}'. Must be a positive number.`);
+      process.exit(1);
+    }
+    if (!Number.isFinite(minPlayers) || !Number.isFinite(maxPlayers)) {
+      outputError(fmt, 'INVALID_PLAYER_RANGE', `Invalid player range. Values must be numbers.`);
+      process.exit(1);
+    }
+
     // Validate player range
     if (minPlayers < 2 || maxPlayers > 10 || minPlayers > maxPlayers) {
       outputError(

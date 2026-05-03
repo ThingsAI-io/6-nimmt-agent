@@ -44,6 +44,9 @@ export function runCompetition(config: CompetitionConfig): CompetitionResult {
   if (pool.length === 0) {
     throw new Error('Competition pool must contain at least one strategy.');
   }
+  if (!Number.isFinite(games) || !Number.isInteger(games) || games < 1) {
+    throw new Error(`Invalid games count: ${games}. Must be a positive integer.`);
+  }
   if (minPlayers < 2 || maxPlayers > 10 || minPlayers > maxPlayers) {
     throw new Error(
       `Invalid player range: [${minPlayers}, ${maxPlayers}]. Must be 2–10 with min ≤ max.`,

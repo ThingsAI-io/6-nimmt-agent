@@ -186,7 +186,8 @@ function formatCompeteTable(data: CompeteResult): string {
   const lines: string[] = [];
 
   lines.push(`Competition: ${data.gamesPlayed} games | Pool: ${data.pool.join(', ')} | Players: ${data.playerRange.min}–${data.playerRange.max}`);
-  lines.push(`ELO: Standard chess (initial=1500, K=32, D=400, normalized by N−1)`);
+  const elo = data.eloConfig;
+  lines.push(`ELO: Standard chess (initial=${elo.initialRating}, K=${elo.K}, D=${elo.D}, ${elo.normalization})`);
   lines.push('');
 
   // ELO Leaderboard (sorted by rating descending)
