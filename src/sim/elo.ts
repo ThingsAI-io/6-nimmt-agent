@@ -12,7 +12,7 @@
  *
  * See spec/strategies/elo.md for the full specification.
  */
-import type { EloConfig, EloRating, EloSnapshot, EloGameInput } from './types';
+import type { EloConfig, EloSnapshot, EloGameInput } from './types';
 
 // ── Defaults ──────────────────────────────────────────────────────────
 
