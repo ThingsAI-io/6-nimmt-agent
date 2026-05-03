@@ -117,4 +117,21 @@ export interface CliError {
   validValues?: string[];
 }
 
+export interface CompeteResult extends MetaEnvelope {
+  gamesPlayed: number;
+  pool: string[];
+  playerRange: { min: number; max: number };
+  seed: string;
+  eloConfig: { initialRating: number; K: number; D: number; normalization: string };
+  results: StrategyResultRow[];
+  elo: EloLeaderboardRow[];
+}
+
+export interface EloLeaderboardRow {
+  strategy: string;
+  rating: number;
+  gamesPlayed: number;
+  ratingStdDev: number;
+}
+
 export type OutputFormat = 'table' | 'json' | 'csv';

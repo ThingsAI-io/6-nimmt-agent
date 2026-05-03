@@ -1,7 +1,7 @@
 /**
  * Statistical aggregation helpers for batch simulation results.
  */
-import type { StrategyStats } from './types';
+import type { GameResult, StrategyStats } from './types';
 
 /** Compute strategy statistics from collected scores and win count. */
 export function computeStats(
@@ -50,4 +50,47 @@ export function computeStats(
     maxScore: sorted[n - 1],
     scoreStdDev: Math.sqrt(variance),
   };
+}
+
+/**
+ * Aggregate per-strategy statistics from a heterogeneous set of game results.
+ * Works for both fixed lineups (BatchRunner) and variable lineups (CompetitionRunner).
+ * Counts player-games dynamically from actual results rather than a fixed config.
+ */
+export function aggregateByStrategy(
+  results: readonly GameResult[],
+): ReadonlyMap<string, StrategyStats> {
+  const scoresMap = new Map<string, number[]>();
+  const winsMap = new Map<string, number>();
+  const winScoresMap = new Map<string, number[]>();
+  const playerGamesMap = new Map<string, number>();
+
+  for (const game of results) {
+    for (const pr of game.playerResults) {
+      if (!scoresMap.has(pr.strategy)) {
+        scoresMap.set(pr.strategy, []);
+        winsMap.set(pr.strategy, 0);
+        winScoresMap.set(pr.strategy, []);
+        playerGamesMap.set(pr.strategy, 0);
+      }
+      scoresMap.get(pr.strategy)!.push(pr.finalScore);
+      playerGamesMap.set(pr.strategy, playerGamesMap.get(pr.strategy)! + 1);
+      if (pr.rank === 1) {
+        winsMap.set(pr.strategy, winsMap.get(pr.strategy)! + 1);
+        winScoresMap.get(pr.strategy)!.push(pr.finalScore);
+      }
+    }
+  }
+
+  const perStrategy = new Map<string, StrategyStats>();
+  for (const [strategy, scores] of scoresMap) {
+    const wins = winsMap.get(strategy)!;
+    const totalPlayerGames = playerGamesMap.get(strategy)!;
+    perStrategy.set(
+      strategy,
+      computeStats(scores, wins, totalPlayerGames, winScoresMap.get(strategy)!),
+    );
+  }
+
+  return perStrategy;
 }

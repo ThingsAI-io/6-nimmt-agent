@@ -66,6 +66,24 @@ npm run play -- --strategy mcs-prior:mcPerCard=200,timingWeight=0.3,trappedDisco
 
 ---
 
+## Strategy Leaderboard
+
+Results from a 1000-game competition tournament (3–6 players per game, random draws from pool). ELO: standard chess (initial=1500, K=32, D=400, normalized by N−1).
+
+| Rank | Strategy | ELO | Win Rate | Avg Score |
+|------|----------|-----|----------|-----------|
+| 🥇 | `mcs:mcPerCard=100` | **1597** | 38.5% | 33.3 |
+| 🥈 | `mcs:mcPerCard=50` | 1558 | 36.1% | 36.6 |
+| 🥉 | `mcs-prior:mcPerCard=100` | 1500 | 34.3% | 37.5 |
+| 4 | `bayesian-simple` | 1431 | 25.0% | 43.1 |
+| 5 | `dummy-max` | 1367 | 16.0% | 48.2 |
+| 6 | `random` | 1198 | 5.3% | 61.8 |
+| 7 | `dummy-min` | 1083 | 3.2% | 66.0 |
+
+> [Full report →](docs/results/competition-1000-report.md)
+
+---
+
 ## Documentation
 
 | Doc | Description |

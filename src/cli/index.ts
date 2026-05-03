@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { simulateCommand } from './commands/simulate.js';
+import { competeCommand } from './commands/compete.js';
 import { strategiesCommand } from './commands/strategies.js';
 import { playCommand } from './commands/play.js';
 import { recommendCommand } from './commands/recommend.js';
@@ -14,6 +15,7 @@ program
   .version('1.0.0');
 
 program.addCommand(simulateCommand);
+program.addCommand(competeCommand);
 program.addCommand(strategiesCommand);
 program.addCommand(playCommand);
 program.addCommand(recommendCommand);

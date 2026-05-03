@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseStrategySpec } from '../../src/engine/strategies/index.js';
+import { parseStrategySpec, strategyKey } from '../../src/engine/strategies/index.js';
 import { parseStrategies } from '../../src/cli/helpers.js';
 
 describe('parseStrategySpec', () => {
@@ -74,5 +74,32 @@ describe('parseStrategies', () => {
     expect(parseStrategies('mcs:mcMax=500,bayesian-simple,random')).toEqual([
       'mcs:mcMax=500', 'bayesian-simple', 'random',
     ]);
+  });
+});
+
+describe('strategyKey', () => {
+  it('returns bare name when no options', () => {
+    expect(strategyKey('mcs')).toBe('mcs');
+    expect(strategyKey('mcs', undefined)).toBe('mcs');
+    expect(strategyKey('mcs', {})).toBe('mcs');
+  });
+
+  it('appends sorted options after colon', () => {
+    expect(strategyKey('mcs', { mcPerCard: 100, mcMax: 500 })).toBe('mcs:mcMax=500,mcPerCard=100');
+  });
+
+  it('produces different keys for same strategy with different options', () => {
+    const key1 = strategyKey('mcs', { mcPerCard: 50 });
+    const key2 = strategyKey('mcs', { mcPerCard: 200 });
+    expect(key1).not.toBe(key2);
+    expect(key1).toBe('mcs:mcPerCard=50');
+    expect(key2).toBe('mcs:mcPerCard=200');
+  });
+
+  it('roundtrips with parseStrategySpec', () => {
+    const key = strategyKey('mcs', { mcPerCard: 100, mcMax: 500 });
+    const parsed = parseStrategySpec(key);
+    expect(parsed.name).toBe('mcs');
+    expect(parsed.options).toEqual({ mcMax: 500, mcPerCard: 100 });
   });
 });
